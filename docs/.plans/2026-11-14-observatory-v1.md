@@ -164,8 +164,9 @@ this list up to date as the plan evolves: add each new difference when it is fou
 
 ## Delivery order
 
-- **Tunnel spike**: prove that a Node process can accept a connection from a Go engine and act as the gRPC client on it,
-  over plain TLS.
+- **Tunnel spike** (done, see [spike/tunnel/README.md](../../spike/tunnel/README.md)): prove that a Node process can
+  accept a connection from a Go engine and act as the gRPC client on it, over plain TLS. Delete `spike/tunnel` when the
+  tunnel's accepting side lands in the Observatory repo.
 - **Spec and engine side, in dogmatiq/runkit**: the `ObservationAPI` `.proto` files, documenting the meaning, unit and
   limits of each field, because the spec is the only contract. Then the cluster ID, the Observatory option, the site
   option and `WithGRPCServerOptions`, the tunnel, sending heartbeats to the Observatory, the description of the
@@ -174,7 +175,8 @@ this list up to date as the plan evolves: add each new difference when it is fou
 - **Observatory repo**: TypeScript generated from runkit's `.proto` files, the tunnel's accepting side, what it holds in
   memory, and the health rules. Then the cluster view, matching the prototype's overview exactly, then its shortcomings,
   then the site view, then the universe view. The frontend exploration comes before the views. The smoke test belongs
-  here.
+  here. The tunnel's tests cover what the spike left open: a new transport for each accepted connection, many
+  concurrent calls, keepalive, abrupt close by either side, and the engine's rejection of a bad Observatory certificate.
 - **Near release, dogmatiq/protobuf**: the spec and the modified `configpb` messages move into dogmatiq/protobuf, and
   runkit and the Observatory switch to them.
 

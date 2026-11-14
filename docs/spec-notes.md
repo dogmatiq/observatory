@@ -73,20 +73,18 @@ Check every item that is not **Checked** before building on it.
 
 ## Inputs for the tunnel spike
 
-All of this is **belief**. The spike checks each item and either confirms or drops it.
+The [spike](../spike/tunnel/README.md) checked each belief below.
 
-- The tunnel is a TLS connection that the engine dials. The side that accepts it, the Observatory, acts as the HTTP/2
-  client on it, so the side that dials acts as the HTTP/2 server.
-- In Go, the engine's gRPC server can serve a connection that the engine dialed, for example through a `net.Listener`
-  that returns that one connection from `Accept`. The server then applies its own credentials to the connection.
-- In Node, `http2.connect` accepts a `createConnection` option that supplies an existing socket, and `tls.connect` accepts
-  an existing socket for the inner TLS handshake.
-- The Connect library for Node probably passes those options through. It is unknown whether `@grpc/grpc-js` can pass them
-  through.
-- The alternative is SSH with a reverse port forward. In Go, the engine would use `golang.org/x/crypto/ssh`. In Node, the
-  `ssh2` package implements an SSH server, which the Observatory would use. Neither runs an external program. The
-  Observatory would still need an HTTP/2 client over the forwarded connection, so SSH helps only if its authentication is
-  wanted for its own value.
+- **Confirmed.** The tunnel is a TLS connection that the engine dials. The side that accepts it, the Observatory, acts as
+  the HTTP/2 client on it, so the side that dials acts as the HTTP/2 server.
+- **Confirmed.** In Go, the engine's gRPC server serves a connection that the engine dialed, through a `net.Listener`
+  that returns that one connection from `Accept`. The server applies its own credentials to the connection, including
+  mutual TLS.
+- **Confirmed.** In Node, `http2.connect` accepts a `createConnection` option that supplies an existing socket, and
+  `tls.connect` accepts an existing socket for the inner TLS handshake.
+- **Confirmed for Connect, dropped for `@grpc/grpc-js`.** `@connectrpc/connect-node` passes `nodeOptions.createConnection`
+  through. `@grpc/grpc-js` makes its own socket and has no public option to supply one.
+- **Not needed.** SSH with a reverse port forward. Plain TLS works, and SSH would add only its authentication.
 
 ## How the Observatory relates to dogmatiq/stories
 
