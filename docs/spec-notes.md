@@ -24,8 +24,8 @@ Check every item that is not **Checked** before building on it.
   TypeScript.
 - **Reported.** These packages were in enginekit until enginekit v0.29.0. Moving them changed the full message names and
   the `Any` type URLs, and left the binary encoding unchanged.
-- **Reasoning.** Moving the `ObservationAPI` spec from runkit into dogmatiq/protobuf will rename its messages in the same
-  way, because a message's full name includes its proto package.
+- **Reasoning.** Moving the `ObservationAPI` spec from `v1alpha1` to a stable version will rename its messages in the
+  same way, because a message's full name includes its proto package.
 - **Reported.** `messaginggrpc` defines the `EventStreamConsumerAPI` service, with the calls `WatchEvents` and
   `ReadEvents`.
 
@@ -42,8 +42,8 @@ Check every item that is not **Checked** before building on it.
 - **Reported.** `configgrpc`, also in enginekit, defines the `ConfigAPI` service with one call, `ListApplications`. runkit
   uses neither `configgrpc` nor `configpb`.
 - **Reasoning.** dogmatiq/protobuf cannot import enginekit's `configpb`, because enginekit depends on dogmatiq/protobuf.
-  So the messages either move into dogmatiq/protobuf or the `ObservationAPI` defines its own. The plan moves them, with
-  modifications, near release, and drops `configgrpc`.
+  So the messages either move into dogmatiq/protobuf or the `ObservationAPI` defines its own. The plan brings the
+  modified messages into dogmatiq/protobuf as `configpb` at `v1alpha1`, and drops `configgrpc`.
 
 ## Why only the engine can show message content
 

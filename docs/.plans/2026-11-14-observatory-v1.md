@@ -58,12 +58,16 @@ These are the engine's terms. A person who is new to Dogma does not need them to
 - The app must be robust. When one component of a page fails, the rest of the page is still shown.
 
 ### Spec
-- Developed in runkit first. The `.proto` files and generated code live in runkit for as long as needed, and
-  dogmatiq/protobuf is not involved until release is close. Versioning is at API level within dogmatiq/protobuf.
+- Developed in dogmatiq/protobuf, in a Go package `observationgrpc` whose Protocol Buffers package is
+  `dogma.observation.v1alpha1`, in the way that Kubernetes marks its unstable APIs. Releases of dogmatiq/protobuf can
+  then carry the spec while it is still changing, and the stable package is added when the spec is ready. Versioning is
+  at API level within dogmatiq/protobuf.
 - New `ObservationAPI` service, hosted by each engine and called by the Observatory through the tunnel.
-- The `configpb` messages, with modification, are the model for describing an application. The `ObservationAPI` serves
-  them. `configgrpc` (the `ConfigAPI` service) is dropped. The modifications are to be decided. `configpb` today has no
-  message type IDs, no route direction and no concurrency preference, and its keys are Go type names.
+- The `configpb` messages, with modification, are the model for describing an application. They are brought into
+  dogmatiq/protobuf as their own Go package `configpb`, outside `observationgrpc`, and their Protocol Buffers package is
+  `dogma.config.v1alpha1`. The `ObservationAPI` serves them. `configgrpc` (the `ConfigAPI` service) is dropped. The
+  modifications are to be decided. `configpb` today has no message type IDs, no route direction and no concurrency
+  preference, and its keys are Go type names.
 - Each node sends its own node configuration, including its description of the application and any timings it uses.
   These may differ between the nodes of one cluster. The Observatory never assumes that a cluster has one configuration.
 - Each message on a watch holds the full current figures, with full lists of queues and event streams. The number of
@@ -167,18 +171,21 @@ this list up to date as the plan evolves: add each new difference when it is fou
 - **Tunnel spike** (done, see [spike/tunnel/README.md](../../spike/tunnel/README.md)): prove that a Node process can
   accept a connection from a Go engine and act as the gRPC client on it, over plain TLS. Delete `spike/tunnel` when the
   tunnel's accepting side lands in the Observatory repo.
-- **Spec and engine side, in dogmatiq/runkit**: the `ObservationAPI` `.proto` files, documenting the meaning, unit and
-  limits of each field, because the spec is the only contract. Then the cluster ID, the Observatory option, the site
-  option and `WithGRPCServerOptions`, the tunnel, sending heartbeats to the Observatory, the description of the
-  application, the port of the prototype's SQL and derivation code from its `observe` package, the observation budget and
-  the schema changes.
-- **Observatory repo**: TypeScript generated from runkit's `.proto` files, the tunnel's accepting side, what it holds in
-  memory, and the health rules. Then the cluster view, matching the prototype's overview exactly, then its shortcomings,
-  then the site view, then the universe view. The frontend exploration comes before the views. The smoke test belongs
-  here. The tunnel's tests cover what the spike left open: a new transport for each accepted connection, many
-  concurrent calls, keepalive, abrupt close by either side, and the engine's rejection of a bad Observatory certificate.
-- **Near release, dogmatiq/protobuf**: the spec and the modified `configpb` messages move into dogmatiq/protobuf, and
-  runkit and the Observatory switch to them.
+- **Spec, in dogmatiq/protobuf**: the `ObservationAPI` `.proto` files in `observationgrpc` and the modified `configpb`
+  messages in `configpb`, both at `v1alpha1`, documenting the meaning, unit and limits of each field, because the spec
+  is the only contract.
+- **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
+  `WithGRPCServerOptions`, the tunnel, sending heartbeats to the Observatory, the description of the application, the
+  port of the prototype's SQL and derivation code from its `observe` package, the observation budget and the schema
+  changes.
+- **Observatory repo**: TypeScript generated from the `v1alpha1` `.proto` files, the tunnel's accepting side, what it
+  holds in memory, and the health rules. Then the cluster view, matching the prototype's overview exactly, then its
+  shortcomings, then the site view, then the universe view. The frontend exploration comes before the views. The smoke
+  test belongs here. The tunnel's tests cover what the spike left open: a new transport for each accepted connection,
+  many concurrent calls, keepalive, abrupt close by either side, and the engine's rejection of a bad Observatory
+  certificate.
+- **Near release, dogmatiq/protobuf**: the spec is added as a stable package, and runkit and the Observatory switch to
+  it.
 
 ## Open
 - Frontend: SPA or islands.
