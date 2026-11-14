@@ -169,23 +169,27 @@ this list up to date as the plan evolves: add each new difference when it is fou
 
 ## Delivery order
 
-- **Tunnel spike** (done, see [spike/tunnel/README.md](../../spike/tunnel/README.md)): prove that a Node process can
+Tick each item when it is done, and write the pull request or commit that did it beside it.
+
+- [x] **Tunnel spike** (see [spike/tunnel/README.md](../../spike/tunnel/README.md)): prove that a Node process can
   accept a connection from a Go engine and act as the gRPC client on it, over plain TLS. Delete `spike/tunnel` when the
   tunnel's accepting side lands in the Observatory repo.
-- **Spec, in dogmatiq/protobuf**: the `ObservationAPI` `.proto` files in `observationgrpc` and the `configpb`
-  messages in `configpb`, both at `v1alpha1`, documenting the meaning, unit and limits of each field, because the spec
-  is the only contract.
-- **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
+- [ ] **Spec, in dogmatiq/protobuf**: documenting the meaning, unit and limits of each field, because the spec is the
+  only contract.
+  - [x] The `configpb` messages in `configpb`, at `v1alpha1`
+    ([dogmatiq/protobuf#35](https://github.com/dogmatiq/protobuf/pull/35)).
+  - [ ] The `ObservationAPI` `.proto` files in `observationgrpc`, at `v1alpha1`.
+- [ ] **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
   `WithGRPCServerOptions`, the tunnel, sending heartbeats to the Observatory, the description of the application, the
   port of the prototype's SQL and derivation code from its `observe` package, the observation budget and the schema
   changes.
-- **Observatory repo**: TypeScript generated from the `v1alpha1` `.proto` files, the tunnel's accepting side, what it
+- [ ] **Observatory repo**: TypeScript generated from the `v1alpha1` `.proto` files, the tunnel's accepting side, what it
   holds in memory, and the health rules. Then the cluster view, matching the prototype's overview exactly, then its
   shortcomings, then the site view, then the universe view. The frontend exploration comes before the views. The smoke
   test belongs here. The tunnel's tests cover what the spike left open: a new transport for each accepted connection,
   many concurrent calls, keepalive, abrupt close by either side, and the engine's rejection of a bad Observatory
   certificate.
-- **Near release, dogmatiq/protobuf**: the spec is added as a stable package, and runkit and the Observatory switch to
+- [ ] **Near release, dogmatiq/protobuf**: the spec is added as a stable package, and runkit and the Observatory switch to
   it.
 
 ## Open
