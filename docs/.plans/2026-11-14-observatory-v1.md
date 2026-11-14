@@ -63,11 +63,12 @@ These are the engine's terms. A person who is new to Dogma does not need them to
   then carry the spec while it is still changing, and the stable package is added when the spec is ready. Versioning is
   at API level within dogmatiq/protobuf.
 - New `ObservationAPI` service, hosted by each engine and called by the Observatory through the tunnel.
-- The `configpb` messages, with modification, are the model for describing an application. They are brought into
-  dogmatiq/protobuf as their own Go package `configpb`, outside `observationgrpc`, and their Protocol Buffers package is
-  `dogma.config.v1alpha1`. The `ObservationAPI` serves them. `configgrpc` (the `ConfigAPI` service) is dropped. The
-  modifications are to be decided. `configpb` today has no message type IDs, no route direction and no concurrency
-  preference, and its keys are Go type names.
+- The `configpb` messages are the model for describing an application. They are brought into dogmatiq/protobuf as their
+  own Go package `configpb`, outside `observationgrpc`, and their Protocol Buffers package is `dogma.config.v1alpha1`.
+  The `ObservationAPI` serves them. `configgrpc` (the `ConfigAPI` service) is dropped. They are brought in unchanged,
+  apart from the package name and corrections to comments. `configpb` today has no message type IDs, no route direction
+  and no concurrency preference, and its keys are Go type names. Each change is made only when the Observatory has a
+  genuine need for it.
 - Each node sends its own node configuration, including its description of the application and any timings it uses.
   These may differ between the nodes of one cluster. The Observatory never assumes that a cluster has one configuration.
 - Each message on a watch holds the full current figures, with full lists of queues and event streams. The number of
@@ -171,7 +172,7 @@ this list up to date as the plan evolves: add each new difference when it is fou
 - **Tunnel spike** (done, see [spike/tunnel/README.md](../../spike/tunnel/README.md)): prove that a Node process can
   accept a connection from a Go engine and act as the gRPC client on it, over plain TLS. Delete `spike/tunnel` when the
   tunnel's accepting side lands in the Observatory repo.
-- **Spec, in dogmatiq/protobuf**: the `ObservationAPI` `.proto` files in `observationgrpc` and the modified `configpb`
+- **Spec, in dogmatiq/protobuf**: the `ObservationAPI` `.proto` files in `observationgrpc` and the `configpb`
   messages in `configpb`, both at `v1alpha1`, documenting the meaning, unit and limits of each field, because the spec
   is the only contract.
 - **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
@@ -189,6 +190,5 @@ this list up to date as the plan evolves: add each new difference when it is fou
 
 ## Open
 - Frontend: SPA or islands.
-- The modifications to the `configpb` messages.
 - The observation budget's actual limits. They are set before the prototype's queries are ported.
 - Which commits on the prototype branch go upstream to dogmatiq/runkit, other than those about the inspector.
