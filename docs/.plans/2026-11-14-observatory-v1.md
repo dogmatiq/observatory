@@ -34,27 +34,48 @@ These are the engine's terms. A person who is new to Dogma does not need them to
   Observatory is the gRPC client through that tunnel. The network direction is engine to Observatory, and the RPC
   direction is Observatory to engine, so the Observatory makes ordinary calls and opens server-streaming watches.
 - The tunnel is `dogmatiq/tenet`, a new Go library with nothing specific to Dogma or to any protocol, shared by engines,
-  the Observatory and Stories. It reverses connections. A server that can only make outbound connections dials a client
-  over a secure WebSocket, and gets a `net.Listener`. For each WebSocket, the client gets a value whose dial method
-  opens a new `net.Conn` to that server over the same WebSocket. The engine serves its gRPC server on that listener, and
-  the Observatory makes its gRPC calls through that dial method, with `grpc.WithContextDialer`. tenet depends on no gRPC
-  library.
-- The client serves the WebSocket itself, or behind an HTTPS proxy that terminates TLS with its own certificate, as
+  the Observatory and Stories. tenet depends on no gRPC library.
+- tenet's terms: the **initiator** connects to the **acceptor** over a secure WebSocket. Inside that WebSocket, the
+  **dialer** dials connections to the **listener**. The initiator is always the listener, and the acceptor is always the
+  dialer, so an engine is an initiator and a listener, and the Observatory is an acceptor and a dialer. "Connect" is
+  used only for the WebSocket, and "dial" only for the connections inside it.
+- The initiator gets a `net.Listener`, and serves its gRPC server on it. For each WebSocket, the acceptor gets a tunnel
+  whose `Dial(ctx)` opens a new `net.Conn` to the listener over the same WebSocket, and the Observatory makes its gRPC
+  calls through it, with `grpc.WithContextDialer`. Many connections share one WebSocket, multiplexed with yamux, so
+  grpc-go's own reconnects and retries work as designed while the WebSocket lives. yamux is an implementation detail,
+  and nothing in tenet's API or documentation names it.
+- The acceptor serves the WebSocket itself, or behind an HTTPS proxy that terminates TLS with its own certificate, as
   Stories does on Railway. Raw TLS and SSH are not used: a WebSocket covers every deployment that they would, and it
   passes through the HTTP proxies of networks that allow only outbound connections.
-- One WebSocket carries many connections, multiplexed with yamux (`github.com/hashicorp/yamux`). Each yamux stream is
-  one connection, with its own flow control. Because each dial opens a fresh connection over the same WebSocket,
-  grpc-go's own reconnects and retries work as designed while the WebSocket lives. When the WebSocket ends, every dial
-  fails, and tenet tells the client that the tunnel has ended.
-- yamux's keepalive runs on both sides, with settings that tenet's caller chooses, so a silent break ends the WebSocket
-  on whichever side notices first. The dialing side dials again whenever its WebSocket ends, with backoff that its
-  caller chooses.
-- tenet doesn't decide who may connect. Its accepting side is an `http.Handler` that its caller wraps with its own
-  checks, such as a token, basic auth, or mutual TLS where the client terminates TLS itself. Its dialing side takes the
-  URL plus its caller's TLS settings and request headers, so that it can present whatever the client checks.
-- tenet doesn't know who dialed, or which WebSocket replaces which. The Observatory identifies each tunnel by the node
-  ID in the preamble of `WatchEngine`. On a second tunnel from the same node, it uses the newer one, and drops the older
-  one once its calls have ended.
+- The acceptor admits each initiator in its own HTTP handler, with whatever checks it uses for other requests, such as a
+  token, basic auth, or mutual TLS where it terminates TLS itself. The handler then passes the request to tenet, which
+  upgrades it and returns the tunnel in the same function. The tunnel doesn't depend on the request's context, so it
+  lives on after the handler returns.
+- The initiator connects with an `http.Client` and request headers that its application gives it, so redirects, proxies
+  and TLS follow that client, as for any other HTTP request. tenet adds no rules of its own.
+- Each side has two settings, both about liveness: an interval, which is how often it checks that the other side still
+  answers, and a timeout, which is how long a check or a write may stall before the tunnel ends. They play the part of
+  TCP keepalive, so a silent break ends the WebSocket on whichever side notices first. Everything else is fixed and
+  documented as bounds, as the kernel's settings are for TCP: at most 256 connections waiting for the listener to accept
+  them, and at most 256 KB buffered per connection in each direction. A connection beyond the listener's backlog is
+  reset, as TCP resets one beyond its own backlog.
+- tenet adds no limits on connections, and no timeout on dialing one. The listener limits what it accepts, and the
+  dialer what it dials, as they would without a tunnel. A dead initiator is noticed by the liveness check, and a
+  listener that stops accepting leaves the dialer to its own context and deadlines, as a TCP backlog does. `Dial`
+  returns as soon as its context ends, and a cancelled dial leaves nothing waiting behind it, so a dialer that keeps
+  retrying against a listener that never accepts can't pile up work inside the tunnel.
+- Closing the initiator's listener behaves like closing any `net.Listener`: no new connections open, and the dialer's
+  new dials fail at once, while existing connections are left to the application. The WebSocket ends after the last one
+  closes. Grace and its deadline come from the server on top, such as `grpc.Server.GracefulStop`. Cancelling the
+  initiator's context ends the WebSocket and every connection at once. The initiator connects again whenever its
+  WebSocket ends, with backoff that its application chooses.
+- When a WebSocket ends, every connection on it ends, pending dials fail, and later dials fail. The acceptor's tunnel
+  signals this with `Done()`, and the acceptor can end a tunnel with `Close()`. Why a tunnel ended is reported as an
+  error on both sides: from the tunnel, and from the listener's `Accept`. tenet doesn't log, just as Go's `net` package
+  doesn't.
+- tenet doesn't know who connected, or which WebSocket replaces which. The Observatory identifies each tunnel by the
+  node ID in the preamble of `WatchEngine`. On a second tunnel from the same node, it uses the newer one, and drops the
+  older one once its calls have ended.
 - tenet's wire format, yamux frames inside WebSocket messages, isn't the one that Stories' Node baseline uses today.
   Stories moves to tenet with its Go backend, together with the engines that it talks to.
 - The spike proved the reversed roles over plain TLS, with a Node process accepting. Stories has since run the same
@@ -300,11 +321,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   - [x] The `EngineAPI` `.proto` files in `enginegrpc`, at `v1alpha1`
     ([dogmatiq/protobuf@99574d8](https://github.com/dogmatiq/protobuf/commit/99574d8),
     [dogmatiq/protobuf@f71b447](https://github.com/dogmatiq/protobuf/commit/f71b447)).
-- [ ] **Tunnel, in dogmatiq/tenet**: the contract, the dialing side and the accepting side, in Go, over a secure
-  WebSocket, with many connections over each WebSocket through yamux. Its tests run each side against the other, and
-  cover many concurrent connections, a slow reader on one connection, abrupt close by either side, a silent break
-  noticed by each side through yamux's keepalive, and the dialing side's rejection of a bad certificate. tenet itself
-  mentions no protocol that runs over it.
+- [ ] **Tunnel, in dogmatiq/tenet**: the contract, the initiator's side and the acceptor's side, in Go, over a secure
+  WebSocket, with many connections over each WebSocket. Its tests run each side against the other, and cover: two
+  connections with one stalled, a dial cancelled while it is blocked, connections closed and dialed again repeatedly on
+  one WebSocket, a silent loss of the network noticed by each side, shutdown during concurrent dials, a full backlog,
+  and abrupt close by either side. tenet itself mentions no protocol that runs over it.
 - [ ] **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
   `WithGRPCServerOptions`, dialing the Observatory through `dogmatiq/tenet`, sending heartbeats to the Observatory, the
   description of the application, the port of the prototype's SQL and derivation code from its `observe` package, the
@@ -330,9 +351,9 @@ Tick each item when it is done, and write the pull request or commit that did it
 - Whether `WatchMetrics` takes a filter of the metrics that the client wants, so that an engine doesn't measure the
   rest. It is added only when an engine defines metrics that the Observatory doesn't use, or when measuring every metric
   costs too much. A server that doesn't know the filter sends every metric, so adding it is safe.
-- The names in tenet's API. The proposal is `Tunnel` for the client's value for one WebSocket, and `Dial(ctx
-  context.Context) (net.Conn, error)` for its dial method, with no network or address because there is only one server
-  to reach.
-- How tenet's dialing side backs off between attempts to dial again, and how its caller sets it.
+- The names in tenet's API. The proposal is `Accept` for the function that the acceptor's handler calls, `Tunnel` for
+  what it returns, and `Dial(ctx context.Context) (net.Conn, error)` for its dial method, with no network or address
+  because there is only one listener to reach.
+- How tenet's initiator backs off between attempts to connect again, and how its application sets it.
 - The path of tenet's WebSocket, and whether it names a subprotocol.
 - Which commits on the prototype branch go upstream to dogmatiq/runkit, other than those about the inspector.
