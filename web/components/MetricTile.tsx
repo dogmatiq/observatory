@@ -167,12 +167,9 @@ export function Failing({
 		>
 			<span
 				className={cn(
-					"min-w-0 origin-left font-semibold whitespace-nowrap text-bad",
-					// The headline shrinks to no width, and clips what is left of its
-					// text as it does. A stat has no width at all, so that clipping
-					// would hide the text from the start, and it has no use for it.
+					"min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-bad",
 					size === "headline"
-						? "overflow-hidden pl-1.5 align-[0.15em] text-[0.62em]"
+						? "pl-1.5 align-[0.15em] text-[0.62em]"
 						: "pl-1 align-[0.05em] text-[0.78em]",
 				)}
 			>
@@ -183,16 +180,6 @@ export function Failing({
 			</span>
 		</span>
 	);
-
-	// In a stat it has no width, so that it can't widen the stat and wrap the row
-	// of stats that it is in. It hangs to the right of the number instead.
-	if (size === "stat") {
-		return (
-			<span className="inline-block w-0 overflow-visible align-baseline whitespace-nowrap">
-				{shown}
-			</span>
-		);
-	}
 
 	return shown;
 }

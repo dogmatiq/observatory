@@ -53,6 +53,22 @@ test("an aggregate shows its instances and commands", () => {
 	});
 });
 
+test("the numbers of messages are on the right, with their labels, and the numbers of instances stay on the left", () => {
+	const { container } = card("process", {
+		schedulesDeadlines: true,
+		bindings: [{ id: "aaaaaaaa", instances: 4 }],
+	});
+
+	const right = container.querySelector("div.ml-auto");
+	expect(stats(right as HTMLElement)).toEqual({ events: "0", deadlines: "0" });
+	for (const label of ["events", "deadlines"]) {
+		expect(
+			within(right as HTMLElement).getByText(label).parentElement?.className,
+		).toContain("items-end");
+	}
+	expect(within(right as HTMLElement).queryByText("in progress")).toBeNull();
+});
+
 test("an aggregate with one instance says so in the singular", () => {
 	const { container } = card("aggregate", { instances: 1 });
 

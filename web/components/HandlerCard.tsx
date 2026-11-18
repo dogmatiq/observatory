@@ -159,6 +159,7 @@ function Summary({
 				// A message kind on its own means the ones that are pending.
 				label: plural,
 				title: `${plural} pending`,
+				end: true,
 			});
 		}
 	};
@@ -172,6 +173,7 @@ function Summary({
 				value: formatCompact(unhandledEvents),
 				label: "events",
 				title: "events pending",
+				end: true,
 			});
 		}
 	};
@@ -263,9 +265,18 @@ function Summary({
 	return (
 		<>
 			<div className="flex flex-wrap gap-x-5 gap-y-4">
-				{stats.map((s) => (
-					<Stat key={s.label} {...s} />
-				))}
+				{stats
+					.filter((s) => !s.end)
+					.map((s) => (
+						<Stat key={s.label} {...s} />
+					))}
+				<div className="ml-auto flex gap-x-5">
+					{stats
+						.filter((s) => s.end)
+						.map((s) => (
+							<Stat key={s.label} {...s} />
+						))}
+				</div>
 			</div>
 			{bar && <div className="mt-auto flex flex-col gap-4">{bar}</div>}
 		</>
@@ -293,6 +304,13 @@ interface StatProps {
 
 	/** Explains the number, as a tooltip. */
 	title?: string;
+
+	/**
+	 * True if the stat is aligned to the right of the card, with its label under
+	 * it, which is how the numbers of messages are, so that the numbers of
+	 * instances stay on the left.
+	 */
+	end?: boolean;
 }
 
 /**
@@ -305,9 +323,12 @@ const iconColors: Partial<Record<IconName, string>> = {
 	event: "text-streams",
 };
 
-function Stat({ tone, icon, value, label, title }: StatProps) {
+function Stat({ tone, icon, value, label, title, end }: StatProps) {
 	return (
-		<div className="flex flex-col" title={title}>
+		<div
+			className={cn("flex flex-col", end && "items-end text-right")}
+			title={title}
+		>
 			<span
 				className={cn(
 					"text-2xl leading-[1.2] tabular-nums",
