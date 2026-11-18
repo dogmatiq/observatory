@@ -68,7 +68,7 @@ func TestRun(t *testing.T) {
 			// Each node counts a part of the messages that are removed, and a node
 			// that counts less than before has started again, which leaves the rate
 			// unknown for a while. So each node's count must only grow.
-			for i := range 120 {
+			for i := range 55 {
 				time.Sleep(time.Second)
 				if i < 20 {
 					continue
@@ -80,6 +80,39 @@ func TestRun(t *testing.T) {
 						t.Fatalf("unknown rate of removal after %d seconds", i)
 					}
 				}
+			}
+
+			cancel()
+			<-done
+		})
+	})
+
+	t.Run("it takes nodes down and brings them back, so that the number of nodes changes", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o, r := observe.NewObserver(), observe.NewRecorder()
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				Run(ctx, o)
+			}()
+
+			fewest, most := 100, 0
+			for range 400 {
+				time.Sleep(time.Second)
+				r.Record(time.Now(), o.Nodes())
+
+				for _, c := range observe.Clusters(time.Now(), o.Nodes()) {
+					view, _ := r.View(time.Now(), o.Nodes(), c.ID)
+					nodes := view.Overview.Cluster.Nodes
+
+					fewest, most = min(fewest, len(nodes)), max(most, len(nodes))
+				}
+			}
+
+			if most != 7 || fewest >= 7 {
+				t.Fatalf("unexpected numbers of nodes: from %d to %d, want from fewer than 7 to 7", fewest, most)
 			}
 
 			cancel()

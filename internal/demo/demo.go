@@ -29,8 +29,17 @@ import (
 	"github.com/dogmatiq/observatory/internal/observe"
 )
 
-// workloads is the number of workloads that each node of the cluster owns.
-var workloads = []int{3, 1, 1, 2, 1, 1, 1}
+const (
+	// nodeCount is the number of nodes that the cluster has when they are all up.
+	nodeCount = 7
+
+	// workloadCount is the number of workloads that the nodes that are up share.
+	workloadCount = 10
+
+	// steadyNodes is how many of the nodes never go down. The others go down and
+	// come back, one after another, so that the number of nodes changes.
+	steadyNodes = 3
+)
 
 // heartbeatIntervals is how often each node sends a heartbeat. They differ, as
 // they do between real nodes, so the heartbeats don't arrive in step.
@@ -54,7 +63,9 @@ const (
 	measureInterval = time.Second
 )
 
-// Run simulates a cluster of seven nodes, and connects each of them to o.
+// Run simulates a cluster of seven nodes, and connects each of them to o. Four
+// of them go down for a while, now and then, and come back, so that the number
+// of nodes, and the workloads that each owns, change.
 //
 // It returns when ctx ends, or when a node can't be served.
 func Run(ctx context.Context, o *observe.Observer) error {
@@ -71,9 +82,9 @@ func Run(ctx context.Context, o *observe.Observer) error {
 
 	wg.Go(func() { c.run(ctx) })
 
-	for i := range workloads {
+	for i := range nodeCount {
 		wg.Go(func() {
-			if e := c.serveNode(ctx, o, i); e != nil {
+			if e := c.runNode(ctx, o, i); e != nil {
 				once.Do(func() { err = e })
 				cancel()
 			}
@@ -86,19 +97,26 @@ func Run(ctx context.Context, o *observe.Observer) error {
 
 // cluster is the simulated cluster, which the nodes report on.
 type cluster struct {
-	id          *uuidpb.UUID
-	app         *configpb.Application
-	nodes       []*uuidpb.UUID
-	streams     [2]*uuidpb.UUID
-	commandsQ   *uuidpb.UUID
-	deadlinesQ  *uuidpb.UUID
-	account     *uuidpb.UUID
-	schedule    *uuidpb.UUID
-	mailer      *uuidpb.UUID
-	balances    *uuidpb.UUID
-	archive     *uuidpb.UUID
-	randomness  *rand.Rand
-	m           sync.Mutex
+	id         *uuidpb.UUID
+	app        *configpb.Application
+	nodes      []*uuidpb.UUID
+	streams    [2]*uuidpb.UUID
+	commandsQ  *uuidpb.UUID
+	deadlinesQ *uuidpb.UUID
+	account    *uuidpb.UUID
+	schedule   *uuidpb.UUID
+	mailer     *uuidpb.UUID
+	balances   *uuidpb.UUID
+	archive    *uuidpb.UUID
+	randomness *rand.Rand
+	m          sync.Mutex
+
+	// live is whether each node is up. The nodes that are up share the workloads,
+	// and changed is closed, and replaced, each time that it changes.
+	live         []bool
+	workloadKeys []*uuidpb.UUID
+	changed      chan struct{}
+
 	ticks       int
 	accumulated map[string]float64
 	totals      map[string]uint64
@@ -135,9 +153,14 @@ func newCluster() *cluster {
 		state:       state{deadlinesQueued: 19},
 	}
 
-	for range workloads {
+	for range nodeCount {
 		c.nodes = append(c.nodes, uuidpb.Generate())
+		c.live = append(c.live, true)
 	}
+	for range workloadCount {
+		c.workloadKeys = append(c.workloadKeys, uuidpb.Generate())
+	}
+	c.changed = make(chan struct{})
 
 	c.app = configpb.Application_builder{
 		Identity: identity("statements", uuidpb.Generate()),
@@ -210,16 +233,20 @@ func (c *cluster) grow(name string, amount float64) uint64 {
 	c.accumulated[name] -= whole
 	c.totals[name] += uint64(whole)
 
-	// Each node counts a part of what happened, in proportion to its workloads.
+	// Each node that is up counts a part of what happened, in proportion to the
+	// workloads that it owns.
 	if c.shares[name] == nil {
-		c.shares[name] = make([]float64, len(workloads))
+		c.shares[name] = make([]float64, nodeCount)
 	}
+	weights := c.weights()
 	var all int
-	for _, w := range workloads {
+	for _, w := range weights {
 		all += w
 	}
-	for i, w := range workloads {
-		c.shares[name][i] += whole * float64(w) / float64(all)
+	if all > 0 {
+		for i, w := range weights {
+			c.shares[name][i] += whole * float64(w) / float64(all)
+		}
 	}
 
 	return uint64(whole)
@@ -390,6 +417,111 @@ func (c *cluster) readings(node int) []reading {
 	return out
 }
 
+// weights returns how many workloads each node owns. c.m must be held.
+func (c *cluster) weights() []int {
+	var up []int
+	for i, ok := range c.live {
+		if ok {
+			up = append(up, i)
+		}
+	}
+
+	weights := make([]int, nodeCount)
+	if len(up) == 0 {
+		return weights
+	}
+
+	// The workloads are dealt out to the nodes that are up, in turn.
+	for w := range c.workloadKeys {
+		weights[up[w%len(up)]]++
+	}
+
+	return weights
+}
+
+// setLive records that a node has come up or gone down, which changes who owns
+// each workload, and tells the nodes. A node that comes up counts from zero, as
+// a node that starts again does.
+func (c *cluster) setLive(node int, up bool) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	if up && !c.live[node] {
+		for _, shares := range c.shares {
+			shares[node] = 0
+		}
+	}
+
+	c.live[node] = up
+	close(c.changed)
+	c.changed = make(chan struct{})
+}
+
+// membership returns the nodes that are up, the workloads that a node owns, and a
+// channel that is closed when either changes.
+func (c *cluster) membership(node int) ([]*uuidpb.UUID, []*enginegrpc.Workload, <-chan struct{}) {
+	c.m.Lock()
+	defer c.m.Unlock()
+
+	var live []*uuidpb.UUID
+	var up []int
+	for i, ok := range c.live {
+		if ok {
+			live = append(live, c.nodes[i])
+			up = append(up, i)
+		}
+	}
+
+	var owned []*enginegrpc.Workload
+	for w, key := range c.workloadKeys {
+		if len(up) > 0 && up[w%len(up)] == node && c.live[node] {
+			owned = append(owned, enginegrpc.Workload_builder{Key: key}.Build())
+		}
+	}
+
+	return live, owned, c.changed
+}
+
+// runNode runs one node of the cluster. A node that is not steady goes down
+// after a while, for a while, and then comes back, again and again.
+func (c *cluster) runNode(ctx context.Context, o *observe.Observer, node int) error {
+	if node < steadyNodes {
+		return c.serveNode(ctx, o, node)
+	}
+
+	// Each node has a rhythm of its own, which is the same on each run.
+	r := rand.New(rand.NewPCG(uint64(node), 7))
+	seconds := func(from, spread int) time.Duration {
+		return time.Duration(from+r.IntN(spread)) * time.Second
+	}
+
+	up := seconds(60, 40)
+
+	for {
+		upCtx, stop := context.WithTimeout(ctx, up)
+		err := c.serveNode(upCtx, o, node)
+		stop()
+
+		c.setLive(node, false)
+
+		if ctx.Err() != nil {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(seconds(20, 25)):
+		}
+
+		up = seconds(45, 45)
+		c.setLive(node, true)
+	}
+}
+
 // serveNode runs one node of the cluster, with its gRPC server in this process,
 // and serves it to o until ctx ends.
 func (c *cluster) serveNode(ctx context.Context, o *observe.Observer, node int) error {
@@ -427,26 +559,25 @@ func (s *engineServer) WatchEngine(
 ) error {
 	c := s.c
 
-	owned := make([]*enginegrpc.Workload, workloads[s.node])
-	for i := range owned {
-		owned[i] = enginegrpc.Workload_builder{Key: uuidpb.Generate()}.Build()
-	}
-
-	for _, b := range []enginegrpc.WatchEngineResponse_builder{
-		{Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
+	err := stream.Send(enginegrpc.WatchEngineResponse_builder{
+		Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
 			NodeId:            c.nodes[s.node],
 			ClusterId:         c.id,
 			Application:       c.app,
 			HeartbeatInterval: durationpb.New(heartbeatIntervals[s.node]),
 			HeartbeatTimeout:  durationpb.New(heartbeatTimeout),
 			Description:       "simulated node",
-		}.Build()},
-		{LiveNodes: enginegrpc.LiveNodes_builder{NodeIds: c.nodes}.Build()},
-		{Workloads: enginegrpc.Workloads_builder{Workloads: owned}.Build()},
-	} {
-		if err := stream.Send(b.Build()); err != nil {
-			return err
-		}
+		}.Build(),
+	}.Build())
+	if err != nil {
+		return err
+	}
+
+	// membership tells the page which nodes are up, and which workloads this
+	// node owns, now and each time that they change.
+	changed, err := s.sendMembership(stream)
+	if err != nil {
+		return err
 	}
 
 	// The nodes start their heartbeats at different moments, so that they are
@@ -454,7 +585,7 @@ func (s *engineServer) WatchEngine(
 	select {
 	case <-stream.Context().Done():
 		return stream.Context().Err()
-	case <-time.After(heartbeatIntervals[s.node] * time.Duration(s.node) / time.Duration(len(workloads))):
+	case <-time.After(heartbeatIntervals[s.node] * time.Duration(s.node) / nodeCount):
 	}
 
 	ticker := time.NewTicker(heartbeatIntervals[s.node])
@@ -470,12 +601,38 @@ func (s *engineServer) WatchEngine(
 			return err
 		}
 
-		select {
-		case <-stream.Context().Done():
-			return stream.Context().Err()
-		case <-ticker.C:
+		for waiting := true; waiting; {
+			select {
+			case <-stream.Context().Done():
+				return stream.Context().Err()
+			case <-changed:
+				if changed, err = s.sendMembership(stream); err != nil {
+					return err
+				}
+			case <-ticker.C:
+				waiting = false
+			}
 		}
 	}
+}
+
+// sendMembership sends the nodes that are up and the workloads that the node
+// owns, and returns a channel that is closed when either changes.
+func (s *engineServer) sendMembership(
+	stream grpc.ServerStreamingServer[enginegrpc.WatchEngineResponse],
+) (<-chan struct{}, error) {
+	live, owned, changed := s.c.membership(s.node)
+
+	for _, b := range []enginegrpc.WatchEngineResponse_builder{
+		{LiveNodes: enginegrpc.LiveNodes_builder{NodeIds: live}.Build()},
+		{Workloads: enginegrpc.Workloads_builder{Workloads: owned}.Build()},
+	} {
+		if err := stream.Send(b.Build()); err != nil {
+			return nil, err
+		}
+	}
+
+	return changed, nil
 }
 
 type metricsServer struct {
