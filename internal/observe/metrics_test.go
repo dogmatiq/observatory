@@ -636,12 +636,11 @@ func TestMetrics(t *testing.T) {
 					first := startNode(t, ctx, o, cluster, reach)
 					second := startNode(t, ctx, o, cluster, reach)
 
-					// The nodes choose their own subjects, which aren't
-					// comparable between nodes.
+					// Nodes of one cluster give the same subject to the same queue.
 					first.sample(t, 0, "x", 1, pending(a, 3))
 					first.sample(t, 0, "y", 1, pending(b, 2))
-					second.sample(t, 0, "p", 1, pending(a, 4))
-					second.sample(t, 0, "q", 1, pending(c, 1))
+					second.sample(t, 0, "x", 1, pending(a, 4))
+					second.sample(t, 0, "z", 1, pending(c, 1))
 
 					expectQueues(t,
 						combined(t, Combine(time.Now(), o.Nodes())),
@@ -650,6 +649,32 @@ func TestMetrics(t *testing.T) {
 
 					// The sums don't change what the nodes reported.
 					expectQueues(t, queues(t, byID(t, o, first.ID)), map[*uuidpb.UUID]uint64{a: 3, b: 2})
+
+					cancel()
+					<-first.Engine.Done
+					<-second.Engine.Done
+				})
+			})
+
+			t.Run("it adds only the samples that have the same subject", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o := NewObserver()
+					cluster := uuidpb.Generate()
+					a := uuidpb.Generate()
+					reach := supports(queuePending, metricsgrpc.Reach_REACH_NODE)
+
+					first := startNode(t, ctx, o, cluster, reach)
+					second := startNode(t, ctx, o, cluster, reach)
+
+					// The messages are equal, but the subjects are not, and the
+					// subject is what says that two samples are of one thing.
+					first.sample(t, 0, "x", 1, pending(a, 3))
+					second.sample(t, 0, "y", 1, pending(a, 4))
+
+					if got := len(Combine(time.Now(), o.Nodes())); got != 2 {
+						t.Fatalf("unexpected number of cluster samples: got %d, want 2", got)
+					}
 
 					cancel()
 					<-first.Engine.Done

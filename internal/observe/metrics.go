@@ -70,11 +70,10 @@ type Sample struct {
 	// that runs the Observer.
 	At time.Time
 
-	// identity says what the sample describes, in a way that is the same on
-	// every node: the message without its value. A subject is only meaningful
-	// on the stream that it came from, so this is what the samples of different
-	// nodes are matched by.
-	identity string
+	// subject says what the sample describes. Equal subjects of the same
+	// metric, from any nodes of one cluster, describe the same thing, so this is
+	// what the samples of different nodes are matched by.
+	subject string
 
 	// run is the value of a running total over the last [rateWindow], in the
 	// order that the values arrived. It is nil for a metric that isn't a running
@@ -472,11 +471,6 @@ func (t metricTable) decode(
 		return seriesKey{}, Sample{}, false, fmt.Errorf("the value of a %s sample is malformed: %w", e.name, err)
 	}
 
-	identity, err := identityOf(m)
-	if err != nil {
-		return seriesKey{}, Sample{}, false, err
-	}
-
 	return seriesKey{e.name, string(s.GetSubject())},
 		Sample{
 			Metric:   e.name,
@@ -484,7 +478,7 @@ func (t metricTable) decode(
 			Message:  m,
 			Revision: s.GetRevision(),
 			At:       at,
-			identity: identity,
+			subject:  string(s.GetSubject()),
 		},
 		true,
 		nil
@@ -494,17 +488,6 @@ func (t metricTable) decode(
 func valueOf(m proto.Message) uint64 {
 	r := m.ProtoReflect()
 	return r.Get(valueField(r.Descriptor())).Uint()
-}
-
-// identityOf returns what the message describes, which is the message without
-// its value.
-func identityOf(m proto.Message) (string, error) {
-	m = proto.Clone(m)
-	r := m.ProtoReflect()
-	r.Clear(valueField(r.Descriptor()))
-
-	b, err := proto.MarshalOptions{Deterministic: true}.Marshal(m)
-	return string(b), err
 }
 
 // ClusterSample is the value of one metric of one subject, such as the number
@@ -551,8 +534,8 @@ func addRates(a, b *float64) *float64 {
 //     Samples from the others are ignored, so that the result never mixes
 //     values from different calls.
 //   - When it is the node, each node's samples describe only the work that
-//     node owns. For each thing that nodes measure, the result is the sum of
-//     their values.
+//     node owns. For each subject, the result is the sum of the values of the
+//     nodes' samples of it.
 //
 // If nodes don't agree about a metric's reach, the first node to begin a call
 // decides, and the nodes that disagree are ignored for that metric.
@@ -585,7 +568,7 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 	}
 
 	type thing struct {
-		metric, identity string
+		metric, subject string
 	}
 	var out []ClusterSample
 	sums := map[thing]int{} // the index in out of what has been summed
@@ -609,7 +592,7 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 				}
 
 			case metricsgrpc.Reach_REACH_NODE:
-				k := thing{s.Metric, s.identity}
+				k := thing{s.Metric, s.subject}
 				i, ok := sums[k]
 				if !ok {
 					sums[k] = len(out)
