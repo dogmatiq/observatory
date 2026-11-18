@@ -19,6 +19,11 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
 - **Site**: the set of applications, or the clusters that run them, that are deployed to one place. It is the same thing
   as the `site` identity in a Dogma envelope.
 - **Universe**: every site and cluster connected to one Observatory.
+- **Vitals**: the headline figures across the top of a page, such as the events per minute and the queues of a cluster.
+  The vitals of a page are about the whole of what the page is for.
+- **Breakdown**: what a page shows below its vitals, an entry for each part of what the vitals add up, such as a card for
+  each handler of a cluster. It is the layer below the page's entity only when that layer is what is worth looking at,
+  which is not always so: the breakdown of a cluster is its handlers, not its nodes.
 
 ## Decisions
 
@@ -75,6 +80,15 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
 - No built-in login. Run it behind a proxy.
 - The Observatory derives rates from the counters that engines send, and keeps its history in memory only.
 - The app must be robust. When one component of a page fails, the rest of the page is still shown.
+- A page gets its data from a stream of server-sent events, as the prototype's page learned of heartbeats, and the
+  stream only says what changes. The server aggregates: a page is a set of components, each with a key and props, and
+  the stream sends a component's whole new props only when they differ from what that page was last sent, appends the
+  new points of a chart, and tells the page of each heartbeat as it arrives. Every connection starts with a burst of
+  everything, ending in `synced`, as a metrics call starts with a sample of every series, and a page that reconnects
+  replaces its state with the burst. A rate is sent as times per second and rounded to three significant figures, and the
+  page decides how to show it. The names are kept readable and short, and shortened further only where a measurement
+  says that they matter. The protocol is documented in the package comment of `internal/server`. The cluster list is
+  asked for again every second, which is a stopgap until the universe view.
 
 ### Spec
 - Developed in dogmatiq/protobuf, in the Go packages `enginegrpc` and `metricsgrpc`, whose Protocol Buffers packages are
@@ -203,8 +217,19 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
   makes that impossible, or where this plan explicitly adds something to it. Those places are recorded below. An
   addition matches the prototype's style, colors, layout and behavior. The exact look is the starting point. Its
   shortcomings are addressed after it matches, and the work then moves up to the site and universe levels.
+- The user interface is navigatory, not modal. Where a page is can be seen and followed, and every view has its own
+  address. Nothing in the interface holds a current site or cluster that the other pages then use, and there is no
+  switcher that sets one. Moving to another place means following a link to it.
 - v1 does not drill down to individual things, as the prototype did: no pages for a handler instance, a queue, an event
   stream or a message.
+- The overview pages of the universe, a site and a cluster have vitals across the top and a breakdown below, and their
+  vitals are the same size. Other pages, such as the drill-downs, needn't have either. An entity such as a cluster has an
+  overview page, and it can have drill-downs of its own, so a kind of entity doesn't have just one page.
+- The breakdown of a site is its clusters, and is not a card for each. A site holds many applications, so what a person
+  wants to know of it is whether anything is wrong and where, how busy it is, and how to reach a cluster, and not the
+  data of every handler. The idea to try first is a matrix with a cell for each cluster, like GitHub's contribution
+  matrix, in a fixed order so that a cluster keeps its place, with the cell showing a cluster's health and each cell
+  leading to the cluster's page.
 - The three views:
   - **Universe view**: the default page, across all sites, showing the health of the whole ecosystem. There is wide
     latitude for a creative "hero page" here. It may also be just a summarized view of the others.
@@ -213,22 +238,30 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
 - Scale to design for: about 100 clusters per site and 10 sites.
 
 ### Health
+- Deferred until close to the end of the plan. The rules are implemented in the backend and nothing uses them, and the work
+  on them, such as naming the backlog rule for the due messages that it is about, waits until then. The reds on a page are
+  plain data and are not Issues: a number is red because it is above zero. An Issue will have an indicator of its own that
+  is not only a color, for which a striped warning tape is the idea.
 - The Observatory decides health from facts that the engines send, by fixed rules. Engines send facts only.
 - The Observatory defines no rule that depends on configuration that it does not know. It can be told node configuration
   by each node, but the nodes of one cluster may differ.
+- What a rule finds is an *Issue*. A cluster is unhealthy when it has any.
 - v1 has only rules for what is clearly already a problem:
   - **Failed deliveries**: a queue holds a message with a failure streak.
   - **Backlog**: a queue holds messages that are due, and the number of them has not fallen within 5 minutes, measured
     by the Observatory's own clock. The rule is defined by time because the engine, not the Observatory, is responsible
     for how often metrics arrive.
   - **Membership**: each node sends the set of nodes that it believes are live. The members of a cluster are all the
-    nodes in any of those sets. A cluster is unhealthy when any member is not reporting. A node is reporting as the Spec
-    section defines it, from its heartbeats or, if it doesn't heartbeat, from its open `WatchEngine` call.
+    nodes in the sets of the nodes that are reporting, or in the sets of every node when none is reporting, because the
+    set of a node that stopped may list nodes that have left since. A cluster is unhealthy when any member is not
+    reporting. A node is reporting as the Spec section defines it, from its heartbeats or, if it doesn't heartbeat, from
+    its open `WatchEngine` call.
 - These rules will mark a cluster as unhealthy during a deploy, and a queue during a long rise in traffic. That is
   accepted for v1, because a deploy and a rise in traffic are moments when an operator wants to look. The rules can be
   tuned later.
 - A cluster is forgotten automatically after 3 days in which none of its nodes reported. The UI also has a "remove"
-  action.
+  action, which it offers only for a cluster that has no node reporting. Removing a cluster that is still reporting
+  would only clear its history, because its nodes connect again.
 - How a flagged queue or node is shown is not decided at this level.
 
 ## Impact on what the prototype does
@@ -256,23 +289,168 @@ this list up to date as the plan evolves: add each new difference when it is fou
 
 - The heartbeat chart shows no heartbeats for a node that isn't connected to the Observatory. The prototype received
   every node's heartbeats from the database.
+- The title bar says "Observatory", and then the name of the application that the cluster runs, where the prototype says
+  the name of the application and then "inspector". The prototype had one application, and the Observatory has many
+  sites, clusters and applications, so the name is where the page is, not the name of the tool's subject. How the title
+  bar shows where the page is will change, as the site and universe views come.
+- The footer shows no versions of Dogma, runkit or the application. The Observatory never loads application code, and the
+  spec has no place for them: neither the engine API's preamble nor the metrics API's carries a version of anything. They
+  return when the spec does.
 - The three tiles and the handler cards are links in the prototype, to the streams, queues, cluster-nodes and handler
   pages. Those pages are not in v1.
 - The prototype's navigation bar links to the streams, queues, cluster-nodes and per-type handler pages, which are not in
   v1.
-- By explicit request, each handler card also shows the commands or deadlines that the handler handled per minute, and
-  for a process handler the deadlines canceled per minute, derived from per-handler totals. The prototype had only the
-  cluster's messages removed per minute, which mixes successes and cancellations. The Observatory shows those
-  per-handler rates when the engine supports their metrics, and the commands and deadlines removed per minute, added
-  together, when it supports only those.
 - The handler card of an aggregate handler doesn't show active instances. The spec replaces them with the instances
   that a node holds in memory, which runkit doesn't support yet.
 - A section of the cluster view whose metric the engine doesn't list in its preamble is hidden. In v1 that may include
   the aggregate instances per event stream and the unhandled events of each handler, if runkit can't count them within
   its budget.
+- The cards and the queues tile use the spec's words, which keep their meaning though the grammar bends. A message kind on
+  its own, such as "commands", "events", "deadlines" or "messages", is the ones that are pending, and its tooltip, later its
+  popover, says "pending". The prototype said "command backlog", "event backlog" and "deadlines". Spelling "pending" out on
+  every label made the process card's stats too wide for one row. "In progress" is the spec's word too. A process's
+  instances that are bound to no queue are the last segment of its bar and are counted in "in progress".
+- Failing messages are the red "+N" after the number that waits, such as "24 +1", on the queues tile and on a handler
+  card, where the prototype had the number in red and the count in a line of its own along the bottom of the card. The
+  failing messages are part of the ones that wait, so the number that is not red is those that are not failing. A line of
+  its own made the card taller when messages began to fail, and moved the page. The red accent along the top of the card is
+  unchanged.
+- The cluster is teal-green where the prototype's was green, because green is for what is healthy on the site and universe
+  views, and the cluster's own tile must not look healthy when its cluster isn't. The icon of each kind of handler has
+  the color of the sticky note of the kind in event storming, where the prototype colored it by the messages that the
+  kind works with: yellow for an aggregate, lilac for a process, pink for an integration and a lime green for a projection, which keeps it apart from the cluster's teal-green.
+- The tooltip of the messages removed per minute doesn't say that the figure comes from PostgreSQL's table statistics,
+  because the Observatory reads no database.
 - Counts are exact and have no limit, so the Observatory never shows the prototype's "at least" form with a plus sign.
 - The prototype shows "Reading the database for the first time" before its first reading. The Observatory doesn't read a
   database.
+
+## Changes wanted to the cluster view
+
+What has been asked for, in the order it came, to be settled before the site and universe views, because they reuse its
+parts. Nothing here is built yet.
+
+- Popovers in place of title text, for the bars and for everything else that has a tooltip.
+- The same for a sparkline: pointing at a place on it shows the value there.
+  - A sparkline scrolls, so the point under the pointer moves. Until a click, the readout is whatever is under the
+    pointer. A click anchors it to that time, and the cursor then moves with the graph.
+  - The cursor line fades out before it reaches the bar above, or flows into the readout in some way. Where it meets the
+    chart's own line, not the shaded area, the line is more intense. It is not made to connect when it can't.
+  - On the heartbeat chart, the hovered node's share has no border. Its line and its shade are more intense instead.
+  - The readout is not a popover that follows the pointer. It is something on the card that appears only while the chart
+    is pointed at, perhaps expanding from the card's icon, and always inside the card.
+- Clicking a segment of a bar goes to something about that thing, such as a queue, an event stream or a node. Those pages
+  don't exist, and none is made up until there is something good to show there. Until then a segment is not a link.
+- The colors of the icons of handler types match the colors of event storming's sticky notes, and not the kind of message
+  that a handler works with: yellow for an aggregate, lilac for a process, which is a policy, pink for an integration,
+  which is an external system, and green for a projection, which is a read model. Done, as the visible differences say.
+  There must not be many colors, and the projection's green and the process's lilac come close to the healthy green that
+  the site view will use and to the event streams' indigo, to be judged when they are side by side on a page.
+- The color mark that an identifier gets (below) comes from a palette that we control and that is reasonably large, so
+  that two identifiers rarely share one.
+- Identifiers. A UUID is inevitable on the page and it irks. It needs a special treatment, so that a person can tell
+  one from another and knows what it is, without the 36 characters.
+- A handler card's chart is events recorded or handled, so the card of an integration that records no events, such as the
+  mailer, has no chart and looks idle while it is busy handling commands. Decided: the chart shows what the handler's
+  routes say that it works with. An aggregate charts events recorded, because it produces the business changes, and a
+  process or a projection charts events handled. An integration charts events recorded if its routes produce any event
+  type, and commands handled if they produce none. The routes are in the application's description, so the rule never
+  changes while a handler runs, and it needs no thresholds. Charting whichever of the two there is more of would adapt
+  as a handler's ratio changes, but it needs a rule for when to change and a label that changes with it, and it is for
+  later if this proves wrong for a handler whose two counts differ. Nothing about it is configurable.
+- An integration or a projection has no instances, so its card has no bar. A bar of the nodes that own the handler's
+  workload would give it one, and both kinds care about concurrency. The spec can't say which node owns which handler's
+  workload: a workload has a key and a description for people, and nothing links it to a handler or a queue.
+- Flag a handler that minimizes concurrency but seems to be running on more than one node. It would be a health rule, and
+  so an Issue. It can be found without knowing who owns the workload: the counters of what a handler handled are per
+  node, so two nodes whose counters for one handler are both growing is handling seen on two nodes. A move of the
+  workload between nodes makes it true for a short time, so the rule would need the two nodes to keep growing for a
+  while, like the backlog rule, and its time is fixed, not set by a person. Whether the hint is clearly a problem when
+  it is not met is the question of the health rules' own test.
+- The icons on a handler card, which are the handler's kind, the little icons before its numbers, and the concurrency
+  icon, feel as though they should do something when pointed at or chosen. What, is not settled.
+- A bar shows how something is spread over the engine's partitions, and it is healthiest, for scalability, when the
+  segments are close to even. A uniform bar means no hot partition. The page could say so: a faint mark where an even
+  share would end, or a cue on a segment that is far larger than its even share. It is a cue and not an Issue, because an
+  uneven bar is not clearly a problem. The sizes in a bar are not all load: the length of an event stream only adds up
+  what it ever received, and a queue's messages are its backlog, so the cue is truer for the rate at which a stream
+  grows, for the instances in a handler's bar, and for the workloads of the nodes.
+  The queues' bar meets it only when there is a backlog worth caring about: a backlog that is spread over queues can be
+  worked through in parallel, and one that sits in a single queue can't, so there the even bar is the better one, and
+  with no backlog the bar needs no cue.
+  The events tile's bar meets it more than first thought: in a growing system new instances get bound to the quieter
+  streams, so the lengths should converge to even. They converge slowly, because a length adds up everything that a stream
+  has received, but the bar is true about that history. The spec does not promise how an engine binds instances, and it
+  needn't: an engine that lets one stream run hotter than the rest limits its throughput by how streams work, because a
+  stream is consumed in order, so unevenness is a sign of harm whatever the engine's policy. It is a cue, and not an
+  Issue, until it is clear that a rule for it would be about something that is already a problem.
+- A bar of the nodes that handled an integration's or a projection's messages could use the per-node rates of what the
+  handler handled. The data is there, since each node reports its own totals, and Combine adds them up. A share of the
+  rate would be volatile, so the shares would be smoothed with an exponentially weighted average. It says who did the
+  work, not who owns it. For a handler that minimizes concurrency, one node doing all the work is the healthy bar, which
+  reverses what an even bar means.
+- Easter eggs for a sparkline with nothing to draw. Each would need to look unlike data, take no room, stay still under
+  a request for reduced motion, and appear only when a chart really is empty, never in place of the sign that a figure is
+  stale or unknown. A night sky of twinkling stars in the dark color mode was tried, with a shooting star, and parked: the
+  stars did not read well enough, and the shooting star was too obvious to be an easter egg. The idea stays. An easter egg
+  has to be subtle enough to be found by chance. It is in the history, at `3a30728`.
+- Use the spec's words on the page: commands pending, events pending and deadlines pending for what the cards call
+  backlogs, messages pending in the queues tile, and instances in progress, which is also the spec's word. The health
+  rule that is called Backlog is about due messages, so it takes the spec's word "due" when the rules come back.
+- The minimize-concurrency icon on a handler card shows a question-mark pointer when pointed at. An information icon would
+  be the usual cue for a tooltip, but this is already a small icon, so the pointer should not suggest more help is behind
+  it. A proper popover gives it its explanation.
+
+### What a page shows when a metric isn't available
+
+Decided. A slot is a place on a page that has a job, such as a tile's headline, its bar or a card's chart. Each slot has
+the metric, or the group of metrics, that fills it, and the slot is removed when no node supports it, so that the page
+responds to what the nodes can report and doesn't stretch what is available into a shape that was decided first. A tile
+with nothing left is not shown. A slot has one candidate for now. Letting a slot fall back to a similar metric is
+[dogmatiq/observatory#3](https://github.com/dogmatiq/observatory/issues/3).
+
+- A metric that is supported and has no value yet is not a missing slot. A rate that has never been known is a dash,
+  and one that is lost keeps its last value, fading to the muted colour, the one of a number that is zero, and becomes a
+  dash after a minute.
+- A part that begins or ends while a page is open grows in or shrinks away, with some animation, and not necessarily the
+  same one for every part. Stats on a card appear and go without one so far.
+- The state document says which: a part that no node supports is absent, and a rate that is supported and not yet known
+  is an empty object.
+
+### Changes asked for after the cluster view was built
+
+- Failing counts are orange, and red is kept for health Issues. Done: the failing count and the accent along the top of
+  a card with failing messages are orange (`--color-failing`, a red-orange). The "no live nodes" alarm stays red, because it is a
+  judgment, as an Issue will be.
+- Animating the numbers themselves, such as rolling the digits of a counter like a flip clock, was tried and is too
+  much. Numbers change at once. What around them changes may be animated.
+- The punctuation in a handler's name is muted, the same colour as a number that is zero. Done.
+- The failing count is smaller on a card, and its digits have their tops on the same line as the number's, which is
+  not a superscript. Done.
+
+## Held back from the views
+
+What the spec carries, or what the Observatory already computes, that no view shows. The cluster view keeps to the
+figures that the prototype's overview had, and the rest is for drilling down. Add to this list whenever something exists
+but isn't shown, and decide towards the end which of them to show and where.
+
+| What | Where it is | Why it isn't shown |
+|---|---|---|
+| Commands or deadlines handled per minute by each handler | `HandlerCommandsHandled`, `HandlerDeadlinesHandled` | Added to the cards, then taken off to keep the prototype's figures. |
+| Deadlines canceled per minute | `HandlerDeadlinesCanceled` | As above. |
+| Process instances ended per minute | `ProcessInstancesEnded` | As above. |
+| Events recorded or handled per minute as a figure | `HandlerEventsRecorded`, `HandlerEventsHandled` | The cards draw only their chart, as the prototype did. |
+| Messages that are due, by queue and by handler | `QueueCommandsDue`, `QueueDeadlinesDue`, `HandlerCommandsDue`, `HandlerDeadlinesDue` | Only the backlog rule reads the queues' counts. No view does. |
+| Instances that a node holds in memory | `AggregateInstancesInMemory`, `ProcessInstancesInMemory` | The Observatory doesn't read them yet, and runkit doesn't support them. |
+| Which queue or handler has the failing messages | `QueueCommandsFailing`, `QueueDeadlinesFailing`, and the handler counterparts | The tile and the card show only the total. |
+| The Issues that the health rules find | `Health.Assess` | No view shows them, and nothing calls `Assess` yet. |
+| Removing a cluster | `Observer.Forget` | The "remove" action has no control. |
+| A node's description, its heartbeat timing, its call's error | `Node` | Only the heartbeat levels are drawn. |
+| A workload's description | `Workload` in the engine API | The cluster tile shows only the number of workloads. |
+| A handler's and an application's Go type, and the messages that a handler uses | `configpb` | Only a handler's name, type and key are used. |
+| A handler's failing messages split into commands and deadlines | `HandlerCommandsFailing`, `HandlerDeadlinesFailing` | The card shows one total. |
+| Which nodes handled a handler's messages, and how many each | the per-node samples that `Combine` adds up | Only the sums are used. |
+| A handler's concurrency preference when it is not minimize | `ConcurrencyPreference` | Only minimize has an icon. |
 
 ## Delivery order
 
@@ -291,6 +469,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   - [x] The `EngineAPI` `.proto` files in `enginegrpc`, at `v1alpha1`
     ([dogmatiq/protobuf@99574d8](https://github.com/dogmatiq/protobuf/commit/99574d8),
     [dogmatiq/protobuf@f71b447](https://github.com/dogmatiq/protobuf/commit/f71b447)).
+  - [x] A handler's concurrency preference in `configpb`, and the metric `ProcessInstancesEnded`
+    ([dogmatiq/protobuf#40](https://github.com/dogmatiq/protobuf/pull/40)).
 - [ ] **Tunnel, in dogmatiq/tenet**: delivered as [its own
   plan](https://github.com/dogmatiq/tenet/blob/main/docs/.plans/2026-11-17-tenet-v1.md) says.
 - [ ] **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
@@ -326,8 +506,8 @@ Tick each item when it is done, and write the pull request or commit that did it
     ends leaves no values and `Node.MetricsErr`, and is made again after 5 seconds, except when the node answers
     UNIMPLEMENTED, which means that it reports no metrics. `Combine` turns the nodes of one cluster into what the
     cluster as a whole reports: for a metric whose reach is the cluster, the samples of one node, the one whose call
-    began first; for a metric whose reach is the node, the sums over the nodes that are reporting, matched by what the
-    message describes, since a subject means something only on its own stream. A call is made to every node, because the
+    began first; for a metric whose reach is the node, the sums over the nodes that are reporting, matched by their
+    subject, which the spec now makes comparable among the nodes of one cluster. A call is made to every node, because the
     metrics whose reach is the node need every node. The cluster-reach samples of the nodes that aren't chosen are
     ignored, so a result never mixes values from different calls.
   - [x] **Rates and history**: rates from running totals within one call, and the history kept in memory for the
@@ -339,17 +519,53 @@ Tick each item when it is done, and write the pull request or commit that did it
     The metrics that are running totals are a list in the Observatory, from the docs of the spec. The Observer keeps
     when each node's heartbeats arrived, for 10 minutes, and `Trail` is the bounded history of one number that the
     cluster view adds to for each sparkline.
-  - [x] **Health rules**: failed deliveries, backlog and membership, and forgetting a cluster after 3 days.
+  - [x] **Health rules**: failed deliveries, backlog and membership, and forgetting a cluster after 3 days. What a rule
+    finds is an *Issue*, and a cluster is unhealthy when it has any. `Health.Assess` decides from `Observer.Nodes()`,
+    and it remembers what it has seen, because a queue has a backlog when the number of messages that are due, commands
+    and deadlines together, has not fallen for 5 minutes as `Assess` has seen it. A queue whose messages stop being due,
+    or that no node reports, starts again. The members of a cluster come from the sets of live nodes of the nodes that
+    are reporting, or of every node when none is, so that a node that left is not a member forever and a cluster that
+    stopped is still unhealthy. A member that no node has connected for is not reporting. `Observer.ForgetIdle` forgets
+    a cluster 3 days after the last time that any of its nodes was reporting, and `Observer.Forget` forgets a cluster
+    for the "remove" action. Both end the connections of its nodes, and a node that connects again is new.
   - [ ] **Engines through tenet**: accepting engines through tenet once its two sides work, and checking engines' server
     certificates once their gRPC connections use mutual TLS.
-  - [x] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots (73f1466).
-  - [x] **Cluster view**: the prototype's overview, exactly, with the differences recorded above (73f1466, 721e01e).
+  - [x] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots. The
+    overview is built from components that the cluster view reuses, with the prototype's colors, spacing, radii, shadows
+    and fonts as Tailwind theme tokens, and it matches a frozen copy of the prototype page in light and dark at 1440, 900
+    and 390 pixels wide, with no pixel over the comparison's threshold. The heartbeat chart is drawn once, and the
+    sparklines don't scroll, which the cluster view adds with live data.
+  - [x] **Cluster view**: the prototype's overview, exactly, with the differences recorded above, fed by live data.
+    `observe.Recorder` keeps the history behind each chart, one point a second for the last 70 seconds, and makes the
+    `ClusterView` of a cluster from what its nodes report: the tiles and the handler cards, with a section left out when
+    no node supports its metrics, and a number left out until it can be given. `internal/server` serves `GET
+    /api/clusters` and `GET /api/clusters/{id}` as JSON, and `GET /api/clusters/{id}/watch` as a stream of changes to what the page draws. The pages are `/`, a plain
+    list of the clusters, each with its site or else the start of its ID, that stands in for the universe view, and `/clusters/{id}`. `cmd/demo` serves the API with a
+    simulated cluster, which is the source of moving data for developing the page. The heartbeat levels and the scrolling
+    sparklines are on the page.
   - [ ] **Smoke test**: a real engine with the Observatory, managed by the Observatory's CI.
   - [ ] **Beyond the cluster view**: its shortcomings, then the site view, then the universe view.
 - [ ] **Near release, dogmatiq/protobuf**: the spec is added as a stable package, and runkit and the Observatory switch to
   it.
 
 ## Open
+- A node that joins, or comes back, makes the cluster-wide rate of anything that nodes count unknown for five seconds,
+  because a rate that any contributor can't give yet is none, so a `?` shows for that long. The demo does this now, because
+  its nodes go down and come back. It belongs to the rule for what an unknown figure does, which is parked.
+- Which node owns the workload of which handler. A workload is `{key, description}` and `Workloads` is the set that a node
+  owns, so the Observatory can say how many workloads a node owns and not what they are for. A bar of the nodes that run
+  an integration or a projection needs the spec to link a workload to a handler, or to the queue or event stream that it
+  works on.
+- A rule for what a rate that isn't known yet, or that may be stale, does on the page. Three questions: whether such a
+  figure earns the space that it takes, by a test that we have still to write; whether the layout shift that it causes
+  when it appears is worth it; and how to show that a figure may be stale with less visual weight than a `?`, such as a
+  glitch or a fade on the text, which doesn't change the layout. The rules would differ for the large figures of a tile
+  and for the figures that sit inside a line of prose. Come back to it with the site and universe views, which have the
+  same figures in smaller places.
+- The versions that the prototype's footer showed, of Dogma, the engine and the application, have no place in the spec.
+  The engine API's preamble has a description for people and the application's identity, and neither the engine API nor
+  the metrics API says what software a node runs. Whether the preamble gets a general list of named versions, or the
+  facts are metrics, or the application's description carries its own version, is a spec decision.
 - The observation budget's actual limits. They are set before the prototype's queries are ported.
 - Where runkit keeps its counters of removed commands and deadlines: in memory on each node, which makes them
   node-scoped and restart from zero with the node, or in counter rows kept by triggers, which adds contention to the
