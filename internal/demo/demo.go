@@ -131,7 +131,7 @@ type cluster struct {
 // running total.
 type state struct {
 	commandsQueued, deadlinesQueued int
-	failing                         int
+	failing, failingDeadlines       int
 	eventsPending                   int
 }
 
@@ -300,6 +300,14 @@ func (c *cluster) advance() {
 	if at := c.ticks % 40; at >= 10 && at < 30 {
 		c.state.failing = 1 + (at-10)/7
 	}
+
+	// Deadlines for the process fail for twenty seconds in every forty too, but
+	// begin ten seconds after the mailer's commands do, so that the two overlap
+	// for ten seconds of each forty, and are alone for ten seconds each.
+	c.state.failingDeadlines = 0
+	if at := c.ticks % 40; at >= 20 {
+		c.state.failingDeadlines = 1 + (at-20)/7
+	}
 }
 
 // supported is the metrics that each node reports, in the order of their
@@ -312,12 +320,14 @@ var supported = []struct {
 	{new(metricsgrpc.QueueCommandsPending), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.QueueDeadlinesPending), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.QueueCommandsFailing), metricsgrpc.Reach_REACH_CLUSTER},
+	{new(metricsgrpc.QueueDeadlinesFailing), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.QueueCommandsRemoved), metricsgrpc.Reach_REACH_NODE},
 	{new(metricsgrpc.QueueDeadlinesRemoved), metricsgrpc.Reach_REACH_NODE},
 	{new(metricsgrpc.HandlerCommandsPending), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.HandlerDeadlinesPending), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.HandlerEventsPending), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.HandlerCommandsFailing), metricsgrpc.Reach_REACH_CLUSTER},
+	{new(metricsgrpc.HandlerDeadlinesFailing), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.HandlerCommandsHandled), metricsgrpc.Reach_REACH_NODE},
 	{new(metricsgrpc.HandlerDeadlinesHandled), metricsgrpc.Reach_REACH_NODE},
 	{new(metricsgrpc.HandlerDeadlinesCanceled), metricsgrpc.Reach_REACH_NODE},
@@ -372,6 +382,7 @@ func (c *cluster) readings(node int) []reading {
 	add(metricsgrpc.QueueCommandsPending_builder{QueueId: c.commandsQ, Value: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.commandsQ)
 	add(metricsgrpc.QueueDeadlinesPending_builder{QueueId: c.deadlinesQ, Value: uint64(c.state.deadlinesQueued)}.Build(), c.deadlinesQ)
 	add(metricsgrpc.QueueCommandsFailing_builder{QueueId: c.commandsQ, Value: uint64(c.state.failing)}.Build(), c.commandsQ)
+	add(metricsgrpc.QueueDeadlinesFailing_builder{QueueId: c.deadlinesQ, Value: uint64(c.state.failingDeadlines)}.Build(), c.deadlinesQ)
 	add(metricsgrpc.QueueCommandsRemoved_builder{QueueId: c.commandsQ, Value: part("removed.commands")}.Build(), c.commandsQ)
 	add(metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: c.deadlinesQ, Value: part("removed.deadlines")}.Build(), c.deadlinesQ)
 
@@ -381,6 +392,7 @@ func (c *cluster) readings(node int) []reading {
 	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.mailer, Value: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.mailer)
 	add(metricsgrpc.HandlerCommandsFailing_builder{HandlerKey: c.mailer, Value: uint64(c.state.failing)}.Build(), c.mailer)
 	add(metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: c.schedule, Value: uint64(c.state.deadlinesQueued)}.Build(), c.schedule)
+	add(metricsgrpc.HandlerDeadlinesFailing_builder{HandlerKey: c.schedule, Value: uint64(c.state.failingDeadlines)}.Build(), c.schedule)
 	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.schedule, Value: uint64(c.state.eventsPending)}.Build(), c.schedule)
 	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.balances, Value: uint64(c.state.eventsPending / 2)}.Build(), c.balances)
 

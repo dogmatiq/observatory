@@ -153,4 +153,58 @@ func TestRun(t *testing.T) {
 			<-done
 		})
 	})
+
+	t.Run("it fails the mailer's commands and the process's deadlines, each in turn and for a while together", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o, r := observe.NewObserver(), observe.NewRecorder()
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				Run(ctx, o)
+			}()
+
+			var mailerOnly, processOnly, both, neither bool
+			for range 200 {
+				time.Sleep(time.Second)
+				r.Record(time.Now(), o.Nodes())
+
+				for _, c := range observe.Clusters(time.Now(), o.Nodes()) {
+					view, _ := r.View(time.Now(), o.Nodes(), c.ID)
+
+					var mailer, process uint64
+					for _, h := range view.Overview.Handlers {
+						switch h.Name {
+						case "mailer":
+							mailer = h.Summary.Failing
+						case "statement-schedule":
+							process = h.Summary.Failing
+							if h.Summary.QueuedMessages != nil && *h.Summary.QueuedMessages < process {
+								t.Fatalf("%d deadlines are pending, and %d are failing", *h.Summary.QueuedMessages, process)
+							}
+						}
+					}
+
+					switch {
+					case mailer > 0 && process > 0:
+						both = true
+					case mailer > 0:
+						mailerOnly = true
+					case process > 0:
+						processOnly = true
+					default:
+						neither = true
+					}
+				}
+			}
+
+			if !mailerOnly || !processOnly || !both || !neither {
+				t.Fatalf("mailer only: %t, process only: %t, both: %t, neither: %t", mailerOnly, processOnly, both, neither)
+			}
+
+			cancel()
+			<-done
+		})
+	})
 }
