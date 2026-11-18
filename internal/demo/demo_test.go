@@ -19,7 +19,9 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				Run(ctx, o)
+				if err := Run(ctx, o); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			for range 12 {
@@ -62,7 +64,9 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				Run(ctx, o)
+				if err := Run(ctx, o); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			// Each node counts a part of the messages that are removed, and a node
@@ -95,7 +99,9 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				Run(ctx, o)
+				if err := Run(ctx, o); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			fewest, most := 100, 0
@@ -128,7 +134,9 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				Run(ctx, o)
+				if err := Run(ctx, o); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			for range 600 {
@@ -162,7 +170,9 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				Run(ctx, o)
+				if err := Run(ctx, o); err != nil {
+					t.Error(err)
+				}
 			}()
 
 			var mailerOnly, processOnly, both, neither bool

@@ -511,8 +511,15 @@ func (c *cluster) runNode(ctx context.Context, o *observe.Observer, node int) er
 
 	for {
 		upCtx, stop := context.WithTimeout(ctx, up)
+		deadline, _ := upCtx.Deadline()
 		err := c.serveNode(upCtx, o, node)
 		stop()
+
+		// A call that gRPC ends at the deadline can report it a moment before the
+		// context does, which is the node going down as planned, and not a failure.
+		if !time.Now().Before(deadline) {
+			err = nil
+		}
 
 		c.setLive(node, false)
 
