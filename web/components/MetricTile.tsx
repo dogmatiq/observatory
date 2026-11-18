@@ -161,7 +161,7 @@ export function Failing({
 				"inline-grid grid-cols-[1fr] align-baseline",
 				phase === "in" && "motion-safe:animate-[failing-in_0.55s_ease-out]",
 				phase === "out" &&
-					"motion-safe:animate-[failing-out_0.3s_ease-in_forwards]",
+					"motion-safe:animate-[failing-out_0.8s_ease-in-out_forwards]",
 			)}
 			onAnimationEnd={() => setPhase((p) => (p === "out" ? "gone" : "steady"))}
 		>

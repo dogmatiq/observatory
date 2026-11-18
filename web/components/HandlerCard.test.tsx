@@ -40,7 +40,7 @@ function stats(container: HTMLElement) {
 	);
 }
 
-test("an aggregate shows its instances and commands pending", () => {
+test("an aggregate shows its instances and commands", () => {
 	const { container } = card("aggregate", {
 		instances: 1200,
 		queuedMessages: 3,
@@ -49,7 +49,7 @@ test("an aggregate shows its instances and commands pending", () => {
 
 	expect(stats(container)).toEqual({
 		instances: "1.2K",
-		"commands pending": "3",
+		commands: "3",
 	});
 });
 
@@ -69,7 +69,7 @@ test("an aggregate shows its active instances only when it is given them", () =>
 	expect(screen.getByTitle("Recently active")).toBeDefined();
 });
 
-test("a process shows the instances in progress, its events pending and its deadlines pending", () => {
+test("a process shows the instances in progress, its events and its deadlines", () => {
 	const { container } = card("process", {
 		schedulesDeadlines: true,
 		unhandledEvents: 7,
@@ -82,9 +82,20 @@ test("a process shows the instances in progress, its events pending and its dead
 
 	expect(stats(container)).toEqual({
 		"in progress": "10",
-		"events pending": "7",
-		"deadlines pending": "1",
+		events: "7",
+		deadlines: "1",
 	});
+});
+
+test("a message kind on its own is the ones that are pending, and its tooltip says so", () => {
+	card("process", {
+		schedulesDeadlines: true,
+		unhandledEvents: 1,
+		queuedMessages: 2,
+	});
+
+	expect(screen.getByTitle("events pending")).toBeDefined();
+	expect(screen.getByTitle("deadlines pending")).toBeDefined();
 });
 
 test("a process that schedules no deadlines has no deadlines or bar", () => {
@@ -92,23 +103,20 @@ test("a process that schedules no deadlines has no deadlines or bar", () => {
 		bindings: [{ id: "aaaaaaaa", instances: 4 }],
 	});
 
-	expect(Object.keys(stats(container))).toEqual([
-		"in progress",
-		"events pending",
-	]);
+	expect(Object.keys(stats(container))).toEqual(["in progress", "events"]);
 	expect(container.querySelector("svg[role=img]")).toBeNull();
 });
 
-test("an integration shows its commands pending", () => {
+test("an integration shows its commands", () => {
 	const { container } = card("integration", { queuedMessages: 12 });
 
-	expect(stats(container)).toEqual({ "commands pending": "12" });
+	expect(stats(container)).toEqual({ commands: "12" });
 });
 
-test("a projection shows its events pending", () => {
+test("a projection shows its events", () => {
 	const { container } = card("projection", { unhandledEvents: 12_000 });
 
-	expect(stats(container)).toEqual({ "events pending": "12.0K" });
+	expect(stats(container)).toEqual({ events: "12.0K" });
 });
 
 test("failing messages are counted after the others that wait, and the card is named by its handler", () => {
@@ -118,7 +126,7 @@ test("failing messages are counted after the others that wait, and the card is n
 	expect(within(article).getByText("+1")).toBeDefined();
 	expect(within(article).getByText(/1 message failing/)).toBeDefined();
 	expect(stats(container)).toEqual({
-		"commands pending": "3+1 and 1 message failing",
+		commands: "3+1 and 1 message failing",
 	});
 });
 
@@ -134,7 +142,7 @@ test("when all that waits is failing, the number that doesn't is zero and recede
 	const { container } = card("integration", { failing: 2, queuedMessages: 2 });
 
 	expect(stats(container)).toEqual({
-		"commands pending": "0+2 and 2 messages failing",
+		commands: "0+2 and 2 messages failing",
 	});
 	expect(
 		container.querySelector("span.font-medium.text-faint")?.textContent,

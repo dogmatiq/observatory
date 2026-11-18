@@ -156,7 +156,9 @@ function Summary({
 						<Failing count={summary.failing} size="stat" />
 					</>
 				),
-				label: `${plural} pending`,
+				// A message kind on its own means the ones that are pending.
+				label: plural,
+				title: `${plural} pending`,
 			});
 		}
 	};
@@ -168,7 +170,8 @@ function Summary({
 				tone: zeroOrNormal(unhandledEvents),
 				icon: "event",
 				value: formatCompact(unhandledEvents),
-				label: "events pending",
+				label: "events",
+				title: "events pending",
 			});
 		}
 	};

@@ -158,7 +158,7 @@ function QueuesTile({
 			valueTitle={formatNumber(healthy)}
 			detail={
 				<>
-					<Noun>{`${nounFor(messages, "message", "messages")} pending`}</Noun>
+					<Noun>{nounFor(messages, "message", "messages")}</Noun>
 					{` in ${countOf(data.queues.length, "queue", "queues")}, `}
 					<span title={removedPerMinuteTitle}>
 						{perMinute(data.removedPerMinute)}

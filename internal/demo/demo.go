@@ -266,10 +266,12 @@ func (c *cluster) advance() {
 	c.state.deadlinesQueued = c.walk(c.state.deadlinesQueued, 10, 30)
 	c.state.eventsPending = c.walk(c.state.eventsPending, 0, 6)
 
-	// A command for the mailer fails for twenty seconds in every two minutes.
+	// Commands for the mailer fail for twenty seconds in every forty, so that
+	// failures begin and end often enough to watch. There are more of them as the
+	// twenty seconds go on.
 	c.state.failing = 0
-	if c.ticks%120 >= 60 && c.ticks%120 < 80 {
-		c.state.failing = 1
+	if at := c.ticks % 40; at >= 10 && at < 30 {
+		c.state.failing = 1 + (at-10)/7
 	}
 }
 
