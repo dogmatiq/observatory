@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { Icon, type IconName } from "./Icon.tsx";
+import { Presence } from "./Presence.tsx";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
 /**
@@ -67,6 +68,7 @@ export function MetricTile({
 		raisedClasses,
 		"flex min-h-44 flex-col px-5 pt-5",
 		// The room for the chart is only there if there is one.
+		"transition-[padding-bottom] duration-400 motion-reduce:transition-none",
 		chart ? "pb-16" : "pb-5",
 		subsystemColors[subsystem],
 		href !== undefined && linkedCardClasses,
@@ -88,8 +90,12 @@ export function MetricTile({
 			<span className="relative z-10 mt-1 min-h-[calc(2*1.5em)] text-sm text-muted">
 				{detail}
 			</span>
-			{bar && <div className="relative z-10 mt-3">{bar}</div>}
-			{chart}
+			<Presence>
+				{bar && <div className="relative z-10 mt-3">{bar}</div>}
+			</Presence>
+			<Presence shape="fade" className="absolute inset-x-0 bottom-0">
+				{chart}
+			</Presence>
 		</>
 	);
 

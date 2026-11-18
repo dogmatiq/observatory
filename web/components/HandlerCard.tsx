@@ -10,6 +10,7 @@ import {
 	linkedCardClasses,
 	raisedClasses,
 } from "./MetricTile.tsx";
+import { Presence } from "./Presence.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
@@ -100,18 +101,20 @@ export function HandlerCard({
 				</span>
 			</div>
 			<Summary handler={handler} summary={summary} />
-			{history && (
-				<Sparkline
-					chart={history}
-					// The chart has the color of the messages that it counts.
-					className={cn(
-						"h-10",
-						subsystemColors[
-							handler.charted === "commands" ? "queues" : "streams"
-						],
-					)}
-				/>
-			)}
+			<Presence shape="fade" className="absolute inset-x-0 bottom-0">
+				{history && (
+					<Sparkline
+						chart={history}
+						// The chart has the color of the messages that it counts.
+						className={cn(
+							"h-10",
+							subsystemColors[
+								handler.charted === "commands" ? "queues" : "streams"
+							],
+						)}
+					/>
+				)}
+			</Presence>
 		</>
 	);
 
@@ -295,7 +298,9 @@ function Summary({
 						))}
 				</div>
 			</div>
-			{bar && <div className="mt-auto flex flex-col gap-4">{bar}</div>}
+			<Presence className="mt-auto">
+				{bar && <div className="flex flex-col gap-4">{bar}</div>}
+			</Presence>
 		</>
 	);
 }

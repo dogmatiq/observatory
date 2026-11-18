@@ -17,6 +17,7 @@ import { Figure } from "./Figure.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
+import { Presence } from "./Presence.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 
@@ -53,16 +54,20 @@ export function Overview({
 				className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5"
 				aria-label="Totals"
 			>
-				{data.events && (
-					<ErrorBoundary>
-						<EventsTile data={data.events} href={links.events} />
-					</ErrorBoundary>
-				)}
-				{data.queues && (
-					<ErrorBoundary>
-						<QueuesTile data={data.queues} href={links.queues} />
-					</ErrorBoundary>
-				)}
+				<Presence shape="fade">
+					{data.events && (
+						<ErrorBoundary>
+							<EventsTile data={data.events} href={links.events} />
+						</ErrorBoundary>
+					)}
+				</Presence>
+				<Presence shape="fade">
+					{data.queues && (
+						<ErrorBoundary>
+							<QueuesTile data={data.queues} href={links.queues} />
+						</ErrorBoundary>
+					)}
+				</Presence>
 				<ErrorBoundary>
 					<ClusterTile data={data.cluster} href={links.cluster} />
 				</ErrorBoundary>
