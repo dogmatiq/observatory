@@ -3,3 +3,4 @@
 /node_modules/
 apm_modules/
 /apm.lock.yaml
+.vscode/settings.json

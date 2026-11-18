@@ -12,9 +12,10 @@ facts about the prototype that this plan relies on are in [prototype-reference.m
 
 ## Terms
 
-These are the engine's terms. A person who is new to Dogma does not need them to use the Observatory.
+These are the terms that this plan uses. A person who is new to Dogma does not need them to use the Observatory.
 
-- **Cluster**: the engine nodes that share one database.
+- **Node**: one running process of an engine.
+- **Cluster**: the nodes that share the work of one application between them.
 - **Site**: the set of applications, or the clusters that run them, that are deployed to one place. It is the same thing
   as the `site` identity in a Dogma envelope.
 - **Universe**: every site and cluster connected to one Observatory.
@@ -34,10 +35,12 @@ These are the engine's terms. A person who is new to Dogma does not need them to
   Observatory is the gRPC client through that tunnel. The network direction is engine to Observatory, and the RPC
   direction is Observatory to engine, so the Observatory makes ordinary calls and opens server-streaming watches.
 - The tunnel is `dogmatiq/tenet`, a separate Go library with [its own
-  plan](https://github.com/dogmatiq/tenet/blob/main/docs/.plans/2026-11-17-tenet-v1.md). In its terms, the engine is the
-  initiator and the listener, and the Observatory is the acceptor and the dialer.
-- The engine serves its gRPC server on tenet's listener. The Observatory admits each engine in its own HTTP handler,
-  gets a tunnel from tenet, and makes its gRPC calls through the tunnel's `Dial`, with `grpc.WithContextDialer`.
+  plan](https://github.com/dogmatiq/tenet/blob/main/docs/.plans/2026-11-17-tenet-v1.md).
+- The engine serves its gRPC server on tenet's listener. The Observatory accepts each engine's WebSocket in its own HTTP
+  handler, gets a tunnel from tenet, and makes its gRPC calls through the tunnel's `Dial`, with
+  `grpc.WithContextDialer`.
+- tenet may let a dial carry an address, so that one tunnel can serve several destinations. If it does, `NodeDialer`
+  takes the address in `Dial` too, and the placeholder target in `NewClients` is replaced by it.
 - tenet doesn't know who connected. The Observatory identifies each tunnel by the node ID in the preamble of
   `WatchEngine`. On a second tunnel from the same node, it uses the newer one, and drops the older one once its calls
   have ended.
@@ -50,9 +53,14 @@ These are the engine's terms. A person who is new to Dogma does not need them to
   listen address.
 - The tunnel has two layers of TLS. On the outer connection, the engine verifies the certificate of whatever terminates
   the WebSocket's TLS, as an ordinary HTTPS client. On each connection inside the tunnel, the engine's gRPC server uses
-  the same credentials as it does on its listen address. If those are mutual TLS, the Observatory must present a client
-  certificate that the cluster accepts, so the Observatory still has to be given access to each cluster. Finer
-  configuration can come later.
+  the same credentials as it does on its listen address.
+- The Observatory holds no sensitive data, so it accepts a WebSocket from anyone, and the tunnel carries no trust of its
+  own. Trust comes from the gRPC connections inside the tunnel, which must eventually use mutual TLS: the engine accepts
+  only an Observatory whose client certificate the cluster trusts, and the Observatory accepts only an engine whose
+  server certificate it trusts. Until then, a client that isn't an engine can open a tunnel and send invented data.
+- The Observatory picks the node that answers cluster-wide questions: it reads one connected node, the one whose
+  `WatchMetrics` call began first, and moves to the next if that call ends. It calls every node, because metrics whose
+  reach is the node need every node. The engine chooses no node. Every node answers questions about itself.
 - One Observatory process in v1.
 
 ### Shape of the Observatory
@@ -93,12 +101,11 @@ These are the engine's terms. A person who is new to Dogma does not need them to
 - A heartbeat is one concept. When an engine heartbeats, it tells every relevant listener: its cluster, through the
   database notification it sends today, and the Observatory, through the `EngineAPI`. In v1 of the spec a node sends
   only its own heartbeats and does not relay heartbeats received from other nodes.
-- A node that heartbeats may say how often it will send a heartbeat.
 - Each node sends the workloads that it believes it owns, and the set of nodes that it believes are live.
-- Each answer to a cluster-wide question carries a `revision`: opaque bytes, compared byte by byte, that put the
-  `Sample`s of one cluster's nodes in order. The node chooses what it holds, such as a timestamp or a logical
-  clock. The ordering is a best effort with no promise, and a revision doesn't give how much time has passed. The
-  Observatory shows the answer with the greatest revision, and tolerates revisions that are out of order.
+- Each `Sample` carries a `revision`: opaque bytes, compared byte by byte, that put the samples of one subject from a
+  cluster's nodes in order. The node chooses what it holds, such as a timestamp or a logical clock. The ordering is a
+  best effort with no promise, and a revision doesn't give how much time has passed. The Observatory shows the sample
+  with the greatest revision, and tolerates revisions that are out of order.
 - The Observatory measures every duration, such as the backlog rule's 5 minutes and the time between counters for a
   rate, with its own clock, at the moment each answer arrives.
 - Each `WatchMetrics` call starts with a preamble that holds the node and cluster IDs, the node's own copy of the
@@ -138,11 +145,14 @@ These are the engine's terms. A person who is new to Dogma does not need them to
   next call sends a sample of it, so it never takes a value from an ended call for a current one. A node that is over
   the observation budget measures less often, and sends no signal, because the engine is responsible for how often
   metrics arrive.
-- A counter's value is comparable only with values of the same counter from the same call, so the Observatory derives
-  rates only within one call. Event stream lengths are not counters, and are comparable across calls and nodes.
-- The spec carries only the metrics that the cluster view and the health rules use. A handler's pending events are one
-  total across the cluster's own event streams, not a checkpoint per stream, and a workload is only its key, with a
-  description for people. The prototype's other metrics are added, compatibly, when a view needs them.
+- A running total is comparable only with values of the same running total from the same call, so the Observatory
+  derives rates only within one call. Event stream lengths are not running totals, and are comparable across calls and
+  nodes.
+- The spec carries only the metrics that the cluster view and the health rules use, with one exception: the handler
+  metrics for messages that are due, `HandlerCommandsDue` and `HandlerDeadlinesDue`, complete the set of handler metrics
+  by request, and no v1 view reads them. A handler's pending events are one total across the cluster's own event
+  streams, not a checkpoint per stream, and a workload is only its key, with a description for people. The prototype's
+  other metrics are added, compatibly, when a view needs them.
 - Every count is exact. A metric that an engine can't count exactly within its budget is one that it doesn't support,
   and doesn't list in the preamble. The prototype's counts that stop at a limit and say "at least" are not carried over.
 - The prototype's active aggregate instances, which had recorded an event within a window, are replaced by the aggregate
@@ -151,13 +161,12 @@ These are the engine's terms. A person who is new to Dogma does not need them to
   more, the spec is amended to promise it, or the Observatory stops relying on it.
 
 ### Engine (runkit)
-- New option that takes a plain Observatory address. Without the option, an engine does not dial. The engine verifies the
-  Observatory's certificate against the system's trusted roots. The site identity is a separate, optional option.
+- New option that takes the Observatory's URL, which is a secure WebSocket URL. Without the option, an engine does not
+  dial. It dials through tenet with an `http.Client`, which by default verifies the Observatory's certificate against
+  the system's trusted roots. The site identity is a separate, optional option.
 - New option `WithGRPCServerOptions`, which sets the options of the engine's gRPC server, however a client reaches it.
   `WithListenAddress` then takes only an address, which is a breaking change. The options are not given per route,
   because one server serves both the listen address and the tunnel.
-- The Observatory picks the node that answers cluster-wide questions: it asks one connected node, and moves to another
-  if that one fails. The engine chooses no node. Every node answers questions about itself.
 - The engine does everything the prototype did that needs the application or the database: the owners of workloads, the
   application's config, and database statistics. It serves counters and gauges, not rates.
 - The engine measures once however many watches are open, and chooses when to send. When it is over the observation
@@ -177,11 +186,8 @@ These are the engine's terms. A person who is new to Dogma does not need them to
   against the observation budget first. If it doesn't fit, runkit doesn't support those two metrics in v1, and the
   handler card hides them. runkit counts the process instances bound to each queue through a partial index of the
   instances in progress.
-- runkit counts the commands and the deadlines that it removes from each queue, each kind separately. The prototype's
-  count of rows deleted from `messagequeue.messages` can't tell the queues or the kinds apart, so how runkit counts them
-  is open. A cluster has tens of queues, spread across its nodes, so the number of counters on each node is small, and
-  the question is only where they live: in memory on each node, which makes the counters node-scoped and restart from
-  zero with the node, or in counter rows kept by triggers, which adds contention to the write path.
+- runkit counts the commands and the deadlines that it removes from each queue, each kind separately. Where those
+  counters live is open.
 - Observation has a stated budget for what it may cost a production engine. The schema, index and signal changes
   listed in the prototype's `docs/maintainers/inspector-schema-changes.md` are part of the engine work, because the
   engine now runs these queries continuously.
@@ -273,8 +279,8 @@ this list up to date as the plan evolves: add each new difference when it is fou
 Tick each item when it is done, and write the pull request or commit that did it beside it.
 
 - [x] **Tunnel spike** (see [spike/tunnel/README.md](../../spike/tunnel/README.md)): prove that a Node process can
-  accept a connection from a Go engine and act as the gRPC client on it, over plain TLS. Delete `spike/tunnel` when
-  `dogmatiq/tenet` exists.
+  accept a connection from a Go engine and act as the gRPC client on it, over plain TLS. Delete `spike/tunnel` once
+  tenet's two sides work.
 - [x] **Spec, in dogmatiq/protobuf**: documenting the meaning, unit and limits of each field, because the spec is the
   only contract.
   - [x] The `configpb` messages in `configpb`, at `v1alpha1`
@@ -291,15 +297,56 @@ Tick each item when it is done, and write the pull request or commit that did it
   `WithGRPCServerOptions`, dialing the Observatory through `dogmatiq/tenet`, sending heartbeats to the Observatory, the
   description of the application, the port of the prototype's SQL and derivation code from its `observe` package, the
   observation budget and the schema changes.
-- [ ] **Observatory repo**: the Go backend, using the `v1alpha1` packages of dogmatiq/protobuf, accepting engines
-  through `dogmatiq/tenet`, what it holds in memory, and the health rules. Then the cluster view, matching the
-  prototype's overview exactly, then its shortcomings, then the site view, then the universe view. A check that React
-  and Tailwind can match the prototype's look comes before the views. The smoke test belongs here.
+- [ ] **Observatory repo**: the Go backend and the React frontend, as the tasks below, each of which ends in a review.
+  - [x] **Setup**: the Go module, and the frontend's toolchain in the Makefile. A Go interface for one connected node,
+    `NodeDialer`, in `internal/observe`: it dials connections to the node, and signals when it can no longer be reached.
+    tenet's `Dialer` is meant to satisfy it without a wrapper. `NewClients` builds the clients of the engine and
+    metrics APIs over a `NodeDialer`, in one place, and the rest of the Observatory depends on those clients. Its first
+    implementation is in-process, over gRPC's `bufconn`. The Go module is at the root and the frontend
+    is in `web`, built by Vite into `artifacts/vite/dist`. Delete `docs/spec-notes.md`, which tenet and the spec have
+    superseded.
+  - [x] **Fake engine**: a stub engine that answers `EngineAPI` and `MetricsAPI` from data that a test supplies while the
+    code under test is receiving it. It is built on the client stubs that `dogmatiq/protobuf` generates, such as
+    `EngineAPIClientStub`. `internal/observe/stubs` adds what they lack: a `ServerStreamingClientStub` for the stream
+    that a stubbed call returns, in the usual style (a `<Method>Func` field for each method), and a `Feed`, which is
+    that stream with `Send` and `End` for the test to call. The Observatory's code takes its `Clients`, so a stub is
+    handed to it in place of a real node. A source of moving data for local development of the frontend is not part
+    of this task. It is decided in the Look task.
+  - [x] **Engine state**: the preambles, live nodes, workloads and heartbeats of each node, whether each node is
+    reporting, and identifying each tunnel by node ID. `Observer.Serve` watches one node's `WatchEngine` call, and
+    `Observer.Nodes` returns what the nodes reported. A node is reporting by the Spec section's rule, with these
+    additions where the spec says nothing: until its first heartbeat arrives, and if its heartbeats give no way to
+    tell when one expires, it is reporting while its call is open. A newer connection from a node ends the older one's
+    `WatchEngine` call at once, and the node keeps its latest heartbeat across connections. `Serve` closes the older
+    connection's clients only once every call that it made through them has ended.
+  - [x] **Metrics**: `Serve` also calls each node's `WatchMetrics`, and `Node.Metrics` holds what the node's current call
+    has reported: its preamble, and the latest sample of each series, where a series is one metric of one subject.
+    Of two samples of a series, the one with the greater revision is kept, and a later one wins a tie. Only metrics that
+    the spec defines are kept. A sample's message is decoded, so that code that uses it reads typed fields. A call that
+    ends leaves no values and `Node.MetricsErr`, and is made again after 5 seconds, except when the node answers
+    UNIMPLEMENTED, which means that it reports no metrics. `Combine` turns the nodes of one cluster into what the
+    cluster as a whole reports: for a metric whose reach is the cluster, the samples of one node, the one whose call
+    began first; for a metric whose reach is the node, the sums over the nodes that are reporting, matched by what the
+    message describes, since a subject means something only on its own stream. A call is made to every node, because the
+    metrics whose reach is the node need every node. The cluster-reach samples of the nodes that aren't chosen are
+    ignored, so a result never mixes values from different calls.
+  - [ ] **Rates and history**: rates from running totals within one call, and the history kept in memory for the
+    sparklines and the heartbeat chart.
+  - [ ] **Health rules**: failed deliveries, backlog and membership, and forgetting a cluster after 3 days.
+  - [ ] **Engines through tenet**: accepting engines through tenet once its two sides work, and checking engines' server
+    certificates once their gRPC connections use mutual TLS.
+  - [ ] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots.
+  - [ ] **Cluster view**: the prototype's overview, exactly, with the differences recorded above.
+  - [ ] **Smoke test**: a real engine with the Observatory, managed by the Observatory's CI.
+  - [ ] **Beyond the cluster view**: its shortcomings, then the site view, then the universe view.
 - [ ] **Near release, dogmatiq/protobuf**: the spec is added as a stable package, and runkit and the Observatory switch to
   it.
 
 ## Open
 - The observation budget's actual limits. They are set before the prototype's queries are ported.
+- Where runkit keeps its counters of removed commands and deadlines: in memory on each node, which makes them
+  node-scoped and restart from zero with the node, or in counter rows kept by triggers, which adds contention to the
+  write path. A cluster has tens of queues, spread across its nodes, so the number of counters on each node is small.
 - Whether `WatchMetrics` should signal a partial failure, so that one unreadable metric doesn't end every metric on the
   call. In v1 it does, and a persistent failure of one metric ends every call, unless the node leaves that metric out of
   its preamble. The design to add when a view needs it is an `Outage` message: one cause, with an id chosen by the node,
