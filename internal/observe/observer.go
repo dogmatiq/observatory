@@ -20,6 +20,15 @@ var ErrForgotten = errors.New("the observer forgot the node")
 // connection from the same node replaced the one that it was serving.
 var ErrSuperseded = errors.New("the node connected again")
 
+// ErrNoPreamble is the error that [Observer.Serve] returns when the node doesn't
+// send its preamble soon enough.
+var ErrNoPreamble = errors.New("the node sent no preamble in time")
+
+// preambleTimeout is how long a node has to send its preamble after the Observer
+// calls it. A tunnel can be opened by anything that reaches the Observatory, so
+// one that sends nothing must not be held open.
+const preambleTimeout = 10 * time.Second
+
 // historySpan is how far back the Observer remembers what happened, such as
 // when a node sent its heartbeats.
 const historySpan = 10 * time.Minute
@@ -279,7 +288,8 @@ func (n Node) reportedAt(now time.Time) time.Time {
 //
 // It returns nil if the node ended its call with an OK status, and otherwise it
 // returns why the call ended. It returns [ErrSuperseded] if a newer connection
-// from the same node replaced this one.
+// from the same node replaced this one, and [ErrNoPreamble] if the node doesn't
+// send its preamble within 10 seconds.
 func (o *Observer) Serve(ctx context.Context, clients *Clients) error {
 	defer clients.Close()
 
@@ -291,7 +301,9 @@ func (o *Observer) Serve(ctx context.Context, clients *Clients) error {
 		return err
 	}
 
+	late := time.AfterFunc(preambleTimeout, func() { cancel(ErrNoPreamble) })
 	res, err := stream.Recv()
+	late.Stop()
 	if err != nil {
 		return endOf(ctx, err)
 	}

@@ -314,6 +314,48 @@ func TestObserver(t *testing.T) {
 			})
 		})
 
+		t.Run("when the node doesn't send its preamble", func(t *testing.T) {
+			t.Run("it returns an error after ten seconds", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					o := NewObserver()
+
+					start := time.Now()
+					c := connect(t.Context(), o)
+
+					if err := <-c.Done; !errors.Is(err, ErrNoPreamble) {
+						t.Fatalf("unexpected error: %v", err)
+					}
+					if got := time.Since(start); got != 10*time.Second {
+						t.Fatalf("unexpected time: got %s, want 10s", got)
+					}
+					if got := len(o.Nodes()); got != 0 {
+						t.Fatalf("unexpected number of nodes: got %d, want 0", got)
+					}
+				})
+			})
+
+			t.Run("it waits for a preamble that is sent in time", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o := NewObserver()
+
+					c := connect(ctx, o)
+					time.Sleep(9 * time.Second)
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+
+					// Long after the time for the preamble, the node is still connected.
+					time.Sleep(time.Minute)
+					nodes := o.Nodes()
+					if len(nodes) != 1 || !nodes[0].Connected {
+						t.Fatalf("unexpected nodes: %+v", nodes)
+					}
+
+					cancel()
+					<-c.Done
+				})
+			})
+		})
+
 		t.Run("when the node sends a second preamble", func(t *testing.T) {
 			t.Run("it returns an error", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {

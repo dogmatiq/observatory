@@ -533,9 +533,11 @@ Tick each item when it is done, and write the pull request or commit that did it
     certificates once their gRPC connections use mutual TLS.
     The accepting side is written: `internal/tunnel` has the HTTP handler that takes a node's tunnel from tenet and gives
     it to `Observer.Serve`, and `cmd/demo` serves it at `/tunnel`. A node must serve its gRPC server on the network and
-    address that `internal/tunnel` names, which is a contract with runkit and is decided by James. A node that doesn't
-    send its preamble within 10 seconds is dropped, because a tunnel can be opened by anything that reaches the
-    Observatory, and the spec doesn't promise a time. The checking of server certificates waits for mutual TLS.
+    address that `internal/tunnel` names: network `dogma`, address `engine`, which runkit serves its gRPC server on
+    through the tunnel. A node that doesn't send its preamble within 10 seconds is dropped, because a tunnel can be
+    opened by anything that reaches the Observatory. The spec promises no time, and is not amended: the limit is the
+    Observatory's own, and a node that is slower than that is not one that it will observe. The checking of server
+    certificates waits for mutual TLS.
   - [x] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots. The
     overview is built from components that the cluster view reuses, with the prototype's colors, spacing, radii, shadows
     and fonts as Tailwind theme tokens, and it matches a frozen copy of the prototype page in light and dark at 1440, 900
