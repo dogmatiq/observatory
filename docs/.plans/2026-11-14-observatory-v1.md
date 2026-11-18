@@ -472,8 +472,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   - [x] A handler's concurrency preference in `configpb`, and the metric `ProcessInstancesEnded`
     ([dogmatiq/protobuf#40](https://github.com/dogmatiq/protobuf/pull/40)).
 - [x] **Tunnel, in dogmatiq/tenet**: delivered as [its own
-  plan](https://github.com/dogmatiq/tenet/blob/main/docs/.plans/2026-11-17-tenet-v1.md) says. Its first cut is on `main`
-  (baf488d, 2026-11-18), which the Observatory uses until there is a release.
+  plan](https://github.com/dogmatiq/tenet/blob/main/docs/.plans/2026-11-17-tenet-v1.md) says. Its first cut is tagged
+  v0.1.0 (2026-11-18), which the Observatory uses.
 - [ ] **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
   `WithGRPCServerOptions`, dialing the Observatory through `dogmatiq/tenet`, sending heartbeats to the Observatory, the
   description of the application, the port of the prototype's SQL and derivation code from its `observe` package, the

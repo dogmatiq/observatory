@@ -8,6 +8,8 @@ github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf h1:tDHXMhA6RIH
 github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf/go.mod h1:96bKDt02UetlEs2RxjOPE8TQvVnk2bVRre5Q3o/cDYg=
 github.com/dogmatiq/tenet v0.0.0-20261118123219-baf488d9ecc8 h1:lgyNCz14JMr8+cV4n6o1RA5NmBi2crMH+LYrTjp+vgk=
 github.com/dogmatiq/tenet v0.0.0-20261118123219-baf488d9ecc8/go.mod h1:Yh5MqvZN4Tz58SSGUpapxY8b/Af3+BND4NhoznhU2mM=
+github.com/dogmatiq/tenet v0.1.0 h1:NYmNgkvSzAwKp304m81O6H3LXeK0RKN2OI3r9CNqAlI=
+github.com/dogmatiq/tenet v0.1.0/go.mod h1:Yh5MqvZN4Tz58SSGUpapxY8b/Af3+BND4NhoznhU2mM=
 github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
 github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
