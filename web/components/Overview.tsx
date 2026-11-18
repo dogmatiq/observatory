@@ -152,13 +152,13 @@ function QueuesTile({
 			value={
 				<>
 					{formatCompact(healthy)}
-					{data.failing > 0 && <Failing count={data.failing} size="headline" />}
+					<Failing count={data.failing} size="headline" />
 				</>
 			}
 			valueTitle={formatNumber(healthy)}
 			detail={
 				<>
-					<Noun>{nounFor(messages, "message", "messages")}</Noun>
+					<Noun>{`${nounFor(messages, "message", "messages")} pending`}</Noun>
 					{` in ${countOf(data.queues.length, "queue", "queues")}, `}
 					<span title={removedPerMinuteTitle}>
 						{perMinute(data.removedPerMinute)}

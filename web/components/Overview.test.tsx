@@ -13,7 +13,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-test("the totals are the prototype's", () => {
+test("the totals are the prototype's, with the spec's words", () => {
 	render(<Overview data={overview} />);
 
 	const totals = within(screen.getByRole("region", { name: "Totals" }));
@@ -24,20 +24,20 @@ test("the totals are the prototype's", () => {
 	expect(visibleText(events)).toBe(
 		"347events per minute, 1.2K events in 2 streams",
 	);
-	expect(visibleText(queues)).toBe("19messages in 1 queue, 442/min");
+	expect(visibleText(queues)).toBe("19messages pending in 1 queue, 442/min");
 	expect(visibleText(cluster)).toBe("3cluster nodes, 5 workloads");
 });
 
-test("the handlers are the prototype's", () => {
+test("the handlers are the prototype's, with the spec's words", () => {
 	render(<Overview data={overview} />);
 
 	const handlers = within(screen.getByRole("region", { name: "Handlers" }));
 
 	expect(handlers.getAllByRole("article").map(visibleText)).toEqual([
-		"accountaggregate100instances0command backlog",
-		"statement-scheduleprocess20in progress0event backlog20deadlines",
-		"mailerintegration0command backlog",
-		"balancesprojection0event backlog",
+		"accountaggregate100instances0commands pending",
+		"statement-scheduleprocess20in progress0events pending20deadlines pending",
+		"mailerintegration0commands pending",
+		"balancesprojection0events pending",
 	]);
 });
 
@@ -225,5 +225,5 @@ test("a rate that the Observatory doesn't have yet is a question mark", () => {
 	expect(visibleText(events)).toBe(
 		"?events per minute, 1.2K events in 2 streams",
 	);
-	expect(visibleText(queues)).toBe("19messages in 1 queue, ?/min");
+	expect(visibleText(queues)).toBe("19messages pending in 1 queue, ?/min");
 });

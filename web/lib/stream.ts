@@ -474,6 +474,13 @@ function cardOf(
 				b.instances - a.instances || (a.id ?? "").localeCompare(b.id ?? ""),
 		);
 
+	// The instances that are bound to no queue are the last segment of the bar,
+	// whatever their number, because they are not a queue.
+	const unbound = maybeNumber(h.unbound, "unbound");
+	if (unbound !== undefined && unbound > 0) {
+		bindings.push({ id: undefined, instances: unbound });
+	}
+
 	const card: HandlerData = {
 		key,
 		name: h.name,

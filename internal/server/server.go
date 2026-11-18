@@ -48,7 +48,9 @@
 //     "unhandledEvents", "schedulesDeadlines", "bindings"}. A fact that the
 //     nodes don't report, or that the handler doesn't have, is absent, and so
 //     are the flags that are false. "bindings" is keyed by the ID of the event
-//     stream or the queue, each {"instances"}. An integration or a projection
+//     stream or the queue, each {"instances"}. A process's instances that are
+//     in progress and bound to no queue are "unbound", a number, which is absent
+//     when there are none. An integration or a projection
 //     also has "nodes", keyed by the ID of the node, each {"rate"}, which is the
 //     smoothed rate at which the node handles the handler's messages. It is
 //     absent if the nodes don't report that.

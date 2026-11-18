@@ -319,6 +319,12 @@ export interface HandlerDocument {
 	bindings?: Record<string, { instances: number }>;
 
 	/**
+	 * The instances of a process that are in progress and bound to no queue, if
+	 * there are any.
+	 */
+	unbound?: number;
+
+	/**
 	 * What each node handled for an integration or a projection, by node ID,
 	 * as a rate in x/s that is smoothed over a while. Absent for other kinds of
 	 * handler, and when the nodes don't report what they handled.

@@ -301,6 +301,10 @@ type HandlerSummary struct {
 	// Bindings is how the instances of an aggregate are spread over the event
 	// streams, or those of a process over the queues of its deadlines.
 	Bindings []Binding `json:"bindings"`
+
+	// Unbound is the number of a process's instances that are in progress and
+	// bound to no queue. They are not in Bindings.
+	Unbound uint64 `json:"unbound,omitempty"`
 }
 
 // Binding is the instances of a handler that are bound to one event stream or
@@ -351,6 +355,10 @@ type handlerFigures struct {
 	// bindings is the number of instances bound to each event stream, for an
 	// aggregate, or queue, for a process, by ID.
 	bindings map[string]uint64
+
+	// unbound is the number of a process's instances that are in progress and
+	// bound to no queue.
+	unbound uint64
 }
 
 // figures is what the combined samples of a cluster say, in the form that an
@@ -421,7 +429,11 @@ func figuresOf(samples []ClusterSample) figures {
 		case *metricsgrpc.AggregateInstanceEventStreamBindings:
 			handler(m.GetHandlerKey()).bindings[m.GetEventStreamId().AsString()] += v
 		case *metricsgrpc.ProcessInstanceQueueBindings:
-			handler(m.GetHandlerKey()).bindings[m.GetQueueId().AsString()] += v
+			if m.HasQueueId() {
+				handler(m.GetHandlerKey()).bindings[m.GetQueueId().AsString()] += v
+			} else {
+				handler(m.GetHandlerKey()).unbound += v
+			}
 		}
 	}
 
@@ -618,6 +630,7 @@ func handlerCards(
 				}
 			}
 			s.Bindings = bindingsOf(figs.bindings)
+			s.Unbound = figs.unbound
 
 		case configpb.HandlerType_HANDLER_TYPE_INTEGRATION:
 			s.QueuedMessages = figs.commandsPending

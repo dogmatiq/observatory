@@ -135,15 +135,15 @@ function Summary({
 	handler: HandlerData;
 	summary: HandlerSummary;
 }) {
-	const failing = summary.failing > 0;
 	const stats: StatProps[] = [];
 	let bar: ReactNode = null;
 
-	// The number of commands or deadlines that wait in the handler's queue is
+	// The number of commands or deadlines that are pending for the handler is
 	// those that aren't failing, and then those that are, as in "2 +1", because
-	// the failing ones are part of what waits. It recedes when it is zero. It is
-	// left out if the engine doesn't report it.
-	const queue = (icon: IconName, label: string) => {
+	// the failing ones are pending too, so that the two add up to all that is
+	// pending. It recedes when it is zero. It is left out if the engine doesn't
+	// report it.
+	const queue = (icon: IconName, plural: string) => {
 		const { queuedMessages } = summary;
 		if (queuedMessages !== undefined) {
 			const healthy = Math.max(0, queuedMessages - summary.failing);
@@ -153,22 +153,22 @@ function Summary({
 				value: (
 					<>
 						{formatCompact(healthy)}
-						{failing && <Failing count={summary.failing} size="stat" />}
+						<Failing count={summary.failing} size="stat" />
 					</>
 				),
-				label,
+				label: `${plural} pending`,
 			});
 		}
 	};
 
-	const eventBacklog = () => {
+	const eventsPending = () => {
 		const { unhandledEvents } = summary;
 		if (unhandledEvents !== undefined) {
 			stats.push({
 				tone: zeroOrNormal(unhandledEvents),
 				icon: "event",
 				value: formatCompact(unhandledEvents),
-				label: "event backlog",
+				label: "events pending",
 			});
 		}
 	};
@@ -194,7 +194,7 @@ function Summary({
 				});
 			}
 
-			queue("command", "command backlog");
+			queue("command", "commands");
 
 			bar = (
 				<StackedBar
@@ -217,13 +217,10 @@ function Summary({
 				label: "in progress",
 			});
 
-			eventBacklog();
+			eventsPending();
 
 			if (summary.schedulesDeadlines) {
-				queue(
-					"deadline",
-					nounFor(summary.queuedMessages ?? 0, "deadline", "deadlines"),
-				);
+				queue("deadline", "deadlines");
 
 				bar = (
 					<StackedBar
@@ -241,11 +238,11 @@ function Summary({
 		}
 
 		case "integration":
-			queue("command", "command backlog");
+			queue("command", "commands");
 			break;
 
 		case "projection":
-			eventBacklog();
+			eventsPending();
 			break;
 	}
 

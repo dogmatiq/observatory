@@ -644,3 +644,37 @@ test("a rate that a change removes from a node, and a node that it removes, leav
 		{ id: "n2", rate: 3 },
 	]);
 });
+
+test("the instances of a process that are bound to no queue are a segment of their own, after the queues", () => {
+	const snapshot = applied([
+		changed({
+			application: { name: "statements", key: "k" },
+			handlers: {
+				p: {
+					name: "schedule",
+					kind: "process",
+					schedulesDeadlines: true,
+					bindings: { q1: { instances: 2 }, q2: { instances: 5 } },
+					unbound: 3,
+				},
+				q: {
+					name: "other",
+					kind: "process",
+					bindings: { q1: { instances: 1 } },
+				},
+			},
+		}),
+		0,
+	]);
+
+	const cards = selectCluster(snapshot, 0)?.overview.handlers ?? [];
+	const scheduled = cards.find((c) => c.name === "schedule");
+	const other = cards.find((c) => c.name === "other");
+
+	expect(scheduled?.summary.bindings).toEqual([
+		{ id: "q2", instances: 5 },
+		{ id: "q1", instances: 2 },
+		{ id: undefined, instances: 3 },
+	]);
+	expect(other?.summary.bindings).toEqual([{ id: "q1", instances: 1 }]);
+});

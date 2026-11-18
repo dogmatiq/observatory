@@ -545,6 +545,8 @@ func TestOverview(t *testing.T) {
 						supports(name(new(metricsgrpc.HandlerEventsPending)), reach),
 					)
 					n.sample(t, 0, "q", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, QueueId: q, Value: 20}.Build())
+					// Instances that are in progress and bound to no queue have no queue ID.
+					n.sample(t, 0, "none", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, Value: 3}.Build())
 					n.sample(t, 1, "schedule", 1, metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: key, Value: 20}.Build())
 					n.sample(t, 2, "schedule", 1, metricsgrpc.HandlerEventsPending_builder{HandlerKey: key, Value: 4}.Build())
 
@@ -568,6 +570,9 @@ func TestOverview(t *testing.T) {
 					}
 					if len(s.Bindings) != 1 || s.Bindings[0].Instances != 20 || s.Bindings[0].ID != q.AsString() {
 						t.Fatalf("unexpected bindings: %v", s.Bindings)
+					}
+					if s.Unbound != 3 {
+						t.Fatalf("unexpected number of instances bound to no queue: got %d, want 3", s.Unbound)
 					}
 
 					cancel()

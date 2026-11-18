@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { Icon, type IconName } from "./Icon.tsx";
@@ -115,11 +115,16 @@ export function Noun({ children }: { children: ReactNode }) {
 }
 
 /**
- * Failing is the number of messages in a backlog that are failing, which comes
+ * Failing is the number of messages that are pending and failing, which comes
  * after the number of those that are not, such as "24 +1". It is red, and
- * smaller than the number it follows by the given amount, in ems.
+ * smaller than the number it follows.
  *
  * It is spoken in full, because "+1" says little to a screen reader.
+ *
+ * When there are none it is not shown. When there begin to be some it grows from
+ * nothing, larger than it will stay for a moment, and when there stop being any
+ * it shrinks away, so that it doesn't make the page jump. It does neither when
+ * the page loads with it in place, nor for a viewer who asks for less motion.
  */
 export function Failing({
 	count,
@@ -128,18 +133,50 @@ export function Failing({
 	count: number;
 	size: "headline" | "stat";
 }) {
+	const [phase, setPhase] = useState<"gone" | "in" | "steady" | "out">(
+		count > 0 ? "steady" : "gone",
+	);
+
+	// The number that is shown while it shrinks away is the last that wasn't zero.
+	const last = useRef(count);
+	if (count > 0) {
+		last.current = count;
+	}
+
+	useEffect(() => {
+		if (count > 0) {
+			setPhase((p) => (p === "steady" || p === "in" ? p : "in"));
+		} else {
+			setPhase((p) => (p === "gone" ? p : "out"));
+		}
+	}, [count]);
+
+	if (phase === "gone") {
+		return null;
+	}
+
 	return (
 		<span
 			className={cn(
-				"font-semibold text-bad",
-				size === "headline"
-					? "ml-1.5 align-[0.15em] text-[0.62em]"
-					: "ml-1 align-[0.05em] text-[0.78em]",
+				"inline-grid grid-cols-[1fr] align-baseline",
+				phase === "in" && "motion-safe:animate-[failing-in_0.55s_ease-out]",
+				phase === "out" &&
+					"motion-safe:animate-[failing-out_0.3s_ease-in_forwards]",
 			)}
+			onAnimationEnd={() => setPhase((p) => (p === "out" ? "gone" : "steady"))}
 		>
-			<span aria-hidden="true">{`+${formatCompact(count)}`}</span>
-			<span className="sr-only">
-				{` and ${countOf(count, "message", "messages")} failing`}
+			<span
+				className={cn(
+					"min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-bad",
+					size === "headline"
+						? "pl-1.5 align-[0.15em] text-[0.62em]"
+						: "pl-1 align-[0.05em] text-[0.78em]",
+				)}
+			>
+				<span aria-hidden="true">{`+${formatCompact(last.current)}`}</span>
+				<span className="sr-only">
+					{` and ${countOf(last.current, "message", "messages")} failing`}
+				</span>
 			</span>
 		</span>
 	);

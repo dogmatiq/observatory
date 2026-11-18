@@ -119,6 +119,46 @@
 	}
 }
 
+/*
+ * The failing count of a backlog, which grows from nothing to a little more than
+ * its size and settles, and which shrinks away again. The width goes with it, so
+ * that what is beside it makes way gradually, and it is the part that is
+ * larger than its final size that overshoots.
+ */
+@keyframes failing-in {
+	0% {
+		grid-template-columns: 0fr;
+		opacity: 0;
+		transform: scale(0.2);
+	}
+
+	55% {
+		grid-template-columns: 1fr;
+		opacity: 1;
+		transform: scale(1.45);
+	}
+
+	100% {
+		grid-template-columns: 1fr;
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes failing-out {
+	0% {
+		grid-template-columns: 1fr;
+		opacity: 1;
+		transform: scale(1);
+	}
+
+	100% {
+		grid-template-columns: 0fr;
+		opacity: 0;
+		transform: scale(0.2);
+	}
+}
+
 @layer base {
 	:root {
 		color-scheme: light;

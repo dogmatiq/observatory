@@ -351,6 +351,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 			bindings[b.ID] = map[string]any{"instances": b.Instances}
 		}
 		h["bindings"] = bindings
+		if s.Unbound > 0 {
+			h["unbound"] = s.Unbound
+		}
 
 		if card.Nodes != nil {
 			nodes := map[string]any{}
