@@ -584,9 +584,14 @@ func TestStream(t *testing.T) {
 		t.Run("when a field of an entry changes", func(t *testing.T) {
 			withStream(t, func(_ *observe.Observer, _ *observe.Recorder, n *node, w *watchRequest) {
 				queue := uuidpb.Generate()
+				// Each sample is taken in before the stream next looks, so that each
+				// makes a patch of its own.
 				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, Value: 7}.Build())
+				synctest.Wait()
 				time.Sleep(time.Second)
+				synctest.Wait()
 				n.sample(t, queueIndex, "q", 2, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, Value: 9}.Build())
+				synctest.Wait()
 				time.Sleep(time.Second)
 				synctest.Wait()
 
