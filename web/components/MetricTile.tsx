@@ -157,27 +157,31 @@ export function Failing({
 		return null;
 	}
 
+	// The count is smaller than the number that it follows, and is raised so that
+	// the tops of their digits are on one line, which is not a superscript. The
+	// raise is the difference between the heights of the digits, which are 0.7 of
+	// the font size, as a share of the count's own size. Its space is inside the
+	// box that shrinks away, because padding on that box would stay behind when it
+	// has shrunk and make the number beside it jump when the count goes.
 	const shown = (
 		<span
 			className={cn(
-				"inline-grid grid-cols-[1fr] align-baseline",
+				"inline-grid grid-cols-[1fr]",
+				size === "headline"
+					? "align-[0.43em] text-[0.62em]"
+					: "align-[0.36em] text-[0.66em]",
 				phase === "in" && "motion-safe:animate-[failing-in_0.55s_ease-out]",
 				phase === "out" &&
 					"motion-safe:animate-[failing-out_0.8s_ease-in-out_forwards]",
 			)}
 			onAnimationEnd={() => setPhase((p) => (p === "out" ? "gone" : "steady"))}
 		>
-			<span
-				className={cn(
-					"min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-bad",
-					size === "headline"
-						? "pl-1.5 align-[0.15em] text-[0.62em]"
-						: "pl-1 align-[0.05em] text-[0.78em]",
-				)}
-			>
-				<span aria-hidden="true">{`+${formatCompact(last.current)}`}</span>
-				<span className="sr-only">
-					{` and ${countOf(last.current, "message", "messages")} failing`}
+			<span className="min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-bad">
+				<span className={cn("block", size === "headline" ? "pl-1.5" : "pl-1")}>
+					<span aria-hidden="true">{`+${formatCompact(last.current)}`}</span>
+					<span className="sr-only">
+						{` and ${countOf(last.current, "message", "messages")} failing`}
+					</span>
 				</span>
 			</span>
 		</span>

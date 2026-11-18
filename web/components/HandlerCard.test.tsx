@@ -149,9 +149,13 @@ test("failing messages are counted after the others that wait, and the card is n
 test("the number that waits is not red because some of it is failing, and only the failing count is", () => {
 	card("integration", { failing: 1, queuedMessages: 4 });
 
-	const failing = screen.getByText("+1").parentElement;
+	// The count is in a box that is red, inside the one that holds it beside the
+	// number that waits, which is not.
+	const failing = screen.getByText("+1").parentElement?.parentElement;
 	expect(failing?.className).toContain("text-bad");
-	expect(failing?.parentElement?.className).not.toContain("text-bad");
+	expect(failing?.parentElement?.parentElement?.className).not.toContain(
+		"text-bad",
+	);
 });
 
 test("when all that waits is failing, the number that doesn't is zero and recedes", () => {
@@ -336,4 +340,25 @@ test("a chart has the color of the messages that it counts", () => {
 	expect(events.querySelector("svg.h-10")?.getAttribute("class")).toContain(
 		"--color-streams",
 	);
+});
+
+test("the punctuation of a handler's name is muted, and the words are not", () => {
+	render(
+		<HandlerCard
+			handler={{
+				key: "k",
+				name: "statement-schedule.v2",
+				kind: "process",
+				summary: quiet,
+			}}
+		/>,
+	);
+
+	const name = screen.getByTitle("statement-schedule.v2");
+	expect(name.textContent).toBe("statement-schedule.v2");
+
+	const muted = [...name.querySelectorAll(".text-faint")].map(
+		(e) => e.textContent,
+	);
+	expect(muted).toEqual(["-", "."]);
 });

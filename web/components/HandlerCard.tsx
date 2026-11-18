@@ -67,7 +67,7 @@ export function HandlerCard({
 						className="min-w-0 truncate text-sm font-bold tracking-[0.04em] uppercase"
 						title={handler.name}
 					>
-						{handler.name}
+						<HandlerName name={handler.name} />
 					</span>
 					<span className="flex min-w-0 items-center gap-3 text-2xs font-medium tracking-[0.08em] text-muted uppercase">
 						<span className="min-w-0 truncate">
@@ -367,5 +367,23 @@ function Stat({ tone, icon, value, label, title, end }: StatProps) {
 			</span>
 			<span className="text-xs text-muted">{label}</span>
 		</div>
+	);
+}
+
+/**
+ * HandlerName is the name of a handler, with its punctuation in the muted color,
+ * the one of a number that is zero, so that the words of the name stand out.
+ */
+function HandlerName({ name }: { name: string }) {
+	// Splitting on a group keeps what matched, which is at the odd positions.
+	return name.split(/([^\p{L}\p{N}]+)/u).map((part, i) =>
+		i % 2 === 1 ? (
+			// biome-ignore lint/suspicious/noArrayIndexKey: the parts have no identity but their positions
+			<span key={i} className="text-faint">
+				{part}
+			</span>
+		) : (
+			part
+		),
 	);
 }
