@@ -1,11 +1,12 @@
 import { type ReactNode, useId } from "react";
 import { cn } from "../lib/cn.ts";
-import { countOf, formatCompact, nounFor } from "../lib/format.ts";
+import { formatCompact, nounFor } from "../lib/format.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
 	cardClasses,
+	Failing,
 	linkedCardClasses,
 	raisedClasses,
 } from "./MetricTile.tsx";
@@ -83,19 +84,6 @@ export function HandlerCard({
 								</span>
 							)}
 						</span>
-						{failing && (
-							// The count is in the line of the kind, which is always there,
-							// so that failing messages don't change the height of the card.
-							<span className="inline-flex flex-none items-center gap-1.5 font-semibold text-bad">
-								<span className="size-1.5 flex-none rounded-full bg-current" />
-								<span aria-hidden="true">
-									{`${formatCompact(summary.failing)} failing`}
-								</span>
-								<span className="sr-only">
-									{`${countOf(summary.failing, "message", "messages")} failing`}
-								</span>
-							</span>
-						)}
 					</span>
 				</span>
 				<span
@@ -151,16 +139,23 @@ function Summary({
 	const stats: StatProps[] = [];
 	let bar: ReactNode = null;
 
-	// The number of commands or deadlines that wait in the handler's queue is red
-	// when messages are failing, and recedes when it is zero. It is left out if
-	// the engine doesn't report it.
+	// The number of commands or deadlines that wait in the handler's queue is
+	// those that aren't failing, and then those that are, as in "2 +1", because
+	// the failing ones are part of what waits. It recedes when it is zero. It is
+	// left out if the engine doesn't report it.
 	const queue = (icon: IconName, label: string) => {
 		const { queuedMessages } = summary;
 		if (queuedMessages !== undefined) {
+			const healthy = Math.max(0, queuedMessages - summary.failing);
 			stats.push({
-				tone: failing ? "bad" : zeroOrNormal(queuedMessages),
+				tone: zeroOrNormal(healthy),
 				icon,
-				value: formatCompact(queuedMessages),
+				value: (
+					<>
+						{formatCompact(healthy)}
+						{failing && <Failing count={summary.failing} size="stat" />}
+					</>
+				),
 				label,
 			});
 		}
@@ -293,7 +288,7 @@ interface StatProps {
 	/** The kind of thing that the number counts, shown as an icon before it. */
 	icon?: IconName;
 
-	value: string;
+	value: ReactNode;
 	label: string;
 
 	/** Explains the number, as a tooltip. */

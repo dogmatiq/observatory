@@ -95,9 +95,11 @@ test("failing messages are shown in the queues tile, and the plural is exact", (
 		/>,
 	);
 
-	expect(screen.getByRole("article", { name: "Queues" }).textContent).toContain(
-		"442/min, 1,234 failing",
-	);
+	const tile = screen.getByRole("article", { name: "Queues" });
+	expect(within(tile).getByText("+1.2K")).toBeDefined();
+	expect(within(tile).getByText(/1,234 messages failing/)).toBeDefined();
+	expect(tile.textContent).toContain("442/min");
+	expect(tile.textContent).not.toContain("442/min, ");
 });
 
 test("a cluster with no live nodes says so", () => {

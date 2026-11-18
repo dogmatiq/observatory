@@ -111,11 +111,34 @@ test("a projection shows its event backlog", () => {
 	expect(stats(container)).toEqual({ "event backlog": "12.0K" });
 });
 
-test("failing messages are counted, and the card is named by its handler", () => {
-	card("integration", { failing: 1, queuedMessages: 1 });
+test("failing messages are counted after the others that wait, and the card is named by its handler", () => {
+	const { container } = card("integration", { failing: 1, queuedMessages: 4 });
 
 	const article = screen.getByRole("article", { name: "the-handler" });
-	expect(within(article).getByText("1 message failing")).toBeDefined();
+	expect(within(article).getByText("+1")).toBeDefined();
+	expect(within(article).getByText(/1 message failing/)).toBeDefined();
+	expect(stats(container)).toEqual({
+		"command backlog": "3+1 and 1 message failing",
+	});
+});
+
+test("the number that waits is not red because some of it is failing, and only the failing count is", () => {
+	card("integration", { failing: 1, queuedMessages: 4 });
+
+	const failing = screen.getByText("+1").parentElement;
+	expect(failing?.className).toContain("text-bad");
+	expect(failing?.parentElement?.className).not.toContain("text-bad");
+});
+
+test("when all that waits is failing, the number that doesn't is zero and recedes", () => {
+	const { container } = card("integration", { failing: 2, queuedMessages: 2 });
+
+	expect(stats(container)).toEqual({
+		"command backlog": "0+2 and 2 messages failing",
+	});
+	expect(
+		container.querySelector("span.font-medium.text-faint")?.textContent,
+	).toContain("0");
 });
 
 test("a card with no failing messages does not say so", () => {
@@ -220,14 +243,9 @@ test("the bar of nodes is at the bottom of the card", () => {
 	expect(nodeBar(bottom as HTMLElement)).toHaveLength(2);
 });
 
-test("failing messages are counted in the line of the kind, so that they don't change the height of the card", () => {
-	const { container } = card("integration", { failing: 2 });
+test("failing messages don't add a line, so that they don't change the height of the card", () => {
+	const { container } = card("integration", { failing: 2, queuedMessages: 2 });
 
-	const line =
-		screen.getByText("2 messages failing").parentElement?.parentElement
-			?.parentElement;
-	expect(line?.textContent).toContain("integration");
-	expect(line?.textContent).toContain("2 failing");
 	expect(container.querySelector(".mt-auto")).toBeNull();
 });
 

@@ -340,14 +340,16 @@ func (c *cluster) readings(node int) []reading {
 		}.Build(), id)
 	}
 
-	add(metricsgrpc.QueueCommandsPending_builder{QueueId: c.commandsQ, Value: uint64(c.state.commandsQueued)}.Build(), c.commandsQ)
+	add(metricsgrpc.QueueCommandsPending_builder{QueueId: c.commandsQ, Value: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.commandsQ)
 	add(metricsgrpc.QueueDeadlinesPending_builder{QueueId: c.deadlinesQ, Value: uint64(c.state.deadlinesQueued)}.Build(), c.deadlinesQ)
 	add(metricsgrpc.QueueCommandsFailing_builder{QueueId: c.commandsQ, Value: uint64(c.state.failing)}.Build(), c.commandsQ)
 	add(metricsgrpc.QueueCommandsRemoved_builder{QueueId: c.commandsQ, Value: part("removed.commands")}.Build(), c.commandsQ)
 	add(metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: c.deadlinesQ, Value: part("removed.deadlines")}.Build(), c.deadlinesQ)
 
 	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.account, Value: 0}.Build(), c.account)
-	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.mailer, Value: uint64(c.state.commandsQueued)}.Build(), c.mailer)
+	// A message that is failing is still waiting, so there are always at least as
+	// many waiting as there are failing.
+	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.mailer, Value: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.mailer)
 	add(metricsgrpc.HandlerCommandsFailing_builder{HandlerKey: c.mailer, Value: uint64(c.state.failing)}.Build(), c.mailer)
 	add(metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: c.schedule, Value: uint64(c.state.deadlinesQueued)}.Build(), c.schedule)
 	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.schedule, Value: uint64(c.state.eventsPending)}.Build(), c.schedule)

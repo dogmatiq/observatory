@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn.ts";
+import { countOf, formatCompact } from "../lib/format.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
@@ -45,7 +46,7 @@ export function MetricTile({
 	icon: IconName;
 
 	/** The headline number. */
-	value: string;
+	value: ReactNode;
 
 	/** The headline number in full, as its tooltip. */
 	valueTitle?: string;
@@ -111,6 +112,37 @@ export function MetricTile({
  */
 export function Noun({ children }: { children: ReactNode }) {
 	return <span className="text-fg">{children}</span>;
+}
+
+/**
+ * Failing is the number of messages in a backlog that are failing, which comes
+ * after the number of those that are not, such as "24 +1". It is red, and
+ * smaller than the number it follows by the given amount, in ems.
+ *
+ * It is spoken in full, because "+1" says little to a screen reader.
+ */
+export function Failing({
+	count,
+	size,
+}: {
+	count: number;
+	size: "headline" | "stat";
+}) {
+	return (
+		<span
+			className={cn(
+				"font-semibold text-bad",
+				size === "headline"
+					? "ml-1.5 align-[0.15em] text-[0.62em]"
+					: "ml-1 align-[0.05em] text-[0.78em]",
+			)}
+		>
+			<span aria-hidden="true">{`+${formatCompact(count)}`}</span>
+			<span className="sr-only">
+				{` and ${countOf(count, "message", "messages")} failing`}
+			</span>
+		</span>
+	);
 }
 
 /**

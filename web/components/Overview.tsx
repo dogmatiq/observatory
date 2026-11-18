@@ -15,7 +15,7 @@ import type { OverviewData } from "../model.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
-import { Alarm, MetricTile, Noun } from "./MetricTile.tsx";
+import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 
@@ -139,14 +139,23 @@ function QueuesTile({
 }) {
 	const messages = data.queues.reduce((sum, q) => sum + q.size, 0);
 
+	// The headline is the messages that aren't failing, and then those that are,
+	// as in "24 +1", because the failing ones are part of the queues' messages.
+	const healthy = Math.max(0, messages - data.failing);
+
 	return (
 		<MetricTile
 			subsystem="queues"
 			label="Queues"
 			icon="queue"
 			href={href}
-			value={formatCompact(messages)}
-			valueTitle={formatNumber(messages)}
+			value={
+				<>
+					{formatCompact(healthy)}
+					{data.failing > 0 && <Failing count={data.failing} size="headline" />}
+				</>
+			}
+			valueTitle={formatNumber(healthy)}
 			detail={
 				<>
 					<Noun>{nounFor(messages, "message", "messages")}</Noun>
@@ -155,12 +164,6 @@ function QueuesTile({
 						{perMinute(data.removedPerMinute)}
 					</span>
 					/min
-					{data.failing > 0 && (
-						<>
-							{", "}
-							<Alarm>{`${formatNumber(data.failing)} failing`}</Alarm>
-						</>
-					)}
 				</>
 			}
 			bar={
