@@ -2,7 +2,7 @@
  * How long a level takes to rise after a heartbeat, in milliseconds, so that it
  * rises instead of jumping.
  */
-export const riseTime = 160;
+export const riseTime = 280;
 
 /**
  * The number of a node's usual intervals between heartbeats over which its

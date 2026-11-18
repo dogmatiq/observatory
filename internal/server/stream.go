@@ -345,6 +345,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 		if s.SchedulesDeadlines {
 			h["schedulesDeadlines"] = true
 		}
+		if card.Charted != "" {
+			h["charted"] = card.Charted
+		}
 
 		bindings := map[string]any{}
 		for _, b := range s.Bindings {

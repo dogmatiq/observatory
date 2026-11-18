@@ -65,6 +65,7 @@ function handlerOf(h: HandlerData): HandlerDocument {
 		queued: summary.queuedMessages,
 		unhandledEvents: summary.unhandledEvents,
 		schedulesDeadlines: summary.schedulesDeadlines,
+		charted: h.charted,
 		bindings: Object.fromEntries(
 			summary.bindings.map((b) => {
 				if (b.id === undefined) {

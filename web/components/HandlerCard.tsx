@@ -103,7 +103,13 @@ export function HandlerCard({
 			{history && (
 				<Sparkline
 					chart={history}
-					className={cn("h-10", subsystemColors.streams)}
+					// The chart has the color of the messages that it counts.
+					className={cn(
+						"h-10",
+						subsystemColors[
+							handler.charted === "commands" ? "queues" : "streams"
+						],
+					)}
 				/>
 			)}
 		</>

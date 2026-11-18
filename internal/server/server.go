@@ -45,19 +45,22 @@
 //     messages removed from the queues. A rate that isn't known yet is absent.
 //   - "handlers": each handler, {"name", "kind", "disabled",
 //     "minimizesConcurrency", "failing", "instances", "queued",
-//     "unhandledEvents", "schedulesDeadlines", "bindings"}. A fact that the
+//     "unhandledEvents", "schedulesDeadlines", "charted", "bindings"}. A fact that the
 //     nodes don't report, or that the handler doesn't have, is absent, and so
 //     are the flags that are false. "bindings" is keyed by the ID of the event
 //     stream or the queue, each {"instances"}. A process's instances that are
 //     in progress and bound to no queue are "unbound", a number, which is absent
-//     when there are none. An integration or a projection
+//     when there are none. "charted" is "events" or "commands", the kind of
+//     message that the handler's time series counts, and is absent if it has
+//     none. An integration or a projection
 //     also has "nodes", keyed by the ID of the node, each {"rate"}, which is the
 //     smoothed rate at which the node handles the handler's messages. It is
 //     absent if the nodes don't report that.
 //
 // The time series are "events" (the events recorded per second), "queues" (the
 // messages in the queues) and "handlers/<handler key>" (the events that the
-// handler records or handles per second).
+// handler records or handles per second, or, if "charted" is "commands", the
+// commands that it handles).
 //
 // A rate is in times per second, whatever it counts, and is rounded to three
 // significant figures, so that a rate whose value only wavers is not sent

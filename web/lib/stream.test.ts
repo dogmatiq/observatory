@@ -481,6 +481,30 @@ test("a card has a chart only once its series has arrived", () => {
 	expect(handlers.find((h) => h.key === "a")?.history).toBeDefined();
 });
 
+test("a card says which kind of message its chart counts, and says none if it has no chart", () => {
+	const s = applied(
+		[
+			changed({
+				application: { name: "app", key: "k" },
+				handlers: {
+					a: { name: "a", kind: "integration", charted: "commands" },
+					b: { name: "b", kind: "aggregate", charted: "events" },
+					c: { name: "c", kind: "projection" },
+				},
+			}),
+			0,
+		],
+		[{ kind: "recorded", series: "handlers/a", points: [[0, 1]] }, 0],
+		[{ kind: "recorded", series: "handlers/b", points: [[0, 1]] }, 0],
+	);
+
+	const handlers = selectCluster(s, 0);
+	const charted = Object.fromEntries(
+		(handlers?.overview.handlers ?? []).map((h) => [h.key, h.charted]),
+	);
+	expect(charted).toEqual({ a: "commands", b: "events", c: undefined });
+});
+
 test("a rate that is absent gives no figure, and an absent collection gives no tile", () => {
 	const s = applied([
 		changed({ application: { name: "a", key: "k" }, eventStreams: {} }),

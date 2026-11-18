@@ -505,6 +505,9 @@ function cardOf(
 	}
 	if (chart) {
 		card.history = chart;
+		if (h.charted === "commands" || h.charted === "events") {
+			card.charted = h.charted;
+		}
 	}
 
 	// Only an integration or a projection has a bar of the nodes that handled its

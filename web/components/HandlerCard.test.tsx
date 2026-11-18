@@ -313,3 +313,27 @@ test("an aggregate and a process don't draw a bar of nodes", () => {
 		cleanup();
 	}
 });
+
+test("a chart has the color of the messages that it counts", () => {
+	const chart = { end: 0, points: [{ at: 0, value: 1 }] };
+
+	const commands = card(
+		"integration",
+		{},
+		{ history: chart, charted: "commands" },
+	).container;
+	expect(commands.querySelector("svg.h-10")?.getAttribute("class")).toContain(
+		"--color-queues",
+	);
+
+	cleanup();
+
+	const events = card(
+		"integration",
+		{},
+		{ history: chart, charted: "events" },
+	).container;
+	expect(events.querySelector("svg.h-10")?.getAttribute("class")).toContain(
+		"--color-streams",
+	);
+});

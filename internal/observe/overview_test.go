@@ -636,6 +636,11 @@ func TestOverview(t *testing.T) {
 						if (h.Name != "silent") != (h.History != nil) {
 							t.Fatalf("unexpected chart of %s: %v", h.Name, h.History)
 						}
+
+						want := map[string]string{"records": "events", "handles": "commands"}[h.Name]
+						if h.Charted != want {
+							t.Fatalf("unexpected kind of message charted for %s: got %q, want %q", h.Name, h.Charted, want)
+						}
 					}
 
 					cancel()

@@ -176,6 +176,12 @@ export interface HandlerData {
 	summary: HandlerSummary;
 
 	/**
+	 * The kind of message that `history` counts, which the card shows in the
+	 * color of its chart, as events if it is absent.
+	 */
+	charted?: "events" | "commands";
+
+	/**
 	 * The history of what the handler works with, per minute: the events that an
 	 * aggregate records, that a process or a projection handles, or that an
 	 * integration records, or else the commands that it handles. Absent if the
@@ -319,6 +325,9 @@ export interface HandlerDocument {
 	queued?: number;
 	unhandledEvents?: number;
 	schedulesDeadlines?: boolean;
+
+	/** The kind of message that the handler's time series counts. */
+	charted?: "events" | "commands";
 
 	/** The instances bound to each event stream or queue, by its ID. */
 	bindings?: Record<string, { instances: number }>;

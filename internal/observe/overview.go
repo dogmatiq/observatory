@@ -261,6 +261,10 @@ type HandlerCard struct {
 	// that it handles. It is nil for a handler that no node reports that number
 	// for.
 	History *Chart `json:"history,omitempty"`
+
+	// Charted is the kind of message that History counts, "events" or
+	// "commands". It is empty if there is no History.
+	Charted string `json:"charted,omitempty"`
 }
 
 // NodeRate is how fast one node handles the messages of a handler.
@@ -615,6 +619,7 @@ func handlerCards(
 		s := &card.Summary
 
 		var recorded *summedRate
+		charted := "events"
 		switch h.GetType() {
 		case configpb.HandlerType_HANDLER_TYPE_AGGREGATE:
 			s.QueuedMessages = figs.commandsPending
@@ -645,10 +650,10 @@ func handlerCards(
 
 			// An integration that produces events has its events recorded charted,
 			// and one that produces none has its commands handled charted.
-			recorded = &figs.commandsHandled
+			recorded, charted = &figs.commandsHandled, "commands"
 			for name, use := range h.GetMessages() {
 				if use.GetIsProduced() && events[name] {
-					recorded = &figs.eventsRecorded
+					recorded, charted = &figs.eventsRecorded, "events"
 				}
 			}
 
@@ -659,6 +664,7 @@ func handlerCards(
 
 		if recorded.samples > 0 {
 			card.History = &Chart{Points: []ChartPoint{}}
+			card.Charted = charted
 			handlerRates[key] = recorded.rate()
 		}
 
