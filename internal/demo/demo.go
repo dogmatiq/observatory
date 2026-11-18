@@ -96,6 +96,7 @@ type cluster struct {
 	schedule    *uuidpb.UUID
 	mailer      *uuidpb.UUID
 	balances    *uuidpb.UUID
+	archive     *uuidpb.UUID
 	randomness  *rand.Rand
 	m           sync.Mutex
 	ticks       int
@@ -126,6 +127,7 @@ func newCluster() *cluster {
 		schedule:    uuidpb.Generate(),
 		mailer:      uuidpb.Generate(),
 		balances:    uuidpb.Generate(),
+		archive:     uuidpb.Generate(),
 		randomness:  rand.New(rand.NewPCG(1, 2)),
 		accumulated: map[string]float64{},
 		totals:      map[string]uint64{},
@@ -149,6 +151,7 @@ func newCluster() *cluster {
 				}),
 			minimizingHandler("mailer", c.mailer, configpb.HandlerType_HANDLER_TYPE_INTEGRATION),
 			handler("balances", c.balances, configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil),
+			handler("archive", c.archive, configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil),
 		},
 		Messages: map[string]configpb.MessageKind{
 			"statements.StatementDue": configpb.MessageKind_MESSAGE_KIND_DEADLINE,
@@ -358,6 +361,10 @@ func (c *cluster) readings(node int) []reading {
 	add(metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: c.account, Value: part("recorded.account")}.Build(), c.account)
 	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.schedule, Value: part("handled.schedule")}.Build(), c.schedule)
 	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.balances, Value: part("handled.balances")}.Build(), c.balances)
+
+	// The archive projection never has anything to do, so its chart is empty.
+	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.archive, Value: 0}.Build(), c.archive)
+	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.archive, Value: 0}.Build(), c.archive)
 
 	for i, instances := range []uint64{63, 37} {
 		out = append(out, reading{

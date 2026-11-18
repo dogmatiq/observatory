@@ -36,8 +36,8 @@ func TestRun(t *testing.T) {
 			if len(view.Overview.Cluster.Nodes) != 7 {
 				t.Fatalf("unexpected number of nodes: got %d, want 7", len(view.Overview.Cluster.Nodes))
 			}
-			if len(view.Overview.Handlers) != 4 {
-				t.Fatalf("unexpected number of handlers: got %d, want 4", len(view.Overview.Handlers))
+			if len(view.Overview.Handlers) != 5 {
+				t.Fatalf("unexpected number of handlers: got %d, want 5", len(view.Overview.Handlers))
 			}
 			if view.Overview.Events == nil || view.Overview.Events.Rate == nil {
 				t.Fatalf("unexpected events: %+v", view.Overview.Events)
