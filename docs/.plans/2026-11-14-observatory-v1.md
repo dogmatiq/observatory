@@ -330,9 +330,16 @@ Tick each item when it is done, and write the pull request or commit that did it
     message describes, since a subject means something only on its own stream. A call is made to every node, because the
     metrics whose reach is the node need every node. The cluster-reach samples of the nodes that aren't chosen are
     ignored, so a result never mixes values from different calls.
-  - [ ] **Rates and history**: rates from running totals within one call, and the history kept in memory for the
-    sparklines and the heartbeat chart.
-  - [ ] **Health rules**: failed deliveries, backlog and membership, and forgetting a cluster after 3 days.
+  - [x] **Rates and history**: rates from running totals within one call, and the history kept in memory for the
+    sparklines and the heartbeat chart. A node sends a sample only when a value changes, so the Observatory takes a
+    running total to stay the same until the next sample, and averages its growth over the last minute, or over the time
+    it has been observed if that is shorter, with no rate before 5 seconds. A total that falls means that the node
+    started again from zero, so the rate starts again too. Each call's rates are its own, and `Combine` adds the rates
+    of nodes whose reach is the node, as it adds their values. A rate that any contributor can't give yet is none.
+    The metrics that are running totals are a list in the Observatory, from the docs of the spec. The Observer keeps
+    when each node's heartbeats arrived, for 10 minutes, and `Trail` is the bounded history of one number that the
+    cluster view adds to for each sparkline.
+  - [x] **Health rules**: failed deliveries, backlog and membership, and forgetting a cluster after 3 days.
   - [ ] **Engines through tenet**: accepting engines through tenet once its two sides work, and checking engines' server
     certificates once their gRPC connections use mutual TLS.
   - [ ] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots.

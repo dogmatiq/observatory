@@ -20,6 +20,16 @@ import (
 // metrics API again, after the previous call ended.
 const metricsRetryDelay = 5 * time.Second
 
+const (
+	// rateWindow is the length of time that a rate is averaged over.
+	rateWindow = time.Minute
+
+	// minRateSpan is the shortest length of time that a running total must have
+	// been observed for, before the Observatory gives a rate for it. A shorter
+	// span would let one occurrence look like a burst.
+	minRateSpan = 5 * time.Second
+)
+
 // Metrics is what a node has reported in one call to its metrics API.
 type Metrics struct {
 	// Call identifies the call. Calls that the same Observer made are numbered
@@ -65,13 +75,101 @@ type Sample struct {
 	// on the stream that it came from, so this is what the samples of different
 	// nodes are matched by.
 	identity string
+
+	// run is the value of a running total over the last [rateWindow], in the
+	// order that the values arrived. It is nil for a metric that isn't a running
+	// total. See [runningTotals].
+	run []point
+}
+
+// point is the value of a running total at the time that it arrived.
+type point struct {
+	at    time.Time
+	value uint64
+}
+
+// runningTotals is the metrics whose values are running totals. The doc of each
+// of their messages in [metricsgrpc] says so.
+//
+// A node lowers a running total only by starting again from zero. The node
+// sends a sample only when the value changes, so the Observatory takes the
+// value of a running total to be the same until the next sample arrives.
+var runningTotals = map[string]bool{
+	string(proto.MessageName(new(metricsgrpc.QueueCommandsRemoved))):     true,
+	string(proto.MessageName(new(metricsgrpc.QueueDeadlinesRemoved))):    true,
+	string(proto.MessageName(new(metricsgrpc.HandlerCommandsHandled))):   true,
+	string(proto.MessageName(new(metricsgrpc.HandlerDeadlinesHandled))):  true,
+	string(proto.MessageName(new(metricsgrpc.HandlerDeadlinesCanceled))): true,
+	string(proto.MessageName(new(metricsgrpc.HandlerEventsRecorded))):    true,
+	string(proto.MessageName(new(metricsgrpc.HandlerEventsHandled))):     true,
+}
+
+// extend returns the run of a running total after a new value of it arrives.
+func extend(run []point, p point) []point {
+	if n := len(run); n > 0 {
+		switch last := run[n-1].value; {
+		case p.value < last:
+			// The node started counting again from zero. What it counted before
+			// says nothing about the rate now.
+			return []point{p}
+		case p.value == last:
+			return run
+		}
+	}
+
+	run = append(run, p)
+
+	// The latest point from before the window gives the value at its start, so
+	// only that one is needed.
+	for len(run) >= 2 && !run[1].at.After(p.at.Add(-rateWindow)) {
+		run = run[1:]
+	}
+
+	return run
+}
+
+// perSecond returns how many times per second a running total has grown, on
+// average, over the last [rateWindow] before the time now.
+//
+// ok is false if the sample isn't of a running total, or if the total has been
+// observed for less than [minRateSpan]. The span is shorter than the window
+// until the total has been observed for that long.
+func (s Sample) perSecond(now time.Time) (rate float64, ok bool) {
+	if len(s.run) == 0 {
+		return 0, false
+	}
+
+	// The value at the start of the window is the value of the latest point
+	// that arrived at or before it. If none did, the first value that arrived is
+	// the best that there is.
+	from := now.Add(-rateWindow)
+	start := s.run[0]
+	for _, p := range s.run {
+		if p.at.After(from) {
+			break
+		}
+		start = p
+	}
+
+	since := start.at
+	if since.Before(from) {
+		since = from
+	}
+
+	span := now.Sub(since)
+	if span < minRateSpan {
+		return 0, false
+	}
+
+	latest := s.run[len(s.run)-1]
+	return float64(latest.value-start.value) / span.Seconds(), true
 }
 
 // metricsCall is the state of one call to a node's metrics API.
 type metricsCall struct {
 	number   uint64
 	preamble *metricsgrpc.WatchMetricsResponse_Preamble
-	series   map[seriesKey]Sample
+	series   map[seriesKey]*Sample
 }
 
 // seriesKey identifies a series within one call.
@@ -93,7 +191,9 @@ func (c *metricsCall) snapshot() *Metrics {
 		Samples:  make([]Sample, 0, len(c.series)),
 	}
 	for _, s := range c.series {
-		m.Samples = append(m.Samples, s)
+		sample := *s
+		sample.run = slices.Clone(s.run)
+		m.Samples = append(m.Samples, sample)
 	}
 	return m
 }
@@ -206,8 +306,8 @@ func (o *Observer) beginMetrics(
 	o.m.Lock()
 	defer o.m.Unlock()
 
-	e := o.nodes[id]
-	if e.conn != c {
+	e := o.live(id, c)
+	if e == nil {
 		return nil
 	}
 
@@ -215,7 +315,7 @@ func (o *Observer) beginMetrics(
 	e.metrics = &metricsCall{
 		number:   o.calls,
 		preamble: p,
-		series:   map[seriesKey]Sample{},
+		series:   map[seriesKey]*Sample{},
 	}
 	e.node.MetricsErr = nil
 
@@ -237,17 +337,24 @@ func (o *Observer) recordSample(
 	o.m.Lock()
 	defer o.m.Unlock()
 
-	if o.nodes[id].conn != c {
+	if o.live(id, c) == nil {
 		return false
 	}
 
-	if current, ok := call.series[key]; ok {
-		if metricsgrpc.CompareRevisions(s.Revision, current.Revision) < 0 {
-			return true
-		}
+	current, ok := call.series[key]
+	if ok && metricsgrpc.CompareRevisions(s.Revision, current.Revision) < 0 {
+		return true
 	}
 
-	call.series[key] = s
+	if runningTotals[s.Metric] {
+		var run []point
+		if ok {
+			run = current.run
+		}
+		s.run = extend(run, point{s.At, valueOf(s.Message)})
+	}
+
+	call.series[key] = &s
 	return true
 }
 
@@ -258,8 +365,8 @@ func (o *Observer) endMetrics(id string, c *connection, err error) {
 	o.m.Lock()
 	defer o.m.Unlock()
 
-	e := o.nodes[id]
-	if e.conn != c {
+	e := o.live(id, c)
+	if e == nil {
 		return
 	}
 
@@ -383,6 +490,12 @@ func (t metricTable) decode(
 		nil
 }
 
+// valueOf returns the measurement that a metric's message holds.
+func valueOf(m proto.Message) uint64 {
+	r := m.ProtoReflect()
+	return r.Get(valueField(r.Descriptor())).Uint()
+}
+
 // identityOf returns what the message describes, which is the message without
 // its value.
 func identityOf(m proto.Message) (string, error) {
@@ -404,6 +517,24 @@ type ClusterSample struct {
 	// Message is the measurement. Its type is the one that Metric names. It
 	// isn't shared with the Observer.
 	Message proto.Message
+
+	// PerSecond is how many times per second the value has grown, on average,
+	// over the last minute. It is nil if the metric isn't a running total, or
+	// if any sample that contributes to the value has been observed for less
+	// than five seconds.
+	//
+	// Each node's rate comes from that node's own call, so it is never made from
+	// values that came from different calls.
+	PerSecond *float64
+}
+
+// addRates returns the sum of two rates, or nil if either is nil.
+func addRates(a, b *float64) *float64 {
+	if a == nil || b == nil {
+		return nil
+	}
+	sum := *a + *b
+	return &sum
 }
 
 // Combine returns what the nodes of one cluster report about the cluster as a
@@ -425,6 +556,8 @@ type ClusterSample struct {
 //
 // If nodes don't agree about a metric's reach, the first node to begin a call
 // decides, and the nodes that disagree are ignored for that metric.
+//
+// The rate of a running total is combined in the same way as its value.
 func Combine(now time.Time, nodes []Node) []ClusterSample {
 	var contributors []Node
 	for _, n := range nodes {
@@ -464,10 +597,15 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 				continue
 			}
 
+			var rate *float64
+			if r, ok := s.perSecond(now); ok {
+				rate = &r
+			}
+
 			switch d.reach {
 			case metricsgrpc.Reach_REACH_CLUSTER:
 				if n.Metrics.Call == d.source {
-					out = append(out, ClusterSample{s.Metric, s.Message})
+					out = append(out, ClusterSample{s.Metric, s.Message, rate})
 				}
 
 			case metricsgrpc.Reach_REACH_NODE:
@@ -475,14 +613,14 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 				i, ok := sums[k]
 				if !ok {
 					sums[k] = len(out)
-					out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message)})
+					out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rate})
 					continue
 				}
 
 				r := out[i].Message.ProtoReflect()
 				f := valueField(r.Descriptor())
-				total := r.Get(f).Uint() + s.Message.ProtoReflect().Get(f).Uint()
-				r.Set(f, protoreflect.ValueOfUint64(total))
+				r.Set(f, protoreflect.ValueOfUint64(valueOf(out[i].Message)+valueOf(s.Message)))
+				out[i].PerSecond = addRates(out[i].PerSecond, rate)
 			}
 		}
 	}

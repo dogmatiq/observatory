@@ -4,15 +4,25 @@ import (
 	"context"
 	"errors"
 	"io"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/dogmatiq/protobuf/enginegrpc"
+	"github.com/dogmatiq/protobuf/uuidpb"
 )
+
+// ErrForgotten is the error that [Observer.Serve] returns when the Observer
+// forgot the node while its connection was open.
+var ErrForgotten = errors.New("the observer forgot the node")
 
 // ErrSuperseded is the error that [Observer.Serve] returns when a newer
 // connection from the same node replaced the one that it was serving.
 var ErrSuperseded = errors.New("the node connected again")
+
+// historySpan is how far back the Observer remembers what happened, such as
+// when a node sent its heartbeats.
+const historySpan = 10 * time.Minute
 
 // Observer holds what the nodes of engines report about themselves.
 //
@@ -57,8 +67,18 @@ type Node struct {
 	// nil.
 	HeartbeatAt time.Time
 
+	// Heartbeats is the time at which each heartbeat arrived in the last ten
+	// minutes, oldest first, by the clock of the process that runs the Observer.
+	// It includes heartbeats that arrived on earlier connections of the node.
+	Heartbeats []time.Time
+
 	// Connected is true while the node's latest connection is open.
 	Connected bool
+
+	// DisconnectedAt is the time at which the node's latest connection ended, by
+	// the clock of the process that runs the Observer. It is the zero time while
+	// the connection is open.
+	DisconnectedAt time.Time
 
 	// Deadline is the time after which the node has stopped reporting, unless
 	// another heartbeat arrives first. It is the zero time if the node's
@@ -101,6 +121,18 @@ func (o *Observer) Nodes() []Node {
 	o.m.Lock()
 	defer o.m.Unlock()
 
+	snapshot := o.snapshot()
+	nodes := make([]Node, 0, len(snapshot))
+	for _, n := range snapshot {
+		nodes = append(nodes, n)
+	}
+
+	return nodes
+}
+
+// snapshot returns every node that the Observer knows, by node ID. o.m must be
+// held.
+func (o *Observer) snapshot() map[string]Node {
 	timeouts := map[string]time.Duration{}
 	for _, e := range o.nodes {
 		timeout := e.node.Preamble.GetHeartbeatTimeout().AsDuration()
@@ -113,10 +145,11 @@ func (o *Observer) Nodes() []Node {
 		}
 	}
 
-	nodes := make([]Node, 0, len(o.nodes))
-	for _, e := range o.nodes {
+	nodes := make(map[string]Node, len(o.nodes))
+	for id, e := range o.nodes {
 		n := e.node
 		n.Metrics = e.metrics.snapshot()
+		n.Heartbeats = slices.Clone(e.heartbeats)
 
 		if n.Heartbeat != nil {
 			expiry := e.expiry
@@ -128,10 +161,72 @@ func (o *Observer) Nodes() []Node {
 			}
 		}
 
-		nodes = append(nodes, n)
+		nodes[id] = n
 	}
 
 	return nodes
+}
+
+// idleLimit is how long none of a cluster's nodes may report, before the
+// Observer forgets the cluster.
+const idleLimit = 3 * 24 * time.Hour
+
+// ForgetIdle forgets every cluster that none of whose nodes has reported for
+// three days, at the time now. See [Observer.Forget].
+func (o *Observer) ForgetIdle(now time.Time) {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	nodes := o.snapshot()
+
+	latest := map[string]time.Time{}
+	for _, n := range nodes {
+		cluster := n.Preamble.GetClusterId().AsString()
+		if t := n.reportedAt(now); t.After(latest[cluster]) {
+			latest[cluster] = t
+		}
+	}
+
+	for id, n := range nodes {
+		if now.Sub(latest[n.Preamble.GetClusterId().AsString()]) >= idleLimit {
+			o.forget(id)
+		}
+	}
+}
+
+// Forget forgets every node of the cluster, and ends their connections. A node
+// that connects again afterward is a new node to the Observer, without the
+// history of the one that it forgot.
+func (o *Observer) Forget(cluster *uuidpb.UUID) {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	for id, e := range o.nodes {
+		if e.node.Preamble.GetClusterId().Equal(cluster) {
+			o.forget(id)
+		}
+	}
+}
+
+// forget forgets a node. o.m must be held.
+func (o *Observer) forget(id string) {
+	if c := o.nodes[id].conn; c != nil {
+		c.cancel(ErrForgotten)
+	}
+	delete(o.nodes, id)
+}
+
+// reportedAt returns the latest time, up to the time now, at which the node was
+// reporting.
+func (n Node) reportedAt(now time.Time) time.Time {
+	switch {
+	case n.Reporting(now):
+		return now
+	case !n.Deadline.IsZero():
+		return n.Deadline
+	default:
+		return n.DisconnectedAt
+	}
 }
 
 // Serve observes the node that clients call, until the node's engine API call
@@ -230,6 +325,9 @@ type entry struct {
 	// expires, by its own account. It is zero if it gave none.
 	expiry time.Duration
 
+	// heartbeats is the value of [Node.Heartbeats].
+	heartbeats []time.Time
+
 	// metrics is the node's current call to the metrics API. It is nil if there
 	// is none.
 	metrics *metricsCall
@@ -258,10 +356,21 @@ func (o *Observer) attach(id string, p *enginegrpc.WatchEngineResponse_Preamble,
 	e.node.LiveNodes = nil
 	e.node.Workloads = nil
 	e.node.Connected = true
+	e.node.DisconnectedAt = time.Time{}
 
 	// Nothing that the earlier connection's calls reported is current.
 	e.metrics = nil
 	e.node.MetricsErr = nil
+}
+
+// live returns the entry of the node, if the connection c is still the node's
+// latest. It returns nil if a newer connection has replaced c, or if the
+// Observer has forgotten the node. o.m must be held.
+func (o *Observer) live(id string, c *connection) *entry {
+	if e := o.nodes[id]; e != nil && e.conn == c {
+		return e
+	}
+	return nil
 }
 
 // detach records that a connection has ended, unless a newer connection from
@@ -270,9 +379,10 @@ func (o *Observer) detach(id string, c *connection) {
 	o.m.Lock()
 	defer o.m.Unlock()
 
-	if e := o.nodes[id]; e.conn == c {
+	if e := o.live(id, c); e != nil {
 		e.conn = nil
 		e.node.Connected = false
+		e.node.DisconnectedAt = time.Now()
 		e.metrics = nil
 	}
 }
@@ -283,8 +393,8 @@ func (o *Observer) apply(id string, c *connection, res *enginegrpc.WatchEngineRe
 	o.m.Lock()
 	defer o.m.Unlock()
 
-	e := o.nodes[id]
-	if e.conn != c {
+	e := o.live(id, c)
+	if e == nil {
 		return false
 	}
 
@@ -298,6 +408,11 @@ func (o *Observer) apply(id string, c *connection, res *enginegrpc.WatchEngineRe
 		e.node.Heartbeat = h
 		e.node.HeartbeatAt = time.Now()
 		e.expiry = expiryOf(h)
+
+		e.heartbeats = append(e.heartbeats, e.node.HeartbeatAt)
+		for e.heartbeats[0].Before(e.node.HeartbeatAt.Add(-historySpan)) {
+			e.heartbeats = e.heartbeats[1:]
+		}
 	}
 
 	return true

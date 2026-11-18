@@ -204,6 +204,62 @@ func TestObserver(t *testing.T) {
 			})
 		})
 
+		t.Run("it remembers when each heartbeat arrived in the last ten minutes", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				o := NewObserver()
+
+				c := connect(ctx, o)
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+
+				first := time.Now()
+				send(t, c, heartbeat(time.Second))
+				time.Sleep(time.Minute)
+				second := time.Now()
+				send(t, c, heartbeat(time.Second))
+
+				got := only(t, o).Heartbeats
+				if len(got) != 2 || !got[0].Equal(first) || !got[1].Equal(second) {
+					t.Fatalf("unexpected heartbeats: %v", got)
+				}
+
+				time.Sleep(11 * time.Minute)
+				third := time.Now()
+				send(t, c, heartbeat(time.Second))
+
+				got = only(t, o).Heartbeats
+				if len(got) != 1 || !got[0].Equal(third) {
+					t.Fatalf("unexpected heartbeats: %v", got)
+				}
+
+				cancel()
+				<-c.Done
+			})
+		})
+
+		t.Run("it keeps the heartbeats of the node's earlier connection", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				o := NewObserver()
+				nodeID, clusterID := uuidpb.Generate(), uuidpb.Generate()
+
+				first := connect(ctx, o)
+				send(t, first, preamble(nodeID, clusterID, 0, 0))
+				send(t, first, heartbeat(time.Second))
+
+				second := connect(ctx, o)
+				send(t, second, preamble(nodeID, clusterID, 0, 0))
+				<-first.Done
+
+				if got := len(only(t, o).Heartbeats); got != 1 {
+					t.Fatalf("unexpected number of heartbeats: got %d, want 1", got)
+				}
+
+				cancel()
+				<-second.Done
+			})
+		})
+
 		t.Run("when the node ends the call with an OK status", func(t *testing.T) {
 			t.Run("it returns nil and marks the node as not connected", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
@@ -300,6 +356,156 @@ func TestObserver(t *testing.T) {
 					cancel()
 					<-second.Done
 				})
+			})
+		})
+	})
+
+	t.Run("func ForgetIdle()", func(t *testing.T) {
+		t.Run("it forgets a cluster whose nodes have not reported for three days", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				o := NewObserver()
+
+				c := connect(t.Context(), o)
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				c.Feed.End(nil)
+				<-c.Done
+
+				if !only(t, o).DisconnectedAt.Equal(time.Now()) {
+					t.Fatalf("unexpected time of disconnection: %s", only(t, o).DisconnectedAt)
+				}
+
+				time.Sleep(3*24*time.Hour - time.Second)
+				o.ForgetIdle(time.Now())
+				only(t, o)
+
+				time.Sleep(time.Second)
+				o.ForgetIdle(time.Now())
+				if got := len(o.Nodes()); got != 0 {
+					t.Fatalf("unexpected number of nodes: got %d, want 0", got)
+				}
+			})
+		})
+
+		t.Run("it counts the time from when the last heartbeat expired", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				o := NewObserver()
+
+				c := connect(t.Context(), o)
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				send(t, c, heartbeat(time.Hour))
+				c.Feed.End(nil)
+				<-c.Done
+
+				time.Sleep(time.Hour + 3*24*time.Hour - time.Second)
+				o.ForgetIdle(time.Now())
+				only(t, o)
+
+				time.Sleep(time.Second)
+				o.ForgetIdle(time.Now())
+				if got := len(o.Nodes()); got != 0 {
+					t.Fatalf("unexpected number of nodes: got %d, want 0", got)
+				}
+			})
+		})
+
+		t.Run("it keeps a cluster while any of its nodes is reporting", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				o := NewObserver()
+				cluster := uuidpb.Generate()
+
+				gone := connect(ctx, o)
+				send(t, gone, preamble(uuidpb.Generate(), cluster, 0, 0))
+				gone.Feed.End(nil)
+				<-gone.Done
+
+				staying := connect(ctx, o)
+				send(t, staying, preamble(uuidpb.Generate(), cluster, 0, 0))
+
+				time.Sleep(4 * 24 * time.Hour)
+				o.ForgetIdle(time.Now())
+
+				if got := len(o.Nodes()); got != 2 {
+					t.Fatalf("unexpected number of nodes: got %d, want 2", got)
+				}
+
+				cancel()
+				<-staying.Done
+			})
+		})
+
+		t.Run("it ends the connection of a node whose heartbeat expired", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				o := NewObserver()
+
+				c := connect(t.Context(), o)
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				send(t, c, heartbeat(time.Second))
+
+				time.Sleep(3*24*time.Hour + time.Second)
+				o.ForgetIdle(time.Now())
+
+				if err := <-c.Done; !errors.Is(err, ErrForgotten) {
+					t.Fatalf("unexpected error: got %v, want %v", err, ErrForgotten)
+				}
+				if got := len(o.Nodes()); got != 0 {
+					t.Fatalf("unexpected number of nodes: got %d, want 0", got)
+				}
+			})
+		})
+	})
+
+	t.Run("func Forget()", func(t *testing.T) {
+		t.Run("it forgets the cluster, and ends its connections", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				o := NewObserver()
+				cluster := uuidpb.Generate()
+
+				gone := connect(t.Context(), o)
+				send(t, gone, preamble(uuidpb.Generate(), cluster, 0, 0))
+				connected := connect(t.Context(), o)
+				send(t, connected, preamble(uuidpb.Generate(), cluster, 0, 0))
+				other := connect(t.Context(), o)
+				send(t, other, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+
+				o.Forget(cluster)
+
+				for _, c := range []connection{gone, connected} {
+					if err := <-c.Done; !errors.Is(err, ErrForgotten) {
+						t.Fatalf("unexpected error: got %v, want %v", err, ErrForgotten)
+					}
+				}
+				if got := len(o.Nodes()); got != 1 {
+					t.Fatalf("unexpected number of nodes: got %d, want 1", got)
+				}
+
+				other.Feed.End(nil)
+				<-other.Done
+			})
+		})
+
+		t.Run("it knows a node that connects again as new", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				o := NewObserver()
+				node, cluster := uuidpb.Generate(), uuidpb.Generate()
+
+				first := connect(ctx, o)
+				send(t, first, preamble(node, cluster, 0, 0))
+				send(t, first, heartbeat(time.Hour))
+				o.Forget(cluster)
+				<-first.Done
+
+				second := connect(ctx, o)
+				send(t, second, preamble(node, cluster, 0, 0))
+
+				n := only(t, o)
+				if !n.Connected || n.Heartbeat != nil || len(n.Heartbeats) != 0 {
+					t.Fatalf("expected a node without history: %+v", n)
+				}
+
+				cancel()
+				<-second.Done
 			})
 		})
 	})
