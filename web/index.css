@@ -34,10 +34,10 @@
 
 	/*
 	 * Messages whose delivery is failing, which is a fact that may pass, and not
-	 * a judgment. It is not red, which is kept for Issues, and it is deeper than
-	 * the yellow of an aggregate.
+	 * a judgment. It is a red-orange that is not the red kept for Issues, and
+	 * that is far from the yellow of an aggregate.
 	 */
-	--color-failing: #c2570c;
+	--color-failing: #e8480c;
 
 	/*
 	 * The engine's subsystems: teal for the cluster, blue for queues and the
