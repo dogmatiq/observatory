@@ -63,9 +63,12 @@ export function StackedBar({
 						// A segment has no identity but its position.
 						// biome-ignore lint/suspicious/noArrayIndexKey: see above
 						key={i}
-						className={
-							s.isOther ? "fill-faint" : cn("fill-(--subsystem)", shades[i])
-						}
+						className={cn(
+							s.isOther ? "fill-faint" : cn("fill-(--subsystem)", shades[i]),
+							// A segment moves and grows as its value changes, and a new one
+							// grows from nothing.
+							"transition-[x,width] duration-500 ease-out starting:w-0 motion-reduce:transition-none",
+						)}
 						x={rect.x.toFixed(3)}
 						y="0"
 						width={rect.width.toFixed(3)}
@@ -97,6 +100,9 @@ export function NodeBar({ segments }: { segments: NodeSegment[] }) {
 					className={cn(
 						"min-w-0 bg-cluster",
 						s.percent === undefined ? "flex-none" : "flex-initial",
+						// A segment grows and shrinks as its share changes, and a new one
+						// grows from nothing.
+						"transition-[width] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out]",
 					)}
 					style={{
 						width: s.percent === undefined ? 8 : `${s.percent.toFixed(3)}%`,

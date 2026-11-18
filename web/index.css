@@ -159,6 +159,16 @@
 	}
 }
 
+/*
+ * A segment of a bar of nodes that is new grows from nothing to the width that it
+ * has, which an inline width can't do by itself.
+ */
+@keyframes bar-in {
+	from {
+		width: 0;
+	}
+}
+
 @layer base {
 	:root {
 		color-scheme: light;
