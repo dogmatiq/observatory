@@ -287,6 +287,25 @@ test("a card with a bar of nodes and no chart keeps the room for a chart, so its
 	expect(without.firstElementChild?.className).not.toContain("pb-15");
 });
 
+test("a card with a bar and no chart keeps the room for a chart, whatever the kind of the bar", () => {
+	const aggregate = card("aggregate", { bindings: [] }).container;
+	expect(aggregate.firstElementChild?.className).toContain("pb-15");
+
+	cleanup();
+
+	const process = card("process", {
+		schedulesDeadlines: true,
+		bindings: [],
+	}).container;
+	expect(process.firstElementChild?.className).toContain("pb-15");
+
+	cleanup();
+
+	// Nothing supports the bindings, so there is no bar and no room for one.
+	const bare = card("aggregate", { bindings: undefined }).container;
+	expect(bare.firstElementChild?.className).not.toContain("pb-15");
+});
+
 test("an integration or a projection whose nodes say nothing has no bar", () => {
 	expect(nodeBar(card("integration").container)).toEqual([]);
 	expect(card("integration").container.querySelector(".bg-sunk")).toBeNull();

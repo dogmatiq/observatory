@@ -51,10 +51,12 @@ export function HandlerCard({
 		failing
 			? "[box-shadow:inset_0_3px_0_var(--color-failing),var(--shadow-raised)]"
 			: raisedClasses,
-		// A card with a chart has room for it along the bottom. So does a card
-		// with a bar of its nodes, which has no chart of its own yet, so that its
-		// bar sits where the bars of the other cards in its row do.
-		(history || handler.nodes !== undefined) && "pb-15",
+		// A card with a chart has room for it along the bottom. So does a card with
+		// a bar and no chart, such as one whose nodes don't report the events that
+		// the chart counts, so that its bar sits where the bars of the other cards
+		// in its row do.
+		"transition-[padding-bottom] duration-400 motion-reduce:transition-none",
+		(history || hasBar(handler)) && "pb-15",
 		href !== undefined && !failing && linkedCardClasses,
 		href !== undefined && failing && "no-underline hover:no-underline",
 	);
@@ -131,6 +133,27 @@ export function HandlerCard({
 			{content}
 		</article>
 	);
+}
+
+/**
+ * hasBar returns whether a handler's card draws a bar of how its work is spread:
+ * an aggregate's instances over the event streams, a process's over the queues of
+ * its deadlines, or an integration's or a projection's work over the nodes. It
+ * does if the nodes report what the bar is made from.
+ */
+function hasBar(handler: HandlerData): boolean {
+	switch (handler.kind) {
+		case "aggregate":
+			return handler.summary.bindings !== undefined;
+		case "process":
+			return (
+				handler.summary.schedulesDeadlines === true &&
+				handler.summary.bindings !== undefined
+			);
+		case "integration":
+		case "projection":
+			return handler.nodes !== undefined;
+	}
 }
 
 /**
