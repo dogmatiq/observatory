@@ -1,4 +1,10 @@
-import type { Binding, LiveNode, SpreadPart } from "../model.ts";
+import type {
+	Binding,
+	HandlerKind,
+	HandlerNode,
+	LiveNode,
+	SpreadPart,
+} from "../model.ts";
 import { countOf, formatCompact, shortId } from "./format.ts";
 
 /**
@@ -193,5 +199,29 @@ export function nodeSegments(nodes: LiveNode[]): NodeSegment[] {
 		title: `${countOf(n.workloads, "workload", "workloads")} owned by node ${shortId(n.id)}`,
 		opacity: nodeOpacity(i, nodes.length),
 		percent: n.workloads > 0 ? (n.workloads / total) * 100 : undefined,
+	}));
+}
+
+/**
+ * handlerNodeSegments returns the segments of a bar of how the work of an
+ * integration or a projection is spread over the nodes that handled its
+ * messages, one for each node that handled any, in the order given. A node's
+ * width is its share of the rate of all the nodes. The result is empty if no
+ * node handled any.
+ *
+ * The shades step down in the same way as those of the bar of nodes.
+ */
+export function handlerNodeSegments(
+	nodes: HandlerNode[],
+	kind: HandlerKind,
+): NodeSegment[] {
+	const busy = nodes.filter((n) => n.rate > 0);
+	const total = busy.reduce((sum, n) => sum + n.rate, 0);
+	const noun = kind === "integration" ? "commands" : "events";
+
+	return busy.map((n, i) => ({
+		title: `${formatCompact(Math.round(n.rate * 60))} ${noun}/min on node ${shortId(n.id)}`,
+		opacity: nodeOpacity(i, busy.length),
+		percent: (n.rate / total) * 100,
 	}));
 }

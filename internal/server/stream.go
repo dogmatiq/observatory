@@ -352,6 +352,14 @@ func documentOf(view observe.ClusterView) map[string]any {
 		}
 		h["bindings"] = bindings
 
+		if card.Nodes != nil {
+			nodes := map[string]any{}
+			for _, n := range card.Nodes {
+				nodes[n.Node] = map[string]any{"rate": significant(n.Rate)}
+			}
+			h["nodes"] = nodes
+		}
+
 		handlers[card.Key] = h
 	}
 	doc["handlers"] = handlers

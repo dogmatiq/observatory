@@ -531,3 +531,116 @@ test("a part of the document that isn't well formed is left out and the others a
 test("there is no cluster view without an application", () => {
 	expect(selectCluster(empty, 0)).toBeUndefined();
 });
+
+/** Selects the cards of a document that has only these handlers. */
+function cardsOf(handlers: Record<string, unknown>) {
+	const s = applied([
+		changed({ application: { name: "a", key: "k" }, handlers }),
+		0,
+	]);
+	return selectCluster(s, 0)?.overview.handlers ?? [];
+}
+
+test("an integration and a projection have the nodes that handled their messages, in the order of the nodes' IDs", () => {
+	const cards = cardsOf({
+		i: {
+			name: "mailer",
+			kind: "integration",
+			nodes: { n2: { rate: 0.5 }, n1: { rate: 1.5 } },
+		},
+		p: {
+			name: "balances",
+			kind: "projection",
+			nodes: { n3: { rate: 2 } },
+		},
+	});
+
+	expect(cards.find((c) => c.key === "i")?.nodes).toEqual([
+		{ id: "n1", rate: 1.5 },
+		{ id: "n2", rate: 0.5 },
+	]);
+	expect(cards.find((c) => c.key === "p")?.nodes).toEqual([
+		{ id: "n3", rate: 2 },
+	]);
+});
+
+test("a handler whose document has no nodes has none, and one whose nodes are empty has an empty list", () => {
+	const cards = cardsOf({
+		a: { name: "a", kind: "integration" },
+		b: { name: "b", kind: "integration", nodes: {} },
+	});
+
+	expect(cards.find((c) => c.key === "a")).not.toHaveProperty("nodes");
+	expect(cards.find((c) => c.key === "b")?.nodes).toEqual([]);
+});
+
+test("an aggregate and a process have no nodes, whatever the document says", () => {
+	const cards = cardsOf({
+		a: { name: "a", kind: "aggregate", nodes: { n1: { rate: 1 } } },
+		p: { name: "p", kind: "process", nodes: { n1: { rate: 1 } } },
+	});
+
+	expect(cards).toHaveLength(2);
+	for (const card of cards) {
+		expect(card).not.toHaveProperty("nodes");
+	}
+});
+
+test("an entry of the nodes that isn't well formed is left out, and the others are not", () => {
+	const cards = cardsOf({
+		i: {
+			name: "i",
+			kind: "integration",
+			nodes: {
+				n1: { rate: 1 },
+				n2: { rate: "fast" },
+				n3: 7,
+				n4: {},
+				n5: { rate: 2 },
+			},
+		},
+	});
+
+	expect(cards[0]?.nodes).toEqual([
+		{ id: "n1", rate: 1 },
+		{ id: "n5", rate: 2 },
+	]);
+});
+
+test("nodes that aren't well formed leave out the bar and nothing else of the card", () => {
+	const cards = cardsOf({
+		i: {
+			name: "i",
+			kind: "integration",
+			queued: 4,
+			nodes: "everyone",
+		},
+	});
+
+	expect(cards).toHaveLength(1);
+	expect(cards[0]).not.toHaveProperty("nodes");
+	expect(cards[0]?.summary.queuedMessages).toBe(4);
+});
+
+test("a rate that a change removes from a node, and a node that it removes, leave the others", () => {
+	const s = applied(
+		[
+			changed({
+				application: { name: "a", key: "k" },
+				handlers: {
+					i: {
+						name: "i",
+						kind: "integration",
+						nodes: { n1: { rate: 1 }, n2: { rate: 2 } },
+					},
+				},
+			}),
+			0,
+		],
+		[changed({ handlers: { i: { nodes: { n1: null, n2: { rate: 3 } } } } }), 1],
+	);
+
+	expect(selectCluster(s, 1)?.overview.handlers[0]?.nodes).toEqual([
+		{ id: "n2", rate: 3 },
+	]);
+});

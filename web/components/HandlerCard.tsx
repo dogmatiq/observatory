@@ -1,7 +1,7 @@
 import { type ReactNode, useId } from "react";
 import { cn } from "../lib/cn.ts";
 import { countOf, formatCompact, nounFor } from "../lib/format.ts";
-import { bindingSegments } from "../lib/segments.ts";
+import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
@@ -10,7 +10,7 @@ import {
 	raisedClasses,
 } from "./MetricTile.tsx";
 import { Sparkline } from "./Sparkline.tsx";
-import { StackedBar } from "./StackedBar.tsx";
+import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
 
 /**
@@ -235,6 +235,17 @@ function Summary({
 		case "projection":
 			eventBacklog();
 			break;
+	}
+
+	// An integration and a projection have no instances to spread, so their bar is
+	// of the nodes that handled their messages, if the nodes say what they handled.
+	if (
+		(handler.kind === "integration" || handler.kind === "projection") &&
+		handler.nodes !== undefined
+	) {
+		bar = (
+			<NodeBar segments={handlerNodeSegments(handler.nodes, handler.kind)} />
+		);
 	}
 
 	return (

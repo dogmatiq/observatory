@@ -3,6 +3,7 @@ import { overview } from "../fixtures/overview.ts";
 import { golden } from "../fixtures/prototype-golden.ts";
 import {
 	bindingSegments,
+	handlerNodeSegments,
 	layoutSegments,
 	limitSegments,
 	nodeSegments,
@@ -174,4 +175,75 @@ test("with more nodes the shades step down evenly, and the last is the lightest"
 	expect(many[0]).toBe(1);
 	expect(many.at(-1)).toBe(0.28);
 	expect([...many].sort((a, b) => b - a)).toEqual(many);
+});
+
+test("the bar of the nodes of an integration gives each node its share of the rate, in the order given", () => {
+	const segments = handlerNodeSegments(
+		[
+			{ id: "aaaaaaaa-1", rate: 3 },
+			{ id: "bbbbbbbb-2", rate: 1 },
+		],
+		"integration",
+	);
+
+	expect(segments.map((s) => s.percent)).toEqual([75, 25]);
+	expect(segments.map((s) => s.title)).toEqual([
+		"180 commands/min on node aaaaaaaa",
+		"60 commands/min on node bbbbbbbb",
+	]);
+});
+
+test("the bar of the nodes of a projection counts events", () => {
+	const [segment] = handlerNodeSegments(
+		[{ id: "cccccccc-3", rate: 25 }],
+		"projection",
+	);
+
+	expect(segment?.title).toBe("1.5K events/min on node cccccccc");
+	expect(segment?.percent).toBe(100);
+});
+
+test("a node that handled nothing has no segment, and the others share the bar", () => {
+	const segments = handlerNodeSegments(
+		[
+			{ id: "aaaaaaaa", rate: 0 },
+			{ id: "bbbbbbbb", rate: 2 },
+			{ id: "cccccccc", rate: -1 },
+			{ id: "dddddddd", rate: 2 },
+		],
+		"integration",
+	);
+
+	expect(segments.map((s) => s.title.split(" on node ")[1])).toEqual([
+		"bbbbbbbb",
+		"dddddddd",
+	]);
+	expect(segments.map((s) => s.percent)).toEqual([50, 50]);
+});
+
+test("a bar of nodes that handled nothing, or of no nodes, has no segments", () => {
+	expect(handlerNodeSegments([], "integration")).toEqual([]);
+	expect(
+		handlerNodeSegments([{ id: "aaaaaaaa", rate: 0 }], "projection"),
+	).toEqual([]);
+});
+
+test("the segments of the nodes of a handler step down in shade with the number of nodes that handled something", () => {
+	const nodes = (n: number) =>
+		Array.from({ length: n }, (_, i) => ({ id: `${i}`.repeat(8), rate: 1 }));
+
+	expect(
+		handlerNodeSegments(nodes(3), "integration").map((s) => s.opacity),
+	).toEqual([1, 0.8, 0.64]);
+	expect(
+		handlerNodeSegments(nodes(7), "integration").map((s) => s.opacity),
+	).toEqual([1, 0.88, 0.76, 0.64, 0.52, 0.4, 0.28]);
+
+	// A node that handled nothing doesn't take a step.
+	expect(
+		handlerNodeSegments(
+			[{ id: "aaaaaaaa", rate: 0 }, ...nodes(7)],
+			"integration",
+		).map((s) => s.opacity),
+	).toEqual([1, 0.88, 0.76, 0.64, 0.52, 0.4, 0.28]);
 });

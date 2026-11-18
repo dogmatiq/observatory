@@ -628,6 +628,163 @@ func TestOverview(t *testing.T) {
 		})
 	})
 
+	t.Run("the nodes that handle the messages of a handler", func(t *testing.T) {
+		nodeRates := func(card HandlerCard) map[string]float64 {
+			got := map[string]float64{}
+			for _, n := range card.Nodes {
+				got[n.Node] = n.Rate
+			}
+			return got
+		}
+
+		t.Run("it gives each node's rate of handling an integration's commands", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				o, r := NewObserver(), NewRecorder()
+				c, key := uuidpb.Generate(), uuidpb.Generate()
+				app := appOf("statements", uuidpb.Generate(),
+					handler("mailer", key, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil),
+					handler("balances", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil),
+					handler("account", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_AGGREGATE, nil))
+				handled := supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE)
+
+				a := startApp(t, ctx, o, c, app, handled)
+				b := startApp(t, ctx, o, c, app, handled)
+				total := func(v uint64) proto.Message {
+					return metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, Value: v}.Build()
+				}
+				a.sample(t, 0, "m", 1, total(0))
+				b.sample(t, 0, "m", 1, total(0))
+				time.Sleep(10 * time.Second)
+				a.sample(t, 0, "m", 2, total(100))
+				b.sample(t, 0, "m", 2, total(50))
+
+				r.Record(time.Now(), o.Nodes())
+
+				cards := map[string]HandlerCard{}
+				for _, card := range viewOf(t, r, o, c).Overview.Handlers {
+					cards[card.Name] = card
+				}
+
+				got := nodeRates(cards["mailer"])
+				if len(got) != 2 {
+					t.Fatalf("unexpected nodes: %v", got)
+				}
+				if v := got[a.ID.AsString()]; math.Abs(v-10) > 1e-9 {
+					t.Fatalf("unexpected rate of the first node: got %g, want 10", v)
+				}
+				if v := got[b.ID.AsString()]; math.Abs(v-5) > 1e-9 {
+					t.Fatalf("unexpected rate of the second node: got %g, want 5", v)
+				}
+
+				// A projection handles events, and the nodes don't report those. An
+				// aggregate has no such bar at all.
+				if cards["balances"].Nodes != nil || cards["account"].Nodes != nil {
+					t.Fatalf("unexpected nodes: %+v %+v", cards["balances"].Nodes, cards["account"].Nodes)
+				}
+
+				cancel()
+				<-a.Engine.Done
+				<-b.Engine.Done
+			})
+		})
+
+		t.Run("it uses the events that a projection has handled", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				o, r := NewObserver(), NewRecorder()
+				c, key := uuidpb.Generate(), uuidpb.Generate()
+				app := appOf("statements", uuidpb.Generate(),
+					handler("balances", key, configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil))
+
+				n := startApp(t, ctx, o, c, app, supports(name(new(metricsgrpc.HandlerEventsHandled)), metricsgrpc.Reach_REACH_NODE))
+				total := func(v uint64) proto.Message {
+					return metricsgrpc.HandlerEventsHandled_builder{HandlerKey: key, Value: v}.Build()
+				}
+				n.sample(t, 0, "b", 1, total(0))
+				time.Sleep(10 * time.Second)
+				n.sample(t, 0, "b", 2, total(20))
+
+				r.Record(time.Now(), o.Nodes())
+
+				got := nodeRates(viewOf(t, r, o, c).Overview.Handlers[0])
+				if v := got[n.ID.AsString()]; len(got) != 1 || math.Abs(v-2) > 1e-9 {
+					t.Fatalf("unexpected nodes: %v", got)
+				}
+
+				cancel()
+				<-n.Engine.Done
+			})
+		})
+
+		t.Run("it leaves out a node whose rate isn't known yet, and it is empty when no node has one", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				o, r := NewObserver(), NewRecorder()
+				c, key := uuidpb.Generate(), uuidpb.Generate()
+				app := appOf("statements", uuidpb.Generate(),
+					handler("mailer", key, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil))
+
+				n := startApp(t, ctx, o, c, app, supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE))
+				n.sample(t, 0, "m", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, Value: 1}.Build())
+				r.Record(time.Now(), o.Nodes())
+
+				card := viewOf(t, r, o, c).Overview.Handlers[0]
+				if card.Nodes == nil || len(card.Nodes) != 0 {
+					t.Fatalf("unexpected nodes: %#v", card.Nodes)
+				}
+
+				cancel()
+				<-n.Engine.Done
+			})
+		})
+
+		t.Run("it smooths a rate, so that the rate of a node that has gone halves in half a minute", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				gone, goneStop := context.WithCancel(t.Context())
+				o, r := NewObserver(), NewRecorder()
+				c, key := uuidpb.Generate(), uuidpb.Generate()
+				app := appOf("statements", uuidpb.Generate(),
+					handler("mailer", key, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil))
+				handled := supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE)
+
+				stays := startApp(t, ctx, o, c, app, handled)
+				leaves := startApp(t, gone, o, c, app, handled)
+				total := func(v uint64) proto.Message {
+					return metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, Value: v}.Build()
+				}
+				stays.sample(t, 0, "m", 1, total(0))
+				leaves.sample(t, 0, "m", 1, total(0))
+				time.Sleep(10 * time.Second)
+				stays.sample(t, 0, "m", 2, total(100))
+				leaves.sample(t, 0, "m", 2, total(100))
+				r.Record(time.Now(), o.Nodes())
+
+				before := nodeRates(viewOf(t, r, o, c).Overview.Handlers[0])[leaves.ID.AsString()]
+				if before == 0 {
+					t.Fatal("expected a rate before the node goes")
+				}
+
+				goneStop()
+				<-leaves.Engine.Done
+
+				for range 30 {
+					time.Sleep(time.Second)
+					r.Record(time.Now(), o.Nodes())
+				}
+
+				after := nodeRates(viewOf(t, r, o, c).Overview.Handlers[0])[leaves.ID.AsString()]
+				if math.Abs(after/before-0.5) > 0.02 {
+					t.Fatalf("unexpected ratio after half a minute: got %g, want 0.5", after/before)
+				}
+
+				cancel()
+				<-stays.Engine.Done
+			})
+		})
+	})
+
 	t.Run("func Record()", func(t *testing.T) {
 		t.Run("it gives each chart the history of its number, placed by how long before the view it was recorded", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {

@@ -48,7 +48,10 @@
 //     "unhandledEvents", "schedulesDeadlines", "bindings"}. A fact that the
 //     nodes don't report, or that the handler doesn't have, is absent, and so
 //     are the flags that are false. "bindings" is keyed by the ID of the event
-//     stream or the queue, each {"instances"}.
+//     stream or the queue, each {"instances"}. An integration or a projection
+//     also has "nodes", keyed by the ID of the node, each {"rate"}, which is the
+//     smoothed rate at which the node handles the handler's messages. It is
+//     absent if the nodes don't report that.
 //
 // The time series are "events" (the events recorded per second), "queues" (the
 // messages in the queues) and "handlers/<handler key>" (the events that the

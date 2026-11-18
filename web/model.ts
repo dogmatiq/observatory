@@ -177,6 +177,29 @@ export interface HandlerData {
 
 	/** The history of events recorded or handled per minute, if it has one. */
 	history?: Chart;
+
+	/**
+	 * How the work of an integration or a projection is spread over the nodes
+	 * that handled its messages, ordered by node ID so that the segments of a bar
+	 * of them keep their places. Absent for other handlers, and for one whose
+	 * nodes don't report what they handled, and then the card has no such bar.
+	 */
+	nodes?: HandlerNode[];
+}
+
+/**
+ * HandlerNode is the work that one node did for a handler.
+ */
+export interface HandlerNode {
+	/** The ID of the node. */
+	id: string;
+
+	/**
+	 * How many messages per second the node handled for the handler, as an
+	 * average that is smoothed over a while. Only its share of all the nodes'
+	 * rates matters to a bar, so the unit is of no importance there.
+	 */
+	rate: number;
 }
 
 /**
@@ -294,4 +317,11 @@ export interface HandlerDocument {
 
 	/** The instances bound to each event stream or queue, by its ID. */
 	bindings?: Record<string, { instances: number }>;
+
+	/**
+	 * What each node handled for an integration or a projection, by node ID,
+	 * as a rate in x/s that is smoothed over a while. Absent for other kinds of
+	 * handler, and when the nodes don't report what they handled.
+	 */
+	nodes?: Record<string, { rate: number }>;
 }

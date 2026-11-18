@@ -5,6 +5,7 @@ import type {
 	ClusterData,
 	HandlerData,
 	HandlerKind,
+	HandlerNode,
 	LiveNode,
 	OverviewData,
 	SpreadPart,
@@ -432,6 +433,23 @@ const kindOrder: HandlerKind[] = [
 const byId = (a: [string, unknown], b: [string, unknown]) =>
 	a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0;
 
+/**
+ * Returns the nodes that handled a handler's messages, in the order of their
+ * IDs, or undefined if the document doesn't say. An entry that isn't well formed
+ * is skipped.
+ */
+function nodesOf(v: unknown): HandlerNode[] | undefined {
+	if (v === undefined) {
+		return undefined;
+	}
+
+	return Object.entries(object(v, "nodes"))
+		.sort(byId)
+		.flatMap(([id, n]): HandlerNode[] =>
+			isObject(n) && isNumber(n.rate) ? [{ id, rate: n.rate }] : [],
+		);
+}
+
 /** Returns what a handler's card draws, from what the document says. */
 function cardOf(
 	key: string,
@@ -480,6 +498,15 @@ function cardOf(
 	}
 	if (chart) {
 		card.history = chart;
+	}
+
+	// Only an integration or a projection has a bar of the nodes that handled its
+	// messages. A part of it that isn't well formed leaves out that bar alone.
+	if (kind === "integration" || kind === "projection") {
+		const nodes = attempt(() => nodesOf(h.nodes));
+		if (nodes !== undefined) {
+			card.nodes = nodes;
+		}
 	}
 
 	// A fact that the document doesn't give is left out, not given as undefined.

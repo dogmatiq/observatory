@@ -2,6 +2,7 @@ package observe
 
 import (
 	"cmp"
+	"math"
 	"slices"
 	"sync"
 	"time"
@@ -245,11 +246,30 @@ type HandlerCard struct {
 
 	Summary HandlerSummary `json:"summary"`
 
+	// Nodes is how fast each node handles the messages of the handler, if it is
+	// an integration, which handles commands, or a projection, which handles
+	// events. It is nil for other handlers, and for one whose messages the nodes
+	// don't report the handling of. It is empty if no node has handled any. The
+	// rates are smoothed. See [NodeRate].
+	Nodes []NodeRate `json:"nodes,omitempty"`
+
 	// History is how many events per second the handler records, if it is an
 	// aggregate or an integration, or handles, if it is a process or a
 	// projection. It is nil for a handler that has no such number, such as an
 	// integration that records no events.
 	History *Chart `json:"history,omitempty"`
+}
+
+// NodeRate is how fast one node handles the messages of a handler.
+type NodeRate struct {
+	// Node is the ID of the node, as a UUID.
+	Node string `json:"node"`
+
+	// Rate is the number of messages per second that the node handles, smoothed
+	// with an exponentially weighted average whose half-life is
+	// [nodeRateHalfLife], so that it follows the work of the node and not the
+	// moment.
+	Rate float64 `json:"rate"`
 }
 
 // HandlerSummary is the facts that a handler's card shows.
@@ -649,6 +669,9 @@ type history struct {
 	events   *Trail
 	queued   *Trail
 	handlers map[string]*Trail
+
+	// nodeRates is the smoothed rate of each node, by the key of the handler.
+	nodeRates map[string]map[string]float64
 }
 
 func newHistory() *history {
@@ -656,6 +679,8 @@ func newHistory() *history {
 		events:   NewTrail(chartSpan),
 		queued:   NewTrail(chartSpan),
 		handlers: map[string]*Trail{},
+
+		nodeRates: map[string]map[string]float64{},
 	}
 }
 
@@ -681,7 +706,7 @@ func (r *Recorder) Record(now time.Time, nodes []Node) {
 	}
 
 	for id, members := range clusters {
-		_, _, rs := overviewOf(now, members)
+		_, o, rs := overviewOf(now, members)
 
 		h, ok := r.clusters[id]
 		if !ok {
@@ -706,7 +731,105 @@ func (r *Recorder) Record(now time.Time, nodes []Node) {
 			}
 			t.Add(now, *rate)
 		}
+
+		h.smoothNodeRates(now, members, o.Handlers)
 	}
+}
+
+// nodeRateHalfLife is the time in which the smoothed rate of a node closes half
+// of its distance to the rate that the node has now.
+const nodeRateHalfLife = 30 * time.Second
+
+// smoothNodeRates moves the smoothed rate of each node of each integration and
+// projection towards the rate that it has at the time now. A node that has no
+// rate, such as one that has gone, moves towards zero.
+func (h *history) smoothNodeRates(now time.Time, nodes []Node, cards []HandlerCard) {
+	commands, events := handledByNode(now, nodes)
+
+	// The Recorder is called once a second, so each call moves the rates by the
+	// share of a half-life that a second is.
+	alpha := 1 - math.Pow(0.5, float64(time.Second)/float64(nodeRateHalfLife))
+
+	for _, card := range cards {
+		var raw map[string]float64
+		switch card.Kind {
+		case "integration":
+			raw = commands[card.Key]
+		case "projection":
+			raw = events[card.Key]
+		default:
+			continue
+		}
+
+		smoothed := h.nodeRates[card.Key]
+		if smoothed == nil {
+			smoothed = map[string]float64{}
+			h.nodeRates[card.Key] = smoothed
+		}
+
+		for node, rate := range raw {
+			if old, ok := smoothed[node]; ok {
+				smoothed[node] = old + alpha*(rate-old)
+			} else {
+				smoothed[node] = rate
+			}
+		}
+
+		for node, old := range smoothed {
+			if _, ok := raw[node]; ok {
+				continue
+			}
+			if smoothed[node] = old * (1 - alpha); smoothed[node] < 1e-9 {
+				delete(smoothed, node)
+			}
+		}
+	}
+}
+
+// handledByNode returns how many commands and how many events per second each
+// node handles for each handler, by the key of the handler and then the ID of
+// the node. A node whose rate isn't known yet is left out.
+//
+// The totals that the nodes report are their own, so the rates are too. See
+// [Combine], which adds them up.
+func handledByNode(now time.Time, nodes []Node) (commands, events map[string]map[string]float64) {
+	commands = map[string]map[string]float64{}
+	events = map[string]map[string]float64{}
+
+	readers := contributors(now, nodes)
+	decisions := decide(readers)
+
+	for _, n := range readers {
+		id := n.Preamble.GetNodeId().AsString()
+
+		for _, s := range n.Metrics.Samples {
+			d := decisions[s.Metric]
+			if s.Reach != metricsgrpc.Reach_REACH_NODE || d.reach != metricsgrpc.Reach_REACH_NODE {
+				continue
+			}
+
+			rate, ok := s.perSecond(now)
+			if !ok {
+				continue
+			}
+
+			switch m := s.Message.(type) {
+			case *metricsgrpc.HandlerCommandsHandled:
+				add(commands, m.GetHandlerKey().AsString(), id, rate)
+			case *metricsgrpc.HandlerEventsHandled:
+				add(events, m.GetHandlerKey().AsString(), id, rate)
+			}
+		}
+	}
+
+	return commands, events
+}
+
+func add(m map[string]map[string]float64, key, node string, rate float64) {
+	if m[key] == nil {
+		m[key] = map[string]float64{}
+	}
+	m[key][node] = rate
 }
 
 // View returns the cluster view of the cluster that has the given ID, at the
@@ -719,6 +842,7 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 	}
 
 	app, o, _ := overviewOf(now, members)
+	supported := Supported(now, members)
 
 	r.m.Lock()
 	defer r.m.Unlock()
@@ -735,13 +859,32 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 		o.Queues.History = chartOf(now, h.queued)
 	}
 	for i, card := range o.Handlers {
-		if card.History == nil {
+		if card.History != nil {
+			if t, ok := h.handlers[card.Key]; ok {
+				c := chartOf(now, t)
+				o.Handlers[i].History = &c
+			}
+		}
+
+		var handled string
+		switch card.Kind {
+		case "integration":
+			handled = metric(new(metricsgrpc.HandlerCommandsHandled))
+		case "projection":
+			handled = metric(new(metricsgrpc.HandlerEventsHandled))
+		default:
 			continue
 		}
-		if t, ok := h.handlers[card.Key]; ok {
-			c := chartOf(now, t)
-			o.Handlers[i].History = &c
+		if !supported[handled] {
+			continue
 		}
+
+		rates := []NodeRate{}
+		for node, rate := range h.nodeRates[card.Key] {
+			rates = append(rates, NodeRate{node, rate})
+		}
+		slices.SortFunc(rates, func(a, b NodeRate) int { return cmp.Compare(a.Node, b.Node) })
+		o.Handlers[i].Nodes = rates
 	}
 
 	return ClusterView{Application: app, Overview: o}, true

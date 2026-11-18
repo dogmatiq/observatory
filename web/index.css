@@ -50,12 +50,12 @@
 	 * The kinds of handler, in the colors of the sticky notes of event
 	 * storming: an aggregate is yellow, a process is a policy and is lilac, an
 	 * integration is an external system and is pink, and a projection is a read
-	 * model and is green. They color only the icon of a kind.
+	 * model and is green, a lime green that stays apart from the cluster's. They color only the icon of a kind.
 	 */
 	--color-sticky-aggregate: #c99a06;
 	--color-sticky-process: #8b5cf6;
 	--color-sticky-integration: #e0559a;
-	--color-sticky-projection: #3f9b57;
+	--color-sticky-projection: #65a30d;
 
 	--font-sans:
 		"IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", Roboto,
@@ -150,7 +150,7 @@
 			--color-sticky-aggregate: #f2c94c;
 			--color-sticky-process: #b794f6;
 			--color-sticky-integration: #f472b6;
-			--color-sticky-projection: #5fd38d;
+			--color-sticky-projection: #a3e635;
 			--shadow-raised:
 				0 0 0 1px rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.35);
 			--shadow-raised-pointed:

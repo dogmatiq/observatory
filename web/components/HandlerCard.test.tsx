@@ -182,3 +182,72 @@ test("the numbers that the engine doesn't report are left out", () => {
 	);
 	expect(stats(projection.container)).toEqual({});
 });
+
+/** The segments of the bar of nodes on the card, by their titles. */
+function nodeBar(container: HTMLElement) {
+	return [...container.querySelectorAll("div[role=img]")].map((e) =>
+		e.getAttribute("aria-label"),
+	);
+}
+
+const nodes = [
+	{ id: "aaaaaaaa-1", rate: 3 },
+	{ id: "bbbbbbbb-2", rate: 1 },
+];
+
+test("an integration shows a bar of the nodes that handled its commands", () => {
+	const { container } = card("integration", {}, { nodes });
+
+	expect(nodeBar(container)).toEqual([
+		"180 commands/min on node aaaaaaaa",
+		"60 commands/min on node bbbbbbbb",
+	]);
+});
+
+test("a projection shows a bar of the nodes that handled its events", () => {
+	const { container } = card("projection", {}, { nodes });
+
+	expect(nodeBar(container)).toEqual([
+		"180 events/min on node aaaaaaaa",
+		"60 events/min on node bbbbbbbb",
+	]);
+});
+
+test("the bar of nodes is with the failing line, at the bottom of the card", () => {
+	const { container } = card("integration", { failing: 2 }, { nodes });
+
+	const bottom = container.querySelector(".mt-auto");
+	expect(bottom?.textContent).toContain("2 messages failing");
+	expect(nodeBar(bottom as HTMLElement)).toHaveLength(2);
+});
+
+test("an integration or a projection whose nodes say nothing has no bar", () => {
+	expect(nodeBar(card("integration").container)).toEqual([]);
+	expect(card("integration").container.querySelector(".bg-sunk")).toBeNull();
+});
+
+test("nodes that all handled nothing give an empty track, that keeps the card's place", () => {
+	const { container } = card(
+		"projection",
+		{},
+		{ nodes: [{ id: "aaaaaaaa", rate: 0 }] },
+	);
+
+	expect(nodeBar(container)).toEqual([]);
+	expect(container.querySelector(".bg-sunk")).not.toBeNull();
+});
+
+test("a handler with an empty list of nodes has an empty track too", () => {
+	const { container } = card("integration", {}, { nodes: [] });
+
+	expect(nodeBar(container)).toEqual([]);
+	expect(container.querySelector(".bg-sunk")).not.toBeNull();
+});
+
+test("an aggregate and a process don't draw a bar of nodes", () => {
+	for (const kind of ["aggregate", "process"] as const) {
+		const { container } = card(kind, { instances: 1 }, { nodes });
+		expect(nodeBar(container).join()).not.toContain("on node");
+		cleanup();
+	}
+});
