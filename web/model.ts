@@ -175,7 +175,12 @@ export interface HandlerData {
 	/** The facts about the handler. */
 	summary: HandlerSummary;
 
-	/** The history of events recorded or handled per minute, if it has one. */
+	/**
+	 * The history of what the handler works with, per minute: the events that an
+	 * aggregate records, that a process or a projection handles, or that an
+	 * integration records, or else the commands that it handles. Absent if the
+	 * nodes don't report it.
+	 */
 	history?: Chart;
 
 	/**

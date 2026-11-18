@@ -253,10 +253,13 @@ type HandlerCard struct {
 	// rates are smoothed. See [NodeRate].
 	Nodes []NodeRate `json:"nodes,omitempty"`
 
-	// History is how many events per second the handler records, if it is an
-	// aggregate or an integration, or handles, if it is a process or a
-	// projection. It is nil for a handler that has no such number, such as an
-	// integration that records no events.
+	// History is how the number of messages per second that the handler works
+	// with changed, chosen by the routes that the handler's description gives it,
+	// which don't change while it runs: the events that an aggregate records, the
+	// events that a process or a projection handles, and, for an integration, the
+	// events that it records if it produces any type of event, or else the commands
+	// that it handles. It is nil for a handler that no node reports that number
+	// for.
 	History *Chart `json:"history,omitempty"`
 }
 
@@ -350,7 +353,7 @@ func (r summedRate) rate() *float64 {
 type handlerFigures struct {
 	commandsPending, deadlinesPending, eventsPending *uint64
 	failing                                          uint64
-	eventsRecorded, eventsHandled                    summedRate
+	eventsRecorded, eventsHandled, commandsHandled   summedRate
 
 	// bindings is the number of instances bound to each event stream, for an
 	// aggregate, or queue, for a process, by ID.
@@ -420,6 +423,8 @@ func figuresOf(samples []ClusterSample) figures {
 			handler(m.GetHandlerKey()).failing += v
 		case *metricsgrpc.HandlerDeadlinesFailing:
 			handler(m.GetHandlerKey()).failing += v
+		case *metricsgrpc.HandlerCommandsHandled:
+			handler(m.GetHandlerKey()).commandsHandled.add(s)
 		case *metricsgrpc.HandlerEventsRecorded:
 			handler(m.GetHandlerKey()).eventsRecorded.add(s)
 			f.eventsRecorded.add(s)
@@ -566,10 +571,13 @@ func handlerCards(
 	f figures,
 	handlerRates map[string]*float64,
 ) []HandlerCard {
-	deadlines := map[string]bool{}
+	deadlines, events := map[string]bool{}, map[string]bool{}
 	for name, kind := range app.GetMessages() {
-		if kind == configpb.MessageKind_MESSAGE_KIND_DEADLINE {
+		switch kind {
+		case configpb.MessageKind_MESSAGE_KIND_DEADLINE:
 			deadlines[name] = true
+		case configpb.MessageKind_MESSAGE_KIND_EVENT:
+			events[name] = true
 		}
 	}
 
@@ -634,7 +642,15 @@ func handlerCards(
 
 		case configpb.HandlerType_HANDLER_TYPE_INTEGRATION:
 			s.QueuedMessages = figs.commandsPending
-			recorded = &figs.eventsRecorded
+
+			// An integration that produces events has its events recorded charted,
+			// and one that produces none has its commands handled charted.
+			recorded = &figs.commandsHandled
+			for name, use := range h.GetMessages() {
+				if use.GetIsProduced() && events[name] {
+					recorded = &figs.eventsRecorded
+				}
+			}
 
 		case configpb.HandlerType_HANDLER_TYPE_PROJECTION:
 			s.UnhandledEvents = figs.eventsPending

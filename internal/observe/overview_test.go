@@ -47,6 +47,7 @@ func appOf(name string, key *uuidpb.UUID, handlers ...*configpb.Handler) *config
 		Messages: map[string]configpb.MessageKind{
 			"example.Deadline": configpb.MessageKind_MESSAGE_KIND_DEADLINE,
 			"example.Command":  configpb.MessageKind_MESSAGE_KIND_COMMAND,
+			"example.Event":    configpb.MessageKind_MESSAGE_KIND_EVENT,
 		},
 	}.Build()
 }
@@ -605,23 +606,34 @@ func TestOverview(t *testing.T) {
 				})
 			})
 
-			t.Run("it gives an integration that records no events no chart", func(t *testing.T) {
+			t.Run("it charts the events that an integration records if its routes produce an event, and else the commands that it handles", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
 					o, r := NewObserver(), NewRecorder()
 					c := uuidpb.Generate()
-					records, silent := uuidpb.Generate(), uuidpb.Generate()
+					records, handles, silent := uuidpb.Generate(), uuidpb.Generate(), uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c,
 						appOf("statements", uuidpb.Generate(),
-							handler("records", records, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil),
+							handler("records", records, configpb.HandlerType_HANDLER_TYPE_INTEGRATION,
+								map[string]*configpb.MessageUsage{
+									"example.Command": configpb.MessageUsage_builder{IsConsumed: true}.Build(),
+									"example.Event":   configpb.MessageUsage_builder{IsProduced: true}.Build(),
+								}),
+							handler("handles", handles, configpb.HandlerType_HANDLER_TYPE_INTEGRATION,
+								map[string]*configpb.MessageUsage{
+									"example.Command": configpb.MessageUsage_builder{IsConsumed: true}.Build(),
+								}),
 							handler("silent", silent, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil)),
 						supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE),
+						supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE),
 					)
+
 					n.sample(t, 0, "records", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: records, Value: 1}.Build())
+					n.sample(t, 1, "handles", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handles, Value: 1}.Build())
 
 					for _, h := range viewOf(t, r, o, c).Overview.Handlers {
-						if (h.Name == "records") != (h.History != nil) {
+						if (h.Name != "silent") != (h.History != nil) {
 							t.Fatalf("unexpected chart of %s: %v", h.Name, h.History)
 						}
 					}
