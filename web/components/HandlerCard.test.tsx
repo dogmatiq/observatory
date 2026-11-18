@@ -221,6 +221,16 @@ test("the bar of nodes is with the failing line, at the bottom of the card", () 
 	expect(nodeBar(bottom as HTMLElement)).toHaveLength(2);
 });
 
+test("a card with a bar of nodes and no chart keeps the room for a chart, so its bar sits where the others do", () => {
+	const withBar = card("integration", {}, { nodes }).container;
+	expect(withBar.firstElementChild?.className).toContain("pb-15");
+
+	cleanup();
+
+	const without = card("integration").container;
+	expect(without.firstElementChild?.className).not.toContain("pb-15");
+});
+
 test("an integration or a projection whose nodes say nothing has no bar", () => {
 	expect(nodeBar(card("integration").container)).toEqual([]);
 	expect(card("integration").container.querySelector(".bg-sunk")).toBeNull();
