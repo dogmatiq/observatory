@@ -342,8 +342,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   - [x] **Health rules**: failed deliveries, backlog and membership, and forgetting a cluster after 3 days.
   - [ ] **Engines through tenet**: accepting engines through tenet once its two sides work, and checking engines' server
     certificates once their gRPC connections use mutual TLS.
-  - [x] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots.
-  - [x] **Cluster view**: the prototype's overview, exactly, with the differences recorded above.
+  - [x] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots (73f1466).
+  - [x] **Cluster view**: the prototype's overview, exactly, with the differences recorded above (73f1466, 721e01e).
   - [ ] **Smoke test**: a real engine with the Observatory, managed by the Observatory's CI.
   - [ ] **Beyond the cluster view**: its shortcomings, then the site view, then the universe view.
 - [ ] **Near release, dogmatiq/protobuf**: the spec is added as a stable package, and runkit and the Observatory switch to
