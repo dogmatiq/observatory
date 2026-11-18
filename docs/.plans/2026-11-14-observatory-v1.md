@@ -471,8 +471,9 @@ Tick each item when it is done, and write the pull request or commit that did it
     [dogmatiq/protobuf@f71b447](https://github.com/dogmatiq/protobuf/commit/f71b447)).
   - [x] A handler's concurrency preference in `configpb`, and the metric `ProcessInstancesEnded`
     ([dogmatiq/protobuf#40](https://github.com/dogmatiq/protobuf/pull/40)).
-- [ ] **Tunnel, in dogmatiq/tenet**: delivered as [its own
-  plan](https://github.com/dogmatiq/tenet/blob/main/docs/.plans/2026-11-17-tenet-v1.md) says.
+- [x] **Tunnel, in dogmatiq/tenet**: delivered as [its own
+  plan](https://github.com/dogmatiq/tenet/blob/main/docs/.plans/2026-11-17-tenet-v1.md) says. Its first cut is on `main`
+  (baf488d, 2026-11-18), which the Observatory uses until there is a release.
 - [ ] **Engine side, in dogmatiq/runkit**: the cluster ID, the Observatory option, the site option and
   `WithGRPCServerOptions`, dialing the Observatory through `dogmatiq/tenet`, sending heartbeats to the Observatory, the
   description of the application, the port of the prototype's SQL and derivation code from its `observe` package, the
@@ -530,6 +531,11 @@ Tick each item when it is done, and write the pull request or commit that did it
     for the "remove" action. Both end the connections of its nodes, and a node that connects again is new.
   - [ ] **Engines through tenet**: accepting engines through tenet once its two sides work, and checking engines' server
     certificates once their gRPC connections use mutual TLS.
+    The accepting side is written: `internal/tunnel` has the HTTP handler that takes a node's tunnel from tenet and gives
+    it to `Observer.Serve`, and `cmd/demo` serves it at `/tunnel`. A node must serve its gRPC server on the network and
+    address that `internal/tunnel` names, which is a contract with runkit and is decided by James. A node that doesn't
+    send its preamble within 10 seconds is dropped, because a tunnel can be opened by anything that reaches the
+    Observatory, and the spec doesn't promise a time. The checking of server certificates waits for mutual TLS.
   - [x] **Look**: a check that React and Tailwind can match the prototype's overview, compared in screenshots. The
     overview is built from components that the cluster view reuses, with the prototype's colors, spacing, radii, shadows
     and fonts as Tailwind theme tokens, and it matches a frozen copy of the prototype page in light and dark at 1440, 900
