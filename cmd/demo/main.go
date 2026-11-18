@@ -17,6 +17,7 @@ import (
 	"github.com/dogmatiq/observatory/internal/demo"
 	"github.com/dogmatiq/observatory/internal/observe"
 	"github.com/dogmatiq/observatory/internal/server"
+	"github.com/dogmatiq/observatory/internal/tunnel"
 )
 
 const address = "localhost:8080"
@@ -54,9 +55,15 @@ func run(ctx context.Context) error {
 		}
 	}()
 
+	// An engine's node can open a tunnel here, to be observed as well as the
+	// simulated nodes are.
+	mux := http.NewServeMux()
+	mux.Handle("/tunnel", tunnel.Handler(ctx, observer))
+	mux.Handle("/", server.New(observer, recorder))
+
 	srv := &http.Server{
 		Addr:    address,
-		Handler: server.New(observer, recorder),
+		Handler: mux,
 	}
 
 	go func() {
@@ -64,7 +71,7 @@ func run(ctx context.Context) error {
 		srv.Shutdown(context.Background())
 	}()
 
-	log.Printf("serving the API at http://%s/api/clusters", address)
+	log.Printf("serving the API at http://%s/api/clusters, and tunnels at ws://%s/tunnel", address, address)
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
