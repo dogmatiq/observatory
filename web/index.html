@@ -3,7 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>Dogma Observatory</title>
+    <script>
+      // Applies the viewer's chosen color mode before the page is drawn, so that
+      // the page does not flash in the wrong colors. The storage key is the one
+      // in lib/theme.ts.
+      try {
+        var mode = window.localStorage.getItem("observatory-theme");
+        if (mode === "light" || mode === "dark") {
+          document.documentElement.setAttribute("data-theme", mode);
+        }
+      } catch (e) {
+        // Storage is unavailable, so the page follows the browser's preference.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,0 +1,121 @@
+import type {
+	Application,
+	Chart,
+	ClusterDocument,
+	HandlerData,
+	HandlerDocument,
+	OverviewData,
+} from "../model.ts";
+
+/**
+ * documentOf returns the state document of a cluster that shows the given
+ * overview, as the Observatory describes it.
+ */
+function documentOf(
+	application: Application,
+	overview: OverviewData,
+): ClusterDocument {
+	const { events, queues } = overview;
+
+	const document: ClusterDocument = {
+		application,
+		nodes: Object.fromEntries(
+			overview.cluster.nodes.map((n) => [n.id, { workloads: n.workloads }]),
+		),
+		handlers: Object.fromEntries(
+			overview.handlers.map((h) => [h.key, handlerOf(h)]),
+		),
+	};
+
+	if (events) {
+		document.eventStreams = Object.fromEntries(
+			events.streams.map((s) => [s.id, { length: s.size }]),
+		);
+		if (events.perMinute !== undefined) {
+			document.rates = { ...document.rates, events: events.perMinute / 60 };
+		}
+	}
+
+	if (queues) {
+		document.queues = Object.fromEntries(
+			queues.queues.map((q) => [q.id, { messages: q.size }]),
+		);
+		document.failing = queues.failing;
+		if (queues.removedPerMinute !== undefined) {
+			document.rates = {
+				...document.rates,
+				removed: queues.removedPerMinute / 60,
+			};
+		}
+	}
+
+	return document;
+}
+
+function handlerOf(h: HandlerData): HandlerDocument {
+	const { summary } = h;
+
+	return {
+		name: h.name,
+		kind: h.kind,
+		disabled: h.disabled,
+		minimizesConcurrency: h.minimizesConcurrency,
+		failing: summary.failing,
+		instances: summary.instances,
+		queued: summary.queuedMessages,
+		unhandledEvents: summary.unhandledEvents,
+		schedulesDeadlines: summary.schedulesDeadlines,
+		bindings: Object.fromEntries(
+			summary.bindings.map((b) => {
+				if (b.id === undefined) {
+					throw new Error("a binding in the document has an ID");
+				}
+				return [b.id, { instances: b.instances }];
+			}),
+		),
+	};
+}
+
+/**
+ * streamOf returns the messages that begin a stream of a cluster that shows
+ * the given overview, as the Observatory sends them: the name of each message,
+ * and its data. It is how a test gives the page the fixture's numbers.
+ *
+ * The overview's times are in milliseconds before its chart's end, and the
+ * burst gives the same.
+ */
+export function streamOf(
+	application: Application,
+	overview: OverviewData,
+): [name: string, data: unknown][] {
+	const messages: [string, unknown][] = [
+		["changed", documentOf(application, overview)],
+	];
+
+	const recorded = (series: string, chart: Chart | undefined) => {
+		if (chart) {
+			messages.push([
+				"recorded",
+				{
+					series,
+					points: chart.points.map((p) => [chart.end - p.at, p.value]),
+				},
+			]);
+		}
+	};
+
+	recorded("events", overview.events?.history);
+	recorded("queues", overview.queues?.history);
+	for (const h of overview.handlers) {
+		recorded(`handlers/${h.key}`, h.history);
+	}
+
+	for (const n of overview.cluster.nodes) {
+		for (const msBefore of n.heartbeats) {
+			messages.push(["heartbeat", { node: n.id, msBefore }]);
+		}
+	}
+
+	messages.push(["synced", {}]);
+	return messages;
+}
