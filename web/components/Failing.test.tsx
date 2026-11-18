@@ -35,6 +35,14 @@ test("the count is shown with a plus sign, and in full to a screen reader", () =
 	expect(screen.getByText(/3 messages failing/)).toBeDefined();
 });
 
+// A stat gives the count no width, so anything that clips to its own box clips
+// all of the count away, and that can only be seen in a browser.
+test("in a stat the count is not clipped to its box, because that box has no width", () => {
+	render(<Failing count={3} size="stat" />);
+
+	expect(failing()?.parentElement?.className).not.toContain("overflow-hidden");
+});
+
 test("a count that is in place when the page loads doesn't animate", () => {
 	const { container } = render(<Failing count={3} size="stat" />);
 
