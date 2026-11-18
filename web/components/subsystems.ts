@@ -1,7 +1,7 @@
 import type { HandlerKind } from "../model.ts";
 
 /**
- * A subsystem is a part of the engine that has a color: green for the cluster,
+ * A subsystem is a part of the engine that has a color: teal for the cluster,
  * blue for queues and the messages in them, purple for event streams and
  * events, and gray for what belongs to none of them.
  */
@@ -26,10 +26,24 @@ export const subsystemColors: Record<Subsystem, string> = {
 };
 
 /**
- * handlerSubsystem returns the subsystem whose color a kind of handler takes,
- * which is that of the messages that it produces. Aggregates and integrations
- * record events, processes produce commands and deadlines, and projections
- * produce nothing.
+ * The class that gives the icon of a kind of handler its color, which is that
+ * of the sticky note of the kind in event storming.
+ *
+ * Each class is written out in full, because Tailwind finds a class by reading
+ * the source for it.
+ */
+export const kindColors: Record<HandlerKind, string> = {
+	aggregate: "text-sticky-aggregate",
+	process: "text-sticky-process",
+	integration: "text-sticky-integration",
+	projection: "text-sticky-projection",
+};
+
+/**
+ * handlerSubsystem returns the subsystem whose colors the bars, charts and
+ * numbers of a kind of handler's card use, which is that of the messages that
+ * the kind produces. Aggregates and integrations record events, processes
+ * produce commands and deadlines, and projections produce nothing.
  */
 export function handlerSubsystem(kind: HandlerKind): Subsystem {
 	switch (kind) {

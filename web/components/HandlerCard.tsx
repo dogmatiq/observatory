@@ -11,7 +11,7 @@ import {
 } from "./MetricTile.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { StackedBar } from "./StackedBar.tsx";
-import { handlerSubsystem, subsystemColors } from "./subsystems.ts";
+import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
 
 /**
  * The tooltip of the icon that marks a handler that minimizes concurrency.
@@ -82,7 +82,10 @@ export function HandlerCard({
 					</span>
 				</span>
 				<span
-					className="ml-auto flex-none self-start text-(--subsystem)"
+					className={cn(
+						"ml-auto flex-none self-start",
+						kindColors[handler.kind],
+					)}
 					title={`${handler.kind} handler`}
 				>
 					<Icon

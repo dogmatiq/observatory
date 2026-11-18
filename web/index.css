@@ -33,18 +33,29 @@
 	--color-bad-soft: #fde8e8;
 
 	/*
-	 * The engine's subsystems: green for the cluster, blue for queues and the
+	 * The engine's subsystems: teal for the cluster, blue for queues and the
 	 * messages in them, purple for event streams and events, and gray for what
 	 * belongs to none of them.
 	 */
-	--color-cluster: #15a34a;
-	--color-cluster-soft: #e6f6ec;
+	--color-cluster: #0a9a7e;
+	--color-cluster-soft: #e1f3ef;
 	--color-queues: #0284c7;
 	--color-queues-soft: #e2f1fa;
 	--color-streams: #4f46e5;
 	--color-streams-soft: #eef0ff;
 	--color-neutral: #6b7486;
 	--color-neutral-soft: #eef0f4;
+
+	/*
+	 * The kinds of handler, in the colors of the sticky notes of event
+	 * storming: an aggregate is yellow, a process is a policy and is lilac, an
+	 * integration is an external system and is pink, and a projection is a read
+	 * model and is green. They color only the icon of a kind.
+	 */
+	--color-sticky-aggregate: #c99a06;
+	--color-sticky-process: #8b5cf6;
+	--color-sticky-integration: #e0559a;
+	--color-sticky-projection: #3f9b57;
 
 	--font-sans:
 		"IBM Plex Sans Variable", system-ui, -apple-system, "Segoe UI", Roboto,
@@ -128,14 +139,18 @@
 			--color-accent-soft: rgb(143 140 255 / 0.12);
 			--color-bad: #ff6b6b;
 			--color-bad-soft: rgb(255 107 107 / 0.13);
-			--color-cluster: #3ddc84;
-			--color-cluster-soft: rgb(61 220 132 / 0.13);
+			--color-cluster: #2bd4a8;
+			--color-cluster-soft: rgb(43 212 168 / 0.13);
 			--color-queues: #38bdf8;
 			--color-queues-soft: rgb(56 189 248 / 0.13);
 			--color-streams: #8f8cff;
 			--color-streams-soft: rgb(143 140 255 / 0.15);
 			--color-neutral: #8592a8;
 			--color-neutral-soft: rgb(133 146 168 / 0.13);
+			--color-sticky-aggregate: #f2c94c;
+			--color-sticky-process: #b794f6;
+			--color-sticky-integration: #f472b6;
+			--color-sticky-projection: #5fd38d;
 			--shadow-raised:
 				0 0 0 1px rgb(255 255 255 / 0.05), 0 8px 24px rgb(0 0 0 / 0.35);
 			--shadow-raised-pointed:
