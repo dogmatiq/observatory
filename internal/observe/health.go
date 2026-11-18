@@ -1,6 +1,8 @@
 package observe
 
 import (
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/dogmatiq/protobuf/metricsgrpc"
@@ -177,17 +179,18 @@ func (h *Health) backlog(now time.Time, id string, cluster *uuidpb.UUID, nodes [
 	return issues
 }
 
-// membership applies the Membership rule to one cluster.
+// Members returns the IDs of the nodes that make up one cluster, at the time
+// now, in no particular order. The nodes are all of the same cluster.
 //
-// The members of a cluster are the nodes in the sets of live nodes that its
-// nodes have sent. Only the sets of nodes that are reporting count, because the
-// set of a node that has stopped reporting may list nodes that have left since.
-// If no node is reporting, every node's set counts, so that a cluster that has
-// stopped entirely still has Issues.
+// The members are the nodes in the sets of live nodes that the cluster's nodes
+// have sent. Only the sets of nodes that are reporting count, because the set of
+// a node that has stopped reporting may list nodes that have left since. If no
+// node is reporting, every node's set counts, so that a cluster that has
+// stopped entirely still has members.
 //
-// A node that is a source is also a member, whether or not its set lists it,
+// A node that sent a set is also a member, whether or not its set lists it,
 // because the Observatory has seen it.
-func membership(now time.Time, cluster *uuidpb.UUID, nodes []Node) []Issue {
+func Members(now time.Time, nodes []Node) []*uuidpb.UUID {
 	var sources []Node
 	for _, n := range nodes {
 		if n.Reporting(now) {
@@ -207,6 +210,12 @@ func membership(now time.Time, cluster *uuidpb.UUID, nodes []Node) []Issue {
 		}
 	}
 
+	return slices.Collect(maps.Values(members))
+}
+
+// membership applies the Membership rule to one cluster. Each member that is
+// not reporting is an Issue. See [Members].
+func membership(now time.Time, cluster *uuidpb.UUID, nodes []Node) []Issue {
 	reporting := map[string]bool{}
 	for _, n := range nodes {
 		if n.Reporting(now) {
@@ -215,8 +224,8 @@ func membership(now time.Time, cluster *uuidpb.UUID, nodes []Node) []Issue {
 	}
 
 	var issues []Issue
-	for key, id := range members {
-		if !reporting[key] {
+	for _, id := range Members(now, nodes) {
+		if !reporting[id.AsString()] {
 			issues = append(issues, Issue{Cluster: cluster, Rule: Membership, Node: id})
 		}
 	}

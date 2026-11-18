@@ -101,6 +101,7 @@ var runningTotals = map[string]bool{
 	string(proto.MessageName(new(metricsgrpc.HandlerDeadlinesCanceled))): true,
 	string(proto.MessageName(new(metricsgrpc.HandlerEventsRecorded))):    true,
 	string(proto.MessageName(new(metricsgrpc.HandlerEventsHandled))):     true,
+	string(proto.MessageName(new(metricsgrpc.ProcessInstancesEnded))):    true,
 }
 
 // extend returns the run of a running total after a new value of it arrives.
@@ -542,30 +543,8 @@ func addRates(a, b *float64) *float64 {
 //
 // The rate of a running total is combined in the same way as its value.
 func Combine(now time.Time, nodes []Node) []ClusterSample {
-	var contributors []Node
-	for _, n := range nodes {
-		if n.Metrics != nil && n.Reporting(now) {
-			contributors = append(contributors, n)
-		}
-	}
-	slices.SortFunc(contributors, func(a, b Node) int {
-		return cmp.Compare(a.Metrics.Call, b.Metrics.Call)
-	})
-
-	// The first node to list a metric decides its reach, and is the one that is
-	// read if the reach is the cluster.
-	type decision struct {
-		reach  metricsgrpc.Reach
-		source uint64
-	}
-	decisions := map[string]decision{}
-	for _, n := range contributors {
-		for _, m := range n.Metrics.Preamble.GetSupportedMetrics() {
-			if _, ok := decisions[m.GetMessageName()]; !ok {
-				decisions[m.GetMessageName()] = decision{m.GetReach(), n.Metrics.Call}
-			}
-		}
-	}
+	readers := contributors(now, nodes)
+	decisions := decide(readers)
 
 	type thing struct {
 		metric, subject string
@@ -573,7 +552,7 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 	var out []ClusterSample
 	sums := map[thing]int{} // the index in out of what has been summed
 
-	for _, n := range contributors {
+	for _, n := range readers {
 		for _, s := range n.Metrics.Samples {
 			d := decisions[s.Metric]
 			if s.Reach != d.reach {
@@ -609,4 +588,57 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 	}
 
 	return out
+}
+
+// Supported returns the full names of the metrics that the nodes of one
+// cluster support, at the time now. A metric is supported if a node that
+// contributes to [Combine] lists it in the preamble of its call to the metrics
+// API.
+//
+// A metric that is supported may still have no samples, such as the length of
+// event streams in a cluster that has none yet. A metric that isn't supported
+// never has samples.
+func Supported(now time.Time, nodes []Node) map[string]bool {
+	supported := map[string]bool{}
+	for name := range decide(contributors(now, nodes)) {
+		supported[name] = true
+	}
+	return supported
+}
+
+// contributors returns the nodes that [Combine] reads, in the order that their
+// current calls to the metrics API began.
+func contributors(now time.Time, nodes []Node) []Node {
+	var out []Node
+	for _, n := range nodes {
+		if n.Metrics != nil && n.Reporting(now) {
+			out = append(out, n)
+		}
+	}
+	slices.SortFunc(out, func(a, b Node) int {
+		return cmp.Compare(a.Metrics.Call, b.Metrics.Call)
+	})
+	return out
+}
+
+// decision is what [Combine] reads of one metric: its reach, and, if the reach
+// is the cluster, the call that it reads.
+type decision struct {
+	reach  metricsgrpc.Reach
+	source uint64
+}
+
+// decide returns the decision for each metric that the contributors list. The
+// first node to list a metric decides its reach, and is the one that is read if
+// the reach is the cluster.
+func decide(contributors []Node) map[string]decision {
+	decisions := map[string]decision{}
+	for _, n := range contributors {
+		for _, m := range n.Metrics.Preamble.GetSupportedMetrics() {
+			if _, ok := decisions[m.GetMessageName()]; !ok {
+				decisions[m.GetMessageName()] = decision{m.GetReach(), n.Metrics.Call}
+			}
+		}
+	}
+	return decisions
 }

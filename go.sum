@@ -2,6 +2,8 @@ github.com/dogmatiq/protobuf v0.8.1-0.20261117024226-2fc5063eb1d2 h1:ThAplmgIZXG
 github.com/dogmatiq/protobuf v0.8.1-0.20261117024226-2fc5063eb1d2/go.mod h1:96bKDt02UetlEs2RxjOPE8TQvVnk2bVRre5Q3o/cDYg=
 github.com/dogmatiq/protobuf v0.8.1-0.20261118010342-2cec54bae53b h1:tzT4fi0H58mt6Zaju7nijx69E9+HepD46YdgSbN+3jk=
 github.com/dogmatiq/protobuf v0.8.1-0.20261118010342-2cec54bae53b/go.mod h1:96bKDt02UetlEs2RxjOPE8TQvVnk2bVRre5Q3o/cDYg=
+github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf h1:tDHXMhA6RIHL50hGXNvOFP8Ho8zPg8hYT/NdTN1uoS0=
+github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf/go.mod h1:96bKDt02UetlEs2RxjOPE8TQvVnk2bVRre5Q3o/cDYg=
 github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
 github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=

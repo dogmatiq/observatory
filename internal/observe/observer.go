@@ -34,11 +34,51 @@ type Observer struct {
 
 	// calls is the number of calls to the metrics API that have begun.
 	calls uint64
+
+	// heartbeats are the channels that [Observer.WatchHeartbeats] returned.
+	heartbeats map[chan Heartbeat]struct{}
 }
 
 // NewObserver returns an Observer that knows no nodes.
 func NewObserver() *Observer {
-	return &Observer{nodes: map[string]*entry{}}
+	return &Observer{
+		nodes:      map[string]*entry{},
+		heartbeats: map[chan Heartbeat]struct{}{},
+	}
+}
+
+// Heartbeat is a heartbeat that a node sent.
+type Heartbeat struct {
+	// Cluster is the ID of the node's cluster, as a UUID.
+	Cluster string
+
+	// Node is the ID of the node, as a UUID.
+	Node string
+}
+
+// WatchHeartbeats returns a channel that receives each heartbeat that a node
+// sends, as it arrives. The channel is closed when ctx ends.
+//
+// A slow receiver misses heartbeats instead of holding up the Observer, so it
+// must not rely on seeing every one.
+func (o *Observer) WatchHeartbeats(ctx context.Context) <-chan Heartbeat {
+	ch := make(chan Heartbeat, 16)
+
+	o.m.Lock()
+	o.heartbeats[ch] = struct{}{}
+	o.m.Unlock()
+
+	go func() {
+		<-ctx.Done()
+
+		o.m.Lock()
+		defer o.m.Unlock()
+
+		delete(o.heartbeats, ch)
+		close(ch)
+	}()
+
+	return ch
 }
 
 // Node is what an [Observer] knows about one node at one moment.
@@ -412,6 +452,17 @@ func (o *Observer) apply(id string, c *connection, res *enginegrpc.WatchEngineRe
 		e.heartbeats = append(e.heartbeats, e.node.HeartbeatAt)
 		for e.heartbeats[0].Before(e.node.HeartbeatAt.Add(-historySpan)) {
 			e.heartbeats = e.heartbeats[1:]
+		}
+
+		beat := Heartbeat{
+			Cluster: e.node.Preamble.GetClusterId().AsString(),
+			Node:    e.node.Preamble.GetNodeId().AsString(),
+		}
+		for ch := range o.heartbeats {
+			select {
+			case ch <- beat:
+			default:
+			}
 		}
 	}
 

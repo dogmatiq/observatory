@@ -628,3 +628,90 @@ func TestObserver(t *testing.T) {
 		})
 	})
 }
+
+func TestWatchHeartbeats(t *testing.T) {
+	t.Run("it tells a watcher the cluster and the node of each heartbeat", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			watch := o.WatchHeartbeats(ctx)
+
+			a, b := uuidpb.Generate(), uuidpb.Generate()
+			na, nb := uuidpb.Generate(), uuidpb.Generate()
+			ca, cb := connect(ctx, o), connect(ctx, o)
+			send(t, ca, preamble(na, a, 0, 0))
+			send(t, cb, preamble(nb, b, 0, 0))
+
+			if len(watch) != 0 {
+				t.Fatal("unexpected notification before any heartbeat")
+			}
+
+			send(t, ca, heartbeat(0))
+			send(t, cb, heartbeat(0))
+			send(t, cb, heartbeat(0))
+
+			var got []Heartbeat
+			for range 3 {
+				got = append(got, <-watch)
+			}
+			want := []Heartbeat{
+				{a.AsString(), na.AsString()},
+				{b.AsString(), nb.AsString()},
+				{b.AsString(), nb.AsString()},
+			}
+			for i := range want {
+				if got[i] != want[i] {
+					t.Fatalf("unexpected clusters: got %v, want %v", got, want)
+				}
+			}
+
+			cancel()
+			<-ca.Done
+			<-cb.Done
+		})
+	})
+
+	t.Run("it closes the channel when ctx ends, and sends nothing more", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+
+			watchCtx, stop := context.WithCancel(ctx)
+			watch := o.WatchHeartbeats(watchCtx)
+
+			c := connect(ctx, o)
+			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+
+			stop()
+			synctest.Wait()
+
+			if _, ok := <-watch; ok {
+				t.Fatal("unexpected notification after ctx ended")
+			}
+
+			// A heartbeat after the watcher has gone must not panic.
+			send(t, c, heartbeat(0))
+
+			cancel()
+			<-c.Done
+		})
+	})
+
+	t.Run("it doesn't hold up the Observer when the watcher doesn't receive", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			o.WatchHeartbeats(ctx)
+
+			c := connect(ctx, o)
+			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+
+			for range 100 {
+				send(t, c, heartbeat(0))
+			}
+
+			cancel()
+			<-c.Done
+		})
+	})
+}

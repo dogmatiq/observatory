@@ -769,3 +769,33 @@ func TestMetrics(t *testing.T) {
 		})
 	})
 }
+
+func TestSupported(t *testing.T) {
+	t.Run("it lists the metrics of the nodes that are reporting and have a call, and no others", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			stopped, stop := context.WithCancel(t.Context())
+			o := NewObserver()
+			c := uuidpb.Generate()
+
+			a := startNode(t, ctx, o, c, supports(queuePending, metricsgrpc.Reach_REACH_CLUSTER))
+			b := startNode(t, stopped, o, c, supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+
+			got := Supported(time.Now(), o.Nodes())
+			if len(got) != 2 || !got[queuePending] || !got[queueDue] {
+				t.Fatalf("unexpected metrics: %v", got)
+			}
+
+			stop()
+			<-b.Engine.Done
+
+			got = Supported(time.Now(), o.Nodes())
+			if len(got) != 1 || !got[queuePending] {
+				t.Fatalf("unexpected metrics: %v", got)
+			}
+
+			cancel()
+			<-a.Engine.Done
+		})
+	})
+}

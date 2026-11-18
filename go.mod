@@ -5,7 +5,7 @@ go 1.27.0
 require google.golang.org/grpc v1.85.0
 
 require (
-	github.com/dogmatiq/protobuf v0.8.1-0.20261118010342-2cec54bae53b // indirect
+	github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
