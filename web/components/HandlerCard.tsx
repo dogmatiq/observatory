@@ -68,17 +68,32 @@ export function HandlerCard({
 					>
 						{handler.name}
 					</span>
-					<span className="text-2xs font-medium tracking-[0.08em] text-muted uppercase">
-						{handler.disabled ? `${handler.kind}, disabled` : handler.kind}
-						{handler.minimizesConcurrency && (
-							<span
-								className="ml-2 inline-block cursor-help text-fg-soft"
-								title={minimizesConcurrencyTitle}
-							>
-								<Icon
-									name="minimize-concurrency"
-									className="inline size-3 align-[-2px]"
-								/>
+					<span className="flex min-w-0 items-center gap-3 text-2xs font-medium tracking-[0.08em] text-muted uppercase">
+						<span className="min-w-0 truncate">
+							{handler.disabled ? `${handler.kind}, disabled` : handler.kind}
+							{handler.minimizesConcurrency && (
+								<span
+									className="ml-2 inline-block cursor-help text-fg-soft"
+									title={minimizesConcurrencyTitle}
+								>
+									<Icon
+										name="minimize-concurrency"
+										className="inline size-3 align-[-2px]"
+									/>
+								</span>
+							)}
+						</span>
+						{failing && (
+							// The count is in the line of the kind, which is always there,
+							// so that failing messages don't change the height of the card.
+							<span className="inline-flex flex-none items-center gap-1.5 font-semibold text-bad">
+								<span className="size-1.5 flex-none rounded-full bg-current" />
+								<span aria-hidden="true">
+									{`${formatCompact(summary.failing)} failing`}
+								</span>
+								<span className="sr-only">
+									{`${countOf(summary.failing, "message", "messages")} failing`}
+								</span>
 							</span>
 						)}
 					</span>
@@ -257,19 +272,7 @@ function Summary({
 					<Stat key={s.label} {...s} />
 				))}
 			</div>
-			{(failing || bar) && (
-				<div className="mt-auto flex flex-col gap-4">
-					{failing && (
-						<div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-							<span className="inline-flex items-center gap-2 font-semibold text-bad">
-								<span className="size-1.5 flex-none rounded-full bg-current" />
-								{`${countOf(summary.failing, "message", "messages")} failing`}
-							</span>
-						</div>
-					)}
-					{bar}
-				</div>
-			)}
+			{bar && <div className="mt-auto flex flex-col gap-4">{bar}</div>}
 		</>
 	);
 }

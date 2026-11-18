@@ -213,12 +213,22 @@ test("a projection shows a bar of the nodes that handled its events", () => {
 	]);
 });
 
-test("the bar of nodes is with the failing line, at the bottom of the card", () => {
+test("the bar of nodes is at the bottom of the card", () => {
 	const { container } = card("integration", { failing: 2 }, { nodes });
 
 	const bottom = container.querySelector(".mt-auto");
-	expect(bottom?.textContent).toContain("2 messages failing");
 	expect(nodeBar(bottom as HTMLElement)).toHaveLength(2);
+});
+
+test("failing messages are counted in the line of the kind, so that they don't change the height of the card", () => {
+	const { container } = card("integration", { failing: 2 });
+
+	const line =
+		screen.getByText("2 messages failing").parentElement?.parentElement
+			?.parentElement;
+	expect(line?.textContent).toContain("integration");
+	expect(line?.textContent).toContain("2 failing");
+	expect(container.querySelector(".mt-auto")).toBeNull();
 });
 
 test("a card with a bar of nodes and no chart keeps the room for a chart, so its bar sits where the others do", () => {
