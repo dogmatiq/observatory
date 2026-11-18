@@ -245,6 +245,77 @@ func TestOverview(t *testing.T) {
 			})
 		})
 
+		t.Run("when a part of a tile has no metric that a node supports", func(t *testing.T) {
+			t.Run("it leaves the part out, and keeps the tile for the parts that remain", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+
+					// Only the length of event streams, and only the removal of messages.
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						supports(name(new(metricsgrpc.EventStreamLength)), reach),
+						supports(name(new(metricsgrpc.QueueCommandsRemoved)), metricsgrpc.Reach_REACH_NODE),
+					)
+
+					v := viewOf(t, r, o, c)
+					if e := v.Overview.Events; e == nil || e.Streams == nil || e.Rate != nil || e.History != nil {
+						t.Fatalf("unexpected events tile: %+v", e)
+					}
+					if q := v.Overview.Queues; q == nil || q.Queues != nil || q.Removed == nil || q.History != nil {
+						t.Fatalf("unexpected queues tile: %+v", q)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it shows a tile for a rate on its own, with a chart and no streams", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE),
+					)
+
+					e := viewOf(t, r, o, c).Overview.Events
+					if e == nil || e.Streams != nil || e.Rate == nil || e.Rate.PerSecond != nil || e.History == nil {
+						t.Fatalf("unexpected events tile: %+v", e)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it gives a handler no bindings where no node supports them, and an empty list where one does", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate(),
+						handler("account", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_AGGREGATE, nil),
+						handler("schedule", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_PROCESS, nil),
+					),
+						supports(name(new(metricsgrpc.AggregateInstanceEventStreamBindings)), reach),
+					)
+
+					for _, h := range viewOf(t, r, o, c).Overview.Handlers {
+						if got, want := h.Summary.Bindings != nil, h.Name == "account"; got != want {
+							t.Fatalf("unexpected bindings of %s: %v", h.Name, h.Summary.Bindings)
+						}
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+		})
+
 		t.Run("when the nodes support event streams", func(t *testing.T) {
 			t.Run("it shows the length of each stream and the events recorded per second", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
@@ -263,8 +334,8 @@ func TestOverview(t *testing.T) {
 					n.sample(t, 1, "h1", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h1, Value: 100}.Build())
 					n.sample(t, 1, "h2", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h2, Value: 0}.Build())
 
-					if v := viewOf(t, r, o, c); v.Overview.Events.Rate != nil {
-						t.Fatal("unexpected rate before five seconds")
+					if v := viewOf(t, r, o, c); v.Overview.Events.Rate == nil || v.Overview.Events.Rate.PerSecond != nil {
+						t.Fatalf("unexpected rate before five seconds: %+v", v.Overview.Events.Rate)
 					}
 
 					time.Sleep(10 * time.Second)
@@ -273,7 +344,7 @@ func TestOverview(t *testing.T) {
 
 					e := viewOf(t, r, o, c).Overview.Events
 					// h1 grew by 60 and h2 by 20 over 10 seconds.
-					expectFloat(t, e.Rate, 80.0/10)
+					expectFloat(t, e.Rate.PerSecond, 80.0/10)
 
 					sizes := map[string]uint64{}
 					for _, s := range e.Streams {
@@ -320,7 +391,7 @@ func TestOverview(t *testing.T) {
 					if q.Failing != 3 {
 						t.Fatalf("unexpected number of failing messages: got %d, want 3", q.Failing)
 					}
-					if q.RemovedRate != nil {
+					if q.Removed != nil {
 						t.Fatal("unexpected rate of removal, which the nodes don't support")
 					}
 
@@ -347,7 +418,7 @@ func TestOverview(t *testing.T) {
 					n.sample(t, 1, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
 					n.sample(t, 2, "q", 2, metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: q, Value: 10}.Build())
 
-					expectFloat(t, viewOf(t, r, o, c).Overview.Queues.RemovedRate, 40.0/10)
+					expectFloat(t, viewOf(t, r, o, c).Overview.Queues.Removed.PerSecond, 40.0/10)
 
 					cancel()
 					<-n.Engine.Done

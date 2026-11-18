@@ -104,42 +104,46 @@ export interface LiveNode {
  */
 export interface OverviewData {
 	/**
-	 * The events tile. Absent if the engine doesn't report the length of event
-	 * streams.
+	 * The events tile. Absent if the nodes support neither the length of event
+	 * streams nor the events recorded. Each part of it is absent if no node
+	 * supports the metric that it is made from, and the tile leaves it out.
 	 */
 	events?: {
 		/**
-		 * The events recorded per minute, which is shown rounded. Absent while the
-		 * Observatory can't give it yet, or if the engine doesn't report it.
+		 * The events recorded per minute. Absent if no node supports it. Its
+		 * `perMinute` is absent while the Observatory can't give it yet, and is
+		 * shown rounded.
 		 */
-		perMinute?: number;
+		rate?: { perMinute?: number };
 
 		/** The length of each of the cluster's event streams, in events. */
-		streams: SpreadPart[];
+		streams?: SpreadPart[];
 
-		/** The history of events recorded per minute. */
-		history: Chart;
+		/** The history of events recorded per minute, which goes with `rate`. */
+		history?: Chart;
 	};
 
 	/**
-	 * The queues tile. Absent if the engine doesn't report the messages in
-	 * queues.
+	 * The queues tile. Absent if the nodes support neither the messages in queues
+	 * nor their removal. Each part of it is absent if no node supports the metric
+	 * that it is made from, and the tile leaves it out.
 	 */
 	queues?: {
 		/** The number of messages in each of the cluster's queues. */
-		queues: SpreadPart[];
+		queues?: SpreadPart[];
 
 		/** The number of messages whose delivery is failing. */
 		failing: number;
 
 		/**
-		 * The messages removed from the queues per minute. Absent while the
-		 * Observatory can't give it yet, or if the engine doesn't report it.
+		 * The messages removed from the queues per minute. Absent if no node
+		 * supports it. Its `perMinute` is absent while the Observatory can't give
+		 * it yet.
 		 */
-		removedPerMinute?: number;
+		removed?: { perMinute?: number };
 
 		/** The history of the number of messages in the queues. */
-		history: Chart;
+		history?: Chart;
 	};
 
 	cluster: {
@@ -252,9 +256,11 @@ export interface HandlerSummary {
 	/**
 	 * How the handler's instances are spread across the event streams, for an
 	 * aggregate, or across the deadline queues, for a process that schedules
-	 * deadlines.
+	 * deadlines. Absent if no node supports the metric that it is made from, and
+	 * then the card has neither the bar nor, for a process, the number in
+	 * progress.
 	 */
-	bindings: Binding[];
+	bindings?: Binding[];
 }
 
 /**
@@ -286,14 +292,12 @@ export interface ClusterDocument {
 	nodes: Record<string, { workloads: number }>;
 
 	/**
-	 * The length of each event stream, by ID. Absent if the engine doesn't report
-	 * event streams, which hides the events tile.
+	 * The length of each event stream, by ID. Absent if no node supports it.
 	 */
 	eventStreams?: Record<string, { length: number }>;
 
 	/**
-	 * The number of messages in each queue, by ID. Absent if the engine doesn't
-	 * report them, which hides the queues tile.
+	 * The number of messages in each queue, by ID. Absent if no node supports it.
 	 */
 	queues?: Record<string, { messages: number }>;
 
@@ -301,11 +305,14 @@ export interface ClusterDocument {
 	failing?: number;
 
 	rates?: {
-		/** The events recorded per second. */
-		events?: number;
+		/**
+		 * The events recorded per second. Absent if no node supports it, and
+		 * empty while the Observatory can't give it yet.
+		 */
+		events?: { rate?: number };
 
-		/** The messages removed from the queues per second. */
-		removed?: number;
+		/** The messages removed from the queues per second, likewise. */
+		removed?: { rate?: number };
 	};
 
 	/** The cluster's handlers, by key. */

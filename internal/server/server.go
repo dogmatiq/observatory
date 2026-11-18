@@ -36,19 +36,23 @@
 //
 //   - "application": {"name", "key"}.
 //   - "nodes": the members of the cluster, each {"workloads"}.
-//   - "eventStreams": each event stream, {"length"}. It is absent if the nodes
-//     don't report event streams.
-//   - "queues": each queue, {"messages"}. It is absent if the nodes don't report
-//     queues.
-//   - "failing": the number of messages whose delivery is failing, with "queues".
+//   - "eventStreams": each event stream, {"length"}. It is absent if no node
+//     supports the length of event streams.
+//   - "queues": each queue, {"messages"}. It is absent if no node supports the
+//     number of messages in queues.
+//   - "failing": the number of messages whose delivery is failing, present with
+//     "queues" or "rates.removed".
 //   - "rates": {"events", "removed"}, which are the events recorded and the
-//     messages removed from the queues. A rate that isn't known yet is absent.
+//     messages removed from the queues, each {"rate"} in times per second. A
+//     rate that no node supports the metrics for is absent. A rate that the
+//     nodes support and that isn't known yet is {}, which has no "rate".
 //   - "handlers": each handler, {"name", "kind", "disabled",
 //     "minimizesConcurrency", "failing", "instances", "queued",
-//     "unhandledEvents", "schedulesDeadlines", "charted", "bindings"}. A fact that the
-//     nodes don't report, or that the handler doesn't have, is absent, and so
-//     are the flags that are false. "bindings" is keyed by the ID of the event
-//     stream or the queue, each {"instances"}. A process's instances that are
+//     "unhandledEvents", "schedulesDeadlines", "charted", "bindings"}. A fact
+//     that the nodes don't report, or that the handler doesn't have, is absent,
+//     and so are the flags that are false. "bindings" is keyed by the ID of the
+//     event stream or the queue, each {"instances"}, and is absent if no node
+//     supports the metric that it is derived from. A process's instances that are
 //     in progress and bound to no queue are "unbound", a number, which is absent
 //     when there are none. "charted" is "events" or "commands", the kind of
 //     message that the handler's time series counts, and is absent if it has
@@ -56,6 +60,11 @@
 //     also has "nodes", keyed by the ID of the node, each {"rate"}, which is the
 //     smoothed rate at which the node handles the handler's messages. It is
 //     absent if the nodes don't report that.
+//
+// A part of the document that no node supports is absent, and the page leaves
+// out what it would show, which is different from a part that is present and
+// has no value yet. A part appears or goes as the nodes' support does, even
+// while a page is open.
 //
 // The time series are "events" (the events recorded per second), "queues" (the
 // messages in the queues) and "handlers/<handler key>" (the events that the

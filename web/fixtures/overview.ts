@@ -37,10 +37,16 @@ export const application = {
 	key: "d0137119-2660-4bc2-ab4c-bc156e08521c",
 };
 
-export const overview: OverviewData &
-	Required<Pick<OverviewData, "events" | "queues">> = {
+/**
+ * The overview of a cluster whose nodes support everything, so that every part
+ * of its tiles is there.
+ */
+export const overview: OverviewData & {
+	events: Required<NonNullable<OverviewData["events"]>>;
+	queues: Required<NonNullable<OverviewData["queues"]>>;
+} = {
 	events: {
-		perMinute: 347,
+		rate: { perMinute: 347 },
 		streams: [
 			{ id: "85d749b5", size: 652 },
 			{ id: "fc53a99f", size: 529 },
@@ -130,7 +136,7 @@ export const overview: OverviewData &
 	queues: {
 		queues: [{ id: "113cbdc3", size: 19 }],
 		failing: 0,
-		removedPerMinute: 442,
+		removed: { perMinute: 442 },
 		history: {
 			end: 0,
 			points: [

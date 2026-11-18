@@ -476,6 +476,45 @@ func TestStream(t *testing.T) {
 			})
 		})
 
+		t.Run("it leaves out a part that no node supports, and gives a rate that isn't known yet as an empty object", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+
+				o, r := observe.NewObserver(), observe.NewRecorder()
+				cluster := uuidpb.Generate()
+
+				// Only the events that handlers record, and the messages that are removed.
+				connectNode(t, ctx, o, cluster, uuidpb.Generate(), application("statements", "account", "ledger"),
+					new(metricsgrpc.HandlerEventsRecorded), new(metricsgrpc.QueueCommandsRemoved))
+
+				w := startWatch(ctx, New(o, r), cluster.AsString())
+				synctest.Wait()
+
+				doc := named(w.events(t), "changed")[0].Data
+				for _, absent := range []string{"eventStreams", "queues"} {
+					if _, ok := doc[absent]; ok {
+						t.Fatalf("unexpected %q in %v", absent, doc)
+					}
+				}
+				for _, name := range []string{"events", "removed"} {
+					b, _ := json.Marshal(at(t, doc, "rates", name))
+					if string(b) != "{}" {
+						t.Fatalf("unexpected rate %q: %s", name, b)
+					}
+				}
+
+				for _, h := range doc["handlers"].(map[string]any) {
+					if _, ok := h.(map[string]any)["bindings"]; ok {
+						t.Fatalf("unexpected bindings in %v", h)
+					}
+				}
+
+				w.Cancel()
+				<-w.Done
+			})
+		})
+
 		t.Run("it gives a node's heartbeats as the time before the burst, oldest first", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
@@ -616,8 +655,8 @@ func TestStream(t *testing.T) {
 			var rate any
 			for _, p := range patches(w, t) {
 				if r, ok := p["rates"].(map[string]any); ok {
-					if v, ok := r["events"]; ok {
-						rate = v
+					if v, ok := r["events"].(map[string]any); ok {
+						rate = v["rate"]
 					}
 				}
 			}

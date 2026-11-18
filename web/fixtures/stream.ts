@@ -27,29 +27,43 @@ function documentOf(
 		),
 	};
 
+	// A part that the overview doesn't have is left out of the document, which is
+	// how the Observatory says that no node supports it.
 	if (events) {
-		document.eventStreams = Object.fromEntries(
-			events.streams.map((s) => [s.id, { length: s.size }]),
-		);
-		if (events.perMinute !== undefined) {
-			document.rates = { ...document.rates, events: events.perMinute / 60 };
+		if (events.streams) {
+			document.eventStreams = Object.fromEntries(
+				events.streams.map((s) => [s.id, { length: s.size }]),
+			);
+		}
+		if (events.rate) {
+			document.rates = {
+				...document.rates,
+				events: rateOf(events.rate.perMinute),
+			};
 		}
 	}
 
 	if (queues) {
-		document.queues = Object.fromEntries(
-			queues.queues.map((q) => [q.id, { messages: q.size }]),
-		);
+		if (queues.queues) {
+			document.queues = Object.fromEntries(
+				queues.queues.map((q) => [q.id, { messages: q.size }]),
+			);
+		}
 		document.failing = queues.failing;
-		if (queues.removedPerMinute !== undefined) {
+		if (queues.removed) {
 			document.rates = {
 				...document.rates,
-				removed: queues.removedPerMinute / 60,
+				removed: rateOf(queues.removed.perMinute),
 			};
 		}
 	}
 
 	return document;
+}
+
+/** Returns a rate as the document gives it: empty if it isn't known yet. */
+function rateOf(perMinute: number | undefined): { rate?: number } {
+	return perMinute === undefined ? {} : { rate: perMinute / 60 };
 }
 
 function handlerOf(h: HandlerData): HandlerDocument {
@@ -65,15 +79,17 @@ function handlerOf(h: HandlerData): HandlerDocument {
 		queued: summary.queuedMessages,
 		unhandledEvents: summary.unhandledEvents,
 		schedulesDeadlines: summary.schedulesDeadlines,
-		charted: h.charted,
-		bindings: Object.fromEntries(
-			summary.bindings.map((b) => {
-				if (b.id === undefined) {
-					throw new Error("a binding in the document has an ID");
-				}
-				return [b.id, { instances: b.instances }];
-			}),
-		),
+		charted: h.history ? (h.charted ?? "events") : undefined,
+		bindings: summary.bindings
+			? Object.fromEntries(
+					summary.bindings.map((b) => {
+						if (b.id === undefined) {
+							throw new Error("a binding in the document has an ID");
+						}
+						return [b.id, { instances: b.instances }];
+					}),
+				)
+			: undefined,
 	};
 }
 

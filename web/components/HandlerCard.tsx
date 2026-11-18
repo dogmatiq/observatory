@@ -207,42 +207,53 @@ function Summary({
 
 			queue("command", "commands");
 
-			bar = (
-				<StackedBar
-					subsystem="streams"
-					segments={bindingSegments(
-						summary.bindings,
-						"event stream",
-						"event streams",
-					)}
-				/>
-			);
+			if (summary.bindings !== undefined) {
+				bar = (
+					<StackedBar
+						subsystem="streams"
+						segments={bindingSegments(
+							summary.bindings,
+							"event stream",
+							"event streams",
+						)}
+					/>
+				);
+			}
 			break;
 		}
 
 		case "process": {
-			const inProgress = summary.bindings.reduce((n, b) => n + b.instances, 0);
-			stats.push({
-				tone: zeroOrNormal(inProgress),
-				value: formatCompact(inProgress),
-				label: "in progress",
-			});
+			// The instances in progress are in the bindings, so there are none to
+			// count if no node supports them.
+			if (summary.bindings !== undefined) {
+				const inProgress = summary.bindings.reduce(
+					(n, b) => n + b.instances,
+					0,
+				);
+				stats.push({
+					tone: zeroOrNormal(inProgress),
+					value: formatCompact(inProgress),
+					label: "in progress",
+				});
+			}
 
 			eventsPending();
 
 			if (summary.schedulesDeadlines) {
 				queue("deadline", "deadlines");
 
-				bar = (
-					<StackedBar
-						subsystem="queues"
-						segments={bindingSegments(
-							summary.bindings,
-							"deadline queue",
-							"deadline queues",
-						)}
-					/>
-				);
+				if (summary.bindings !== undefined) {
+					bar = (
+						<StackedBar
+							subsystem="queues"
+							segments={bindingSegments(
+								summary.bindings,
+								"deadline queue",
+								"deadline queues",
+							)}
+						/>
+					);
+				}
 			}
 
 			break;

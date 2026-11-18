@@ -22,6 +22,8 @@ import (
 	"github.com/dogmatiq/protobuf/metricsgrpc"
 	"github.com/dogmatiq/protobuf/uuidpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -108,8 +110,11 @@ type cluster struct {
 	mailer     *uuidpb.UUID
 	balances   *uuidpb.UUID
 	archive    *uuidpb.UUID
-	randomness *rand.Rand
-	m          sync.Mutex
+
+	// reconciliation is a process that schedules no deadlines.
+	reconciliation *uuidpb.UUID
+	randomness     *rand.Rand
+	m              sync.Mutex
 
 	// live is whether each node is up. The nodes that are up share the workloads,
 	// and changed is closed, and replaced, each time that it changes.
@@ -125,6 +130,9 @@ type cluster struct {
 	// A node's share only grows.
 	shares map[string][]float64
 	state  state
+
+	// profile is the index in [profiles] of what the nodes support now.
+	profile int
 }
 
 // state is the part of the cluster's state that is a number at a moment, not a
@@ -133,24 +141,29 @@ type state struct {
 	commandsQueued, deadlinesQueued int
 	failing, failingDeadlines       int
 	eventsPending                   int
+
+	// reconciling is the number of instances of the reconciliation process that
+	// are in progress.
+	reconciling int
 }
 
 func newCluster() *cluster {
 	c := &cluster{
-		id:          uuidpb.Generate(),
-		streams:     [2]*uuidpb.UUID{uuidpb.Generate(), uuidpb.Generate()},
-		commandsQ:   uuidpb.Generate(),
-		deadlinesQ:  uuidpb.Generate(),
-		account:     uuidpb.Generate(),
-		schedule:    uuidpb.Generate(),
-		mailer:      uuidpb.Generate(),
-		balances:    uuidpb.Generate(),
-		archive:     uuidpb.Generate(),
-		randomness:  rand.New(rand.NewPCG(1, 2)),
-		accumulated: map[string]float64{},
-		totals:      map[string]uint64{},
-		shares:      map[string][]float64{},
-		state:       state{deadlinesQueued: 19},
+		id:             uuidpb.Generate(),
+		streams:        [2]*uuidpb.UUID{uuidpb.Generate(), uuidpb.Generate()},
+		commandsQ:      uuidpb.Generate(),
+		deadlinesQ:     uuidpb.Generate(),
+		account:        uuidpb.Generate(),
+		schedule:       uuidpb.Generate(),
+		mailer:         uuidpb.Generate(),
+		balances:       uuidpb.Generate(),
+		archive:        uuidpb.Generate(),
+		reconciliation: uuidpb.Generate(),
+		randomness:     rand.New(rand.NewPCG(1, 2)),
+		accumulated:    map[string]float64{},
+		totals:         map[string]uint64{},
+		shares:         map[string][]float64{},
+		state:          state{deadlinesQueued: 19},
 	}
 
 	for range nodeCount {
@@ -175,6 +188,7 @@ func newCluster() *cluster {
 			minimizingHandler("mailer", c.mailer, configpb.HandlerType_HANDLER_TYPE_INTEGRATION),
 			handler("balances", c.balances, configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil),
 			handler("archive", c.archive, configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil),
+			handler("reconciliation", c.reconciliation, configpb.HandlerType_HANDLER_TYPE_PROCESS, nil),
 		},
 		Messages: map[string]configpb.MessageKind{
 			"statements.StatementDue": configpb.MessageKind_MESSAGE_KIND_DEADLINE,
@@ -270,6 +284,7 @@ func (c *cluster) advance() {
 
 	c.ticks++
 	t := float64(c.ticks)
+	c.profile = profileAt(c.ticks)
 
 	// The rate of events swells and falls away over a few minutes.
 	events := math.Max(0, 5+3*math.Sin(t/25)+c.randomness.Float64()*2)
@@ -280,6 +295,7 @@ func (c *cluster) advance() {
 	c.grow("commands.account", events)
 	c.grow("handled.schedule", events*0.8)
 	c.grow("handled.balances", events)
+	c.grow("handled.reconciliation", events*0.5)
 
 	delivered := c.grow("commands.mailer", 0.4+c.randomness.Float64())
 	scheduled := c.grow("deadlines.schedule", 0.8+c.randomness.Float64()*0.6)
@@ -292,6 +308,7 @@ func (c *cluster) advance() {
 	c.state.commandsQueued = c.walk(c.state.commandsQueued, 0, 4)
 	c.state.deadlinesQueued = c.walk(c.state.deadlinesQueued, 10, 30)
 	c.state.eventsPending = c.walk(c.state.eventsPending, 0, 6)
+	c.state.reconciling = c.walk(c.state.reconciling, 4, 14)
 
 	// Commands for the mailer fail for twenty seconds in every forty, so that
 	// failures begin and end often enough to watch. There are more of them as the
@@ -336,6 +353,70 @@ var supported = []struct {
 	{new(metricsgrpc.ProcessInstancesEnded), metricsgrpc.Reach_REACH_NODE},
 	{new(metricsgrpc.AggregateInstanceEventStreamBindings), metricsgrpc.Reach_REACH_CLUSTER},
 	{new(metricsgrpc.ProcessInstanceQueueBindings), metricsgrpc.Reach_REACH_CLUSTER},
+}
+
+// A profile is what the nodes support at a time, which is every metric but the
+// ones that it leaves out. The cluster moves from one profile to the next, so
+// that the user interface can be seen to respond as support begins and ends. A
+// node that supports something different ends its call to the metrics API and
+// makes it again.
+var profiles = [][]proto.Message{
+	// Everything.
+	nil,
+
+	// Only the rates of events and of removing messages, and no totals of them.
+	{
+		new(metricsgrpc.EventStreamLength),
+		new(metricsgrpc.QueueCommandsPending),
+		new(metricsgrpc.QueueDeadlinesPending),
+	},
+
+	// Only the totals, and none of the rates.
+	{
+		new(metricsgrpc.HandlerEventsRecorded),
+		new(metricsgrpc.QueueCommandsRemoved),
+		new(metricsgrpc.QueueDeadlinesRemoved),
+	},
+
+	// Nothing about instances, or about what each node handles.
+	{
+		new(metricsgrpc.AggregateInstanceEventStreamBindings),
+		new(metricsgrpc.ProcessInstanceQueueBindings),
+		new(metricsgrpc.HandlerCommandsHandled),
+		new(metricsgrpc.HandlerEventsHandled),
+	},
+}
+
+// The profile changes every profileInterval ticks, from the first change at
+// profileStart.
+const (
+	profileStart    = 60
+	profileInterval = 40
+)
+
+// profileAt returns the index of the profile that the nodes have after the given
+// number of ticks.
+func profileAt(ticks int) int {
+	if ticks < profileStart {
+		return 0
+	}
+	return ((ticks-profileStart)/profileInterval + 1) % len(profiles)
+}
+
+// supportedBy returns the metrics of [supported] that a profile doesn't leave
+// out.
+func supportedBy(profile int) []int {
+	var out []int
+loop:
+	for i, m := range supported {
+		for _, left := range profiles[profile] {
+			if proto.MessageName(left) == proto.MessageName(m.message) {
+				continue loop
+			}
+		}
+		out = append(out, i)
+	}
+	return out
 }
 
 // indexOf returns the index of a metric in [supported].
@@ -404,6 +485,8 @@ func (c *cluster) readings(node int) []reading {
 	add(metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: c.account, Value: part("recorded.account")}.Build(), c.account)
 	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.schedule, Value: part("handled.schedule")}.Build(), c.schedule)
 	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.balances, Value: part("handled.balances")}.Build(), c.balances)
+	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.reconciliation, Value: part("handled.reconciliation")}.Build(), c.reconciliation)
+	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.reconciliation, Value: uint64(c.state.eventsPending / 3)}.Build(), c.reconciliation)
 
 	// The archive projection never has anything to do, so its chart is empty.
 	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.archive, Value: 0}.Build(), c.archive)
@@ -423,6 +506,16 @@ func (c *cluster) readings(node int) []reading {
 		c.schedule.AsString() + c.deadlinesQ.AsString(),
 		metricsgrpc.ProcessInstanceQueueBindings_builder{
 			HandlerKey: c.schedule, QueueId: c.deadlinesQ, Value: uint64(c.state.deadlinesQueued),
+		}.Build(),
+	})
+
+	// The reconciliation process schedules no deadlines, so its instances in
+	// progress are bound to no queue.
+	out = append(out, reading{
+		indexOf(new(metricsgrpc.ProcessInstanceQueueBindings)),
+		c.reconciliation.AsString(),
+		metricsgrpc.ProcessInstanceQueueBindings_builder{
+			HandlerKey: c.reconciliation, Value: uint64(c.state.reconciling),
 		}.Build(),
 	})
 
@@ -666,9 +759,18 @@ func (s *metricsServer) WatchMetrics(
 ) error {
 	c := s.c
 
+	c.m.Lock()
+	profile := c.profile
+	c.m.Unlock()
+
+	// The metrics that the node supports now, and the index of each in the list
+	// that its preamble gives.
 	var metrics []*metricsgrpc.SupportedMetric
-	for _, m := range supported {
+	indexes := map[uint32]uint32{}
+	for _, i := range supportedBy(profile) {
+		m := supported[i]
 		reach := m.reach
+		indexes[uint32(i)] = uint32(len(metrics))
 		metrics = append(metrics, metricsgrpc.SupportedMetric_builder{
 			MessageName: string(proto.MessageName(m.message)),
 			Reach:       &reach,
@@ -701,13 +803,26 @@ func (s *metricsServer) WatchMetrics(
 		revision := make([]byte, 8)
 		binary.BigEndian.PutUint64(revision, uint64(time.Now().UnixNano()))
 
+		// A node that supports something else now says so by making its call again.
+		c.m.Lock()
+		changed := c.profile != profile
+		c.m.Unlock()
+		if changed {
+			return status.Error(codes.Unavailable, "the supported metrics changed")
+		}
+
 		for _, r := range c.readings(s.node) {
+			index, ok := indexes[r.metric]
+			if !ok {
+				continue
+			}
+
 			value, err := proto.Marshal(r.value)
 			if err != nil {
 				return err
 			}
 
-			k := series{r.metric, r.subject}
+			k := series{index, r.subject}
 			if old, ok := sent[k]; ok && string(old) == string(value) {
 				continue
 			}
@@ -715,7 +830,7 @@ func (s *metricsServer) WatchMetrics(
 
 			err = stream.Send(metricsgrpc.WatchMetricsResponse_builder{
 				Sample: metricsgrpc.WatchMetricsResponse_Sample_builder{
-					MetricIndex: r.metric,
+					MetricIndex: index,
 					Subject:     []byte(r.subject),
 					Value:       value,
 					Revision:    revision,

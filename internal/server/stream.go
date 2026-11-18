@@ -256,10 +256,10 @@ func significant(v float64) float64 {
 func chartsOf(view observe.ClusterView, series observe.Series) map[string][]observe.TrailPoint {
 	charts := map[string][]observe.TrailPoint{}
 
-	if view.Overview.Events != nil {
+	if e := view.Overview.Events; e != nil && e.History != nil {
 		charts["events"] = series.Events
 	}
-	if view.Overview.Queues != nil {
+	if q := view.Overview.Queues; q != nil && q.History != nil {
 		charts["queues"] = series.Queues
 	}
 	for _, card := range view.Overview.Handlers {
@@ -291,28 +291,40 @@ func documentOf(view observe.ClusterView) map[string]any {
 
 	rates := map[string]any{}
 
-	if e := o.Events; e != nil {
-		streams := map[string]any{}
-		for _, s := range e.Streams {
-			streams[s.ID] = map[string]any{"length": s.Size}
+	// A rate that the nodes support is present, and has a "rate" once it is known.
+	rateOf := func(r *observe.Rate) map[string]any {
+		if r.PerSecond == nil {
+			return map[string]any{}
 		}
-		doc["eventStreams"] = streams
+		return map[string]any{"rate": significant(*r.PerSecond)}
+	}
+
+	if e := o.Events; e != nil {
+		if e.Streams != nil {
+			streams := map[string]any{}
+			for _, s := range e.Streams {
+				streams[s.ID] = map[string]any{"length": s.Size}
+			}
+			doc["eventStreams"] = streams
+		}
 
 		if e.Rate != nil {
-			rates["events"] = significant(*e.Rate)
+			rates["events"] = rateOf(e.Rate)
 		}
 	}
 
 	if q := o.Queues; q != nil {
-		queues := map[string]any{}
-		for _, s := range q.Queues {
-			queues[s.ID] = map[string]any{"messages": s.Size}
+		if q.Queues != nil {
+			queues := map[string]any{}
+			for _, s := range q.Queues {
+				queues[s.ID] = map[string]any{"messages": s.Size}
+			}
+			doc["queues"] = queues
 		}
-		doc["queues"] = queues
 		doc["failing"] = q.Failing
 
-		if q.RemovedRate != nil {
-			rates["removed"] = significant(*q.RemovedRate)
+		if q.Removed != nil {
+			rates["removed"] = rateOf(q.Removed)
 		}
 	}
 
@@ -349,11 +361,13 @@ func documentOf(view observe.ClusterView) map[string]any {
 			h["charted"] = card.Charted
 		}
 
-		bindings := map[string]any{}
-		for _, b := range s.Bindings {
-			bindings[b.ID] = map[string]any{"instances": b.Instances}
+		if s.Bindings != nil {
+			bindings := map[string]any{}
+			for _, b := range s.Bindings {
+				bindings[b.ID] = map[string]any{"instances": b.Instances}
+			}
+			h["bindings"] = bindings
 		}
-		h["bindings"] = bindings
 		if s.Unbound > 0 {
 			h["unbound"] = s.Unbound
 		}

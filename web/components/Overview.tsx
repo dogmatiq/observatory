@@ -13,6 +13,7 @@ import {
 } from "../lib/segments.ts";
 import type { OverviewData } from "../model.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
+import { Figure } from "./Figure.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
@@ -90,40 +91,62 @@ function EventsTile({
 	data: NonNullable<OverviewData["events"]>;
 	href: string | undefined;
 }) {
-	const total = data.streams.reduce((sum, s) => sum + s.size, 0);
+	const { rate, streams } = data;
+	const total = streams?.reduce((sum, s) => sum + s.size, 0) ?? 0;
 
+	// The tile shows what the nodes can tell it. Its headline is the events per
+	// minute, or, if no node supports that, how many events there are.
 	return (
 		<MetricTile
 			subsystem="streams"
 			label="Events"
 			icon="event"
 			href={href}
-			value={perMinute(data.perMinute)}
+			value={
+				rate ? (
+					<Figure text={perMinute(rate.perMinute)} />
+				) : (
+					formatCompact(total)
+				)
+			}
+			valueTitle={rate ? undefined : formatNumber(total)}
 			detail={
-				<>
-					<Noun>events per minute</Noun>
-					{", "}
-					<span title={formatNumber(total)}>{formatCompact(total)}</span>
-					{` ${nounFor(total, "event", "events")} in ${countOf(data.streams.length, "stream", "streams")}`}
-				</>
+				rate ? (
+					<>
+						<Noun>events per minute</Noun>
+						{streams && (
+							<>
+								{", "}
+								<span title={formatNumber(total)}>{formatCompact(total)}</span>
+								{` ${nounFor(total, "event", "events")} in ${countOf(streams.length, "stream", "streams")}`}
+							</>
+						)}
+					</>
+				) : (
+					<>
+						<Noun>{nounFor(total, "event", "events")}</Noun>
+						{` in ${countOf(streams?.length ?? 0, "stream", "streams")}`}
+					</>
+				)
 			}
 			bar={
-				<StackedBar
-					subsystem="streams"
-					segments={streamSegments(data.streams)}
-				/>
+				streams && (
+					<StackedBar subsystem="streams" segments={streamSegments(streams)} />
+				)
 			}
-			chart={<Sparkline chart={data.history} className="h-12" />}
+			chart={
+				data.history && <Sparkline chart={data.history} className="h-12" />
+			}
 		/>
 	);
 }
 
 /**
- * perMinute returns a rate as it is shown, which is rounded, or a question mark
- * if the Observatory doesn't have the rate yet.
+ * perMinute returns a rate as it is shown, which is rounded, or undefined if the
+ * Observatory doesn't have the rate yet.
  */
-function perMinute(rate: number | undefined): string {
-	return rate === undefined ? "?" : formatCompact(Math.round(rate));
+function perMinute(rate: number | undefined): string | undefined {
+	return rate === undefined ? undefined : formatCompact(Math.round(rate));
 }
 
 /** The tooltip of the number of messages removed per minute. */
@@ -137,10 +160,13 @@ function QueuesTile({
 	data: NonNullable<OverviewData["queues"]>;
 	href: string | undefined;
 }) {
-	const messages = data.queues.reduce((sum, q) => sum + q.size, 0);
+	const { queues, removed } = data;
+	const messages = queues?.reduce((sum, q) => sum + q.size, 0) ?? 0;
 
 	// The headline is the messages that aren't failing, and then those that are,
-	// as in "24 +1", because the failing ones are part of the queues' messages.
+	// as in "24 +1", because the failing ones are part of the queues' messages. If
+	// no node supports the messages in queues, it is the messages that are removed
+	// per minute.
 	const healthy = Math.max(0, messages - data.failing);
 
 	return (
@@ -150,26 +176,45 @@ function QueuesTile({
 			icon="queue"
 			href={href}
 			value={
-				<>
-					{formatCompact(healthy)}
-					<Failing count={data.failing} size="headline" />
-				</>
-			}
-			valueTitle={formatNumber(healthy)}
-			detail={
-				<>
-					<Noun>{nounFor(messages, "message", "messages")}</Noun>
-					{` in ${countOf(data.queues.length, "queue", "queues")}, `}
+				queues ? (
+					<>
+						{formatCompact(healthy)}
+						<Failing count={data.failing} size="headline" />
+					</>
+				) : (
 					<span title={removedPerMinuteTitle}>
-						{perMinute(data.removedPerMinute)}
+						<Figure text={perMinute(removed?.perMinute)} />
 					</span>
-					/min
-				</>
+				)
+			}
+			valueTitle={queues ? formatNumber(healthy) : undefined}
+			detail={
+				queues ? (
+					<>
+						<Noun>{nounFor(messages, "message", "messages")}</Noun>
+						{` in ${countOf(queues.length, "queue", "queues")}`}
+						{removed && (
+							<>
+								{", "}
+								<span title={removedPerMinuteTitle}>
+									<Figure text={perMinute(removed.perMinute)} />
+								</span>
+								/min
+							</>
+						)}
+					</>
+				) : (
+					<Noun>messages removed per minute</Noun>
+				)
 			}
 			bar={
-				<StackedBar subsystem="queues" segments={queueSegments(data.queues)} />
+				queues && (
+					<StackedBar subsystem="queues" segments={queueSegments(queues)} />
+				)
 			}
-			chart={<Sparkline chart={data.history} className="h-12" />}
+			chart={
+				data.history && <Sparkline chart={data.history} className="h-12" />
+			}
 		/>
 	);
 }

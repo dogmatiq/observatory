@@ -38,16 +38,32 @@ func TestRun(t *testing.T) {
 			if len(view.Overview.Cluster.Nodes) != 7 {
 				t.Fatalf("unexpected number of nodes: got %d, want 7", len(view.Overview.Cluster.Nodes))
 			}
-			if len(view.Overview.Handlers) != 5 {
-				t.Fatalf("unexpected number of handlers: got %d, want 5", len(view.Overview.Handlers))
+			if len(view.Overview.Handlers) != 6 {
+				t.Fatalf("unexpected number of handlers: got %d, want 6", len(view.Overview.Handlers))
 			}
-			if view.Overview.Events == nil || view.Overview.Events.Rate == nil {
+
+			// One of the processes schedules no deadlines, and its instances are in
+			// progress and bound to no queue.
+			found := false
+			for _, h := range view.Overview.Handlers {
+				if h.Name != "reconciliation" {
+					continue
+				}
+				found = true
+				if h.Kind != "process" || h.Summary.SchedulesDeadlines || h.Summary.Unbound == 0 {
+					t.Fatalf("unexpected process: %+v", h)
+				}
+			}
+			if !found {
+				t.Fatal("no reconciliation process")
+			}
+			if view.Overview.Events == nil || view.Overview.Events.Rate == nil || view.Overview.Events.Rate.PerSecond == nil {
 				t.Fatalf("unexpected events: %+v", view.Overview.Events)
 			}
 
 			// Each node counts the messages that it removes, and the rates of all
 			// seven add up, so each running total must only ever grow.
-			if view.Overview.Queues == nil || view.Overview.Queues.RemovedRate == nil {
+			if view.Overview.Queues == nil || view.Overview.Queues.Removed == nil || view.Overview.Queues.Removed.PerSecond == nil {
 				t.Fatalf("unexpected queues: %+v", view.Overview.Queues)
 			}
 
@@ -80,7 +96,7 @@ func TestRun(t *testing.T) {
 
 				for _, c := range observe.Clusters(time.Now(), o.Nodes()) {
 					view, _ := r.View(time.Now(), o.Nodes(), c.ID)
-					if view.Overview.Queues == nil || view.Overview.Queues.RemovedRate == nil {
+					if view.Overview.Queues == nil || view.Overview.Queues.Removed == nil || view.Overview.Queues.Removed.PerSecond == nil {
 						t.Fatalf("unknown rate of removal after %d seconds", i)
 					}
 				}
@@ -211,6 +227,62 @@ func TestRun(t *testing.T) {
 
 			if !mailerOnly || !processOnly || !both || !neither {
 				t.Fatalf("mailer only: %t, process only: %t, both: %t, neither: %t", mailerOnly, processOnly, both, neither)
+			}
+
+			cancel()
+			<-done
+		})
+	})
+
+	t.Run("it changes what the nodes support, so that parts of the page begin and end", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o, r := observe.NewObserver(), observe.NewRecorder()
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				if err := Run(ctx, o); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			seen := map[string]bool{}
+			for range 300 {
+				time.Sleep(time.Second)
+				r.Record(time.Now(), o.Nodes())
+
+				for _, c := range observe.Clusters(time.Now(), o.Nodes()) {
+					view, _ := r.View(time.Now(), o.Nodes(), c.ID)
+					e, q := view.Overview.Events, view.Overview.Queues
+					if e == nil || q == nil {
+						continue
+					}
+
+					bindings := false
+					for _, h := range view.Overview.Handlers {
+						if h.Name == "account" && h.Summary.Bindings != nil {
+							bindings = true
+						}
+					}
+
+					switch {
+					case e.Rate != nil && e.Streams != nil && q.Queues != nil && q.Removed != nil && bindings:
+						seen["everything"] = true
+					case e.Rate != nil && e.Streams == nil && q.Queues == nil && q.Removed != nil:
+						seen["rates only"] = true
+					case e.Rate == nil && e.Streams != nil && q.Queues != nil && q.Removed == nil:
+						seen["totals only"] = true
+					case e.Streams != nil && !bindings:
+						seen["no instances"] = true
+					}
+				}
+			}
+
+			for _, want := range []string{"everything", "rates only", "totals only", "no instances"} {
+				if !seen[want] {
+					t.Fatalf("never saw the nodes support: %s", want)
+				}
 			}
 
 			cancel()

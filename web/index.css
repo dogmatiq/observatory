@@ -145,6 +145,20 @@
 	}
 }
 
+/*
+ * A figure that has been lost fades from the color that it had to the muted one.
+ * The time is the one that Figure gives it.
+ */
+@keyframes stale {
+	from {
+		color: inherit;
+	}
+
+	to {
+		color: var(--color-faint);
+	}
+}
+
 @keyframes failing-out {
 	0% {
 		grid-template-columns: 1fr;

@@ -54,18 +54,20 @@ export function MetricTile({
 	/** The words beside the number, which always take two lines of room. */
 	detail: ReactNode;
 
-	/** The bar of how the number is spread. */
-	bar: ReactNode;
+	/** The bar of how the number is spread, if there is one. */
+	bar?: ReactNode;
 
-	/** The chart along the bottom. */
-	chart: ReactNode;
+	/** The chart along the bottom, if there is one. */
+	chart?: ReactNode;
 
 	href?: string;
 }) {
 	const classes = cn(
 		cardClasses,
 		raisedClasses,
-		"flex min-h-44 flex-col px-5 pt-5 pb-16",
+		"flex min-h-44 flex-col px-5 pt-5",
+		// The room for the chart is only there if there is one.
+		chart ? "pb-16" : "pb-5",
 		subsystemColors[subsystem],
 		href !== undefined && linkedCardClasses,
 	);
@@ -86,7 +88,7 @@ export function MetricTile({
 			<span className="relative z-10 mt-1 min-h-[calc(2*1.5em)] text-sm text-muted">
 				{detail}
 			</span>
-			<div className="relative z-10 mt-3">{bar}</div>
+			{bar && <div className="relative z-10 mt-3">{bar}</div>}
 			{chart}
 		</>
 	);

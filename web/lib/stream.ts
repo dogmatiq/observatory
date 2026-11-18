@@ -461,23 +461,29 @@ function cardOf(
 		throw new Error(`handler ${key} has no name or kind`);
 	}
 
-	const bindings: Binding[] = entries(h.bindings, "bindings")
-		.map(
-			([id, b]): Binding => ({
-				id,
-				instances: number(b.instances, "instances"),
-			}),
-		)
-		// The instances of a handler are shown largest first.
-		.sort(
-			(a, b) =>
-				b.instances - a.instances || (a.id ?? "").localeCompare(b.id ?? ""),
-		);
+	// A handler whose document has no bindings is one that no node supports them
+	// for, which is different from one that has none.
+	const bindings: Binding[] | undefined =
+		h.bindings === undefined
+			? undefined
+			: entries(h.bindings, "bindings")
+					.map(
+						([id, b]): Binding => ({
+							id,
+							instances: number(b.instances, "instances"),
+						}),
+					)
+					// The instances of a handler are shown largest first.
+					.sort(
+						(a, b) =>
+							b.instances - a.instances ||
+							(a.id ?? "").localeCompare(b.id ?? ""),
+					);
 
 	// The instances that are bound to no queue are the last segment of the bar,
 	// whatever their number, because they are not a queue.
 	const unbound = maybeNumber(h.unbound, "unbound");
-	if (unbound !== undefined && unbound > 0) {
+	if (bindings !== undefined && unbound !== undefined && unbound > 0) {
 		bindings.push({ id: undefined, instances: unbound });
 	}
 
@@ -505,8 +511,9 @@ function cardOf(
 	}
 	if (chart) {
 		card.history = chart;
-		if (h.charted === "commands" || h.charted === "events") {
-			card.charted = h.charted;
+		// The chart counts events unless the document says commands.
+		if (h.charted === "commands") {
+			card.charted = "commands";
 		}
 	}
 
@@ -552,42 +559,67 @@ export function selectCluster(
 
 	const overview: OverviewData = { cluster: { nodes: [] }, handlers: [] };
 
-	if (doc.eventStreams !== undefined) {
+	// A part of a tile that the document doesn't have is one that no node
+	// supports, and the tile leaves it out. A rate that the document has, and that
+	// has no number, is one that the nodes support and that isn't known yet.
+	const rateOf = (
+		v: unknown,
+		what: string,
+	): { perMinute?: number } | undefined => {
+		if (v === undefined) {
+			return undefined;
+		}
+		const perSecond = maybeNumber(object(v, what).rate, `${what}.rate`);
+		return perSecond === undefined ? {} : { perMinute: perSecond * 60 };
+	};
+
+	if (doc.eventStreams !== undefined || rates.events !== undefined) {
 		overview.events = attempt(() => {
-			const perSecond = maybeNumber(rates.events, "rates.events");
-			return {
-				perMinute: perSecond === undefined ? undefined : perSecond * 60,
+			const events: NonNullable<OverviewData["events"]> = {};
+
+			if (rates.events !== undefined) {
+				events.rate = rateOf(rates.events, "rates.events");
+				events.history = chartOf(snapshot.series.get("events"), ref);
+			}
+			if (doc.eventStreams !== undefined) {
 				// The event streams are shown largest first.
-				streams: entries(doc.eventStreams, "eventStreams")
+				events.streams = entries(doc.eventStreams, "eventStreams")
 					.map(
 						([id, s]): SpreadPart => ({
 							id,
 							size: number(s.length, "length"),
 						}),
 					)
-					.sort((a, b) => b.size - a.size || a.id.localeCompare(b.id)),
-				history: chartOf(snapshot.series.get("events"), ref),
-			};
+					.sort((a, b) => b.size - a.size || a.id.localeCompare(b.id));
+			}
+
+			return events;
 		});
 	}
 
-	if (doc.queues !== undefined) {
+	if (doc.queues !== undefined || rates.removed !== undefined) {
 		overview.queues = attempt(() => {
-			const perSecond = maybeNumber(rates.removed, "rates.removed");
-			return {
+			const queues: NonNullable<OverviewData["queues"]> = {
+				failing: maybeNumber(doc.failing, "failing") ?? 0,
+			};
+
+			if (rates.removed !== undefined) {
+				queues.removed = rateOf(rates.removed, "rates.removed");
+			}
+			if (doc.queues !== undefined) {
 				// The queues are shown in the order of their IDs.
-				queues: entries(doc.queues, "queues")
+				queues.queues = entries(doc.queues, "queues")
 					.sort(byId)
 					.map(
 						([id, q]): SpreadPart => ({
 							id,
 							size: number(q.messages, "messages"),
 						}),
-					),
-				failing: maybeNumber(doc.failing, "failing") ?? 0,
-				removedPerMinute: perSecond === undefined ? undefined : perSecond * 60,
-				history: chartOf(snapshot.series.get("queues"), ref),
-			};
+					);
+				queues.history = chartOf(snapshot.series.get("queues"), ref);
+			}
+
+			return queues;
 		});
 	}
 
@@ -613,7 +645,9 @@ export function selectCluster(
 			cardOf(
 				key,
 				h,
-				snapshot.series.has(name)
+				// A handler has a chart only while the document says what it counts,
+				// because its points stay once the nodes stop supporting the metric.
+				h.charted !== undefined && snapshot.series.has(name)
 					? chartOf(snapshot.series.get(name), ref)
 					: undefined,
 			),

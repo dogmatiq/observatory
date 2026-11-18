@@ -209,13 +209,13 @@ test("a tile whose metrics the engine doesn't report is hidden", () => {
 	expect(screen.getByRole("article", { name: "Events" })).toBeDefined();
 });
 
-test("a rate that the Observatory doesn't have yet is a question mark", () => {
+test("a rate that the Observatory has never had is a dash", () => {
 	render(
 		<Overview
 			data={{
 				...overview,
-				events: { ...overview.events, perMinute: undefined },
-				queues: { ...overview.queues, removedPerMinute: undefined },
+				events: { ...overview.events, rate: {} },
+				queues: { ...overview.queues, removed: {} },
 			}}
 		/>,
 	);
@@ -223,7 +223,7 @@ test("a rate that the Observatory doesn't have yet is a question mark", () => {
 	const events = screen.getByRole("article", { name: "Events" });
 	const queues = screen.getByRole("article", { name: "Queues" });
 	expect(visibleText(events)).toBe(
-		"?events per minute, 1.2K events in 2 streams",
+		"\u2014events per minute, 1.2K events in 2 streams",
 	);
-	expect(visibleText(queues)).toBe("19messages in 1 queue, ?/min");
+	expect(visibleText(queues)).toBe("19messages in 1 queue, \u2014/min");
 });

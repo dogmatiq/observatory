@@ -132,11 +132,13 @@ type ClusterView struct {
 // Overview is what the cluster view's three tiles and its handler cards show.
 type Overview struct {
 	// Events is the events tile. It is nil if no node of the cluster supports the
-	// length of event streams.
+	// length of event streams or the metrics that the rate of events is derived
+	// from.
 	Events *EventsTile `json:"events,omitempty"`
 
 	// Queues is the queues tile. It is nil if no node of the cluster supports the
-	// number of messages in queues.
+	// number of messages in queues or the metrics that the rate of their removal
+	// is derived from.
 	Queues *QueuesTile `json:"queues,omitempty"`
 
 	Cluster ClusterTile `json:"cluster"`
@@ -146,37 +148,51 @@ type Overview struct {
 	Handlers []HandlerCard `json:"handlers"`
 }
 
+// A part of a tile that no node of the cluster supports the metrics for is
+// nil, and the tile leaves it out. A part that the nodes do support, and that
+// has no value yet, is present and empty.
+
 // EventsTile is the events tile.
 type EventsTile struct {
-	// Rate is how many events per second the cluster records. It is nil until
-	// the Observatory can give it, or if no node supports the metrics that it is
-	// derived from.
-	Rate *float64 `json:"rate,omitempty"`
+	// Rate is how many events per second the cluster records. It is nil if no
+	// node supports the metrics that it is derived from.
+	Rate *Rate `json:"rate,omitempty"`
 
-	// Streams is the length of each of the cluster's event streams.
+	// Streams is the length of each of the cluster's event streams. It is nil if
+	// no node supports the length of event streams.
 	Streams []Spread `json:"streams"`
 
-	// History is how Rate changed over the last minute.
-	History Chart `json:"history"`
+	// History is how Rate changed over the last minute. It is nil if Rate is.
+	History *Chart `json:"history,omitempty"`
 }
 
 // QueuesTile is the queues tile.
 type QueuesTile struct {
 	// Queues is the number of messages that wait in each of the cluster's queues,
-	// commands and deadlines together.
+	// commands and deadlines together. It is nil if no node supports the number
+	// of messages in queues.
 	Queues []Spread `json:"queues"`
 
-	// Failing is the number of messages whose latest delivery attempt failed.
+	// Failing is the number of messages whose latest delivery attempt failed. It
+	// is zero if no node reports it.
 	Failing uint64 `json:"failing"`
 
-	// RemovedRate is how many messages per second are removed from the queues,
-	// commands and deadlines together. It is nil until the Observatory can give
-	// it, or if no node supports the metrics that it is derived from.
-	RemovedRate *float64 `json:"removedRate,omitempty"`
+	// Removed is how many messages per second are removed from the queues,
+	// commands and deadlines together. It is nil if no node supports the metrics
+	// that it is derived from.
+	Removed *Rate `json:"removed,omitempty"`
 
 	// History is how the number of messages in the queues changed over the last
-	// minute.
-	History Chart `json:"history"`
+	// minute. It is nil if Queues is.
+	History *Chart `json:"history,omitempty"`
+}
+
+// Rate is how often something happens, which the Observatory derives from the
+// running totals that the nodes report.
+type Rate struct {
+	// PerSecond is the number of times per second. It is nil until the
+	// Observatory can give it.
+	PerSecond *float64 `json:"perSecond,omitempty"`
 }
 
 // Spread is one part of a quantity that is spread over several things, such as
@@ -306,7 +322,9 @@ type HandlerSummary struct {
 	SchedulesDeadlines bool `json:"schedulesDeadlines,omitempty"`
 
 	// Bindings is how the instances of an aggregate are spread over the event
-	// streams, or those of a process over the queues of its deadlines.
+	// streams, or those of a process over the queues of its deadlines. It is nil
+	// for another kind of handler, and if no node supports the metric that it is
+	// derived from. It is empty if the handler has no instances.
 	Bindings []Binding `json:"bindings"`
 
 	// Unbound is the number of a process's instances that are in progress and
@@ -474,32 +492,42 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		r = chartValues{handlers: map[string]*float64{}}
 	)
 
-	if supported[metric(new(metricsgrpc.EventStreamLength))] {
-		o.Events = &EventsTile{
-			Streams: spreadOf(f.streams),
-			History: Chart{Points: []ChartPoint{}},
+	recorded := supported[metric(new(metricsgrpc.HandlerEventsRecorded))]
+	streamed := supported[metric(new(metricsgrpc.EventStreamLength))]
+	if recorded || streamed {
+		o.Events = &EventsTile{}
+
+		if streamed {
+			o.Events.Streams = spreadOf(f.streams)
 		}
-		if supported[metric(new(metricsgrpc.HandlerEventsRecorded))] {
-			o.Events.Rate = f.eventsRecorded.rate()
-			r.events = o.Events.Rate
+		if recorded {
+			o.Events.Rate = &Rate{f.eventsRecorded.rate()}
+			o.Events.History = &Chart{Points: []ChartPoint{}}
+			r.events = o.Events.Rate.PerSecond
 		}
 	}
 
-	if supported[metric(new(metricsgrpc.QueueCommandsPending))] ||
-		supported[metric(new(metricsgrpc.QueueDeadlinesPending))] {
-		o.Queues = &QueuesTile{
-			Queues:  spreadOf(f.pendingInQueue),
-			Failing: f.failing,
-			History: Chart{Points: []ChartPoint{}},
-		}
-		o.Queues.RemovedRate = f.removed.rate()
+	pending := supported[metric(new(metricsgrpc.QueueCommandsPending))] ||
+		supported[metric(new(metricsgrpc.QueueDeadlinesPending))]
+	removed := supported[metric(new(metricsgrpc.QueueCommandsRemoved))] ||
+		supported[metric(new(metricsgrpc.QueueDeadlinesRemoved))]
+	if pending || removed {
+		o.Queues = &QueuesTile{Failing: f.failing}
 
-		var total uint64
-		for _, n := range f.pendingInQueue {
-			total += n
+		if pending {
+			o.Queues.Queues = spreadOf(f.pendingInQueue)
+			o.Queues.History = &Chart{Points: []ChartPoint{}}
+
+			var total uint64
+			for _, n := range f.pendingInQueue {
+				total += n
+			}
+			t := float64(total)
+			r.queued = &t
 		}
-		t := float64(total)
-		r.queued = &t
+		if removed {
+			o.Queues.Removed = &Rate{f.removed.rate()}
+		}
 	}
 
 	o.Cluster.Nodes = membersOf(now, nodes)
@@ -614,7 +642,7 @@ func handlerCards(
 
 			MinimizesConcurrency: h.GetConcurrencyPreference() ==
 				configpb.ConcurrencyPreference_CONCURRENCY_PREFERENCE_MINIMIZE,
-			Summary: HandlerSummary{Failing: figs.failing, Bindings: []Binding{}},
+			Summary: HandlerSummary{Failing: figs.failing},
 		}
 		s := &card.Summary
 
@@ -624,8 +652,9 @@ func handlerCards(
 		case configpb.HandlerType_HANDLER_TYPE_AGGREGATE:
 			s.QueuedMessages = figs.commandsPending
 			recorded = &figs.eventsRecorded
-			s.Bindings = bindingsOf(figs.bindings)
 			if supported[metric(new(metricsgrpc.AggregateInstanceEventStreamBindings))] {
+				s.Bindings = bindingsOf(figs.bindings)
+
 				var n uint64
 				for _, b := range s.Bindings {
 					n += b.Instances
@@ -642,8 +671,10 @@ func handlerCards(
 					s.SchedulesDeadlines = true
 				}
 			}
-			s.Bindings = bindingsOf(figs.bindings)
-			s.Unbound = figs.unbound
+			if supported[metric(new(metricsgrpc.ProcessInstanceQueueBindings))] {
+				s.Bindings = bindingsOf(figs.bindings)
+				s.Unbound = figs.unbound
+			}
 
 		case configpb.HandlerType_HANDLER_TYPE_INTEGRATION:
 			s.QueuedMessages = figs.commandsPending
@@ -887,11 +918,13 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 		h = newHistory()
 	}
 
-	if o.Events != nil {
-		o.Events.History = chartOf(now, h.events)
+	if o.Events != nil && o.Events.History != nil {
+		c := chartOf(now, h.events)
+		o.Events.History = &c
 	}
-	if o.Queues != nil {
-		o.Queues.History = chartOf(now, h.queued)
+	if o.Queues != nil && o.Queues.History != nil {
+		c := chartOf(now, h.queued)
+		o.Queues.History = &c
 	}
 	for i, card := range o.Handlers {
 		if card.History != nil {

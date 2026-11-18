@@ -366,13 +366,14 @@ function full(): Snapshot {
 				eventStreams: { s1: { length: 5 }, s2: { length: 9 } },
 				queues: { q2: { messages: 1 }, q1: { messages: 3 } },
 				failing: 1,
-				rates: { events: 2, removed: 0.5 },
+				rates: { events: { rate: 2 }, removed: { rate: 0.5 } },
 				handlers: {
 					a: {
 						name: "alpha",
 						kind: "aggregate",
 						disabled: true,
 						failing: 0,
+						charted: "events",
 						bindings: { x: { instances: 1 }, y: { instances: 4 } },
 					},
 					b: {
@@ -413,7 +414,7 @@ test("the cluster view is selected from a snapshot, with times measured from the
 
 	const { overview } = data ?? { overview: undefined };
 	expect(overview?.events).toEqual({
-		perMinute: 120,
+		rate: { perMinute: 120 },
 		// The event streams are largest first.
 		streams: [
 			{ id: "s2", size: 9 },
@@ -434,7 +435,7 @@ test("the cluster view is selected from a snapshot, with times measured from the
 			{ id: "q2", size: 1 },
 		],
 		failing: 1,
-		removedPerMinute: 30,
+		removed: { perMinute: 30 },
 		history: { end: 0, points: [{ at: 0, value: 3 }] },
 	});
 	expect(overview?.cluster.nodes).toEqual([
@@ -464,12 +465,11 @@ test("the cards go by kind and then by name, and the instances of a handler are 
 		name: "beta",
 		kind: "integration",
 		minimizesConcurrency: true,
-		summary: { failing: 2, queuedMessages: 7, bindings: [] },
+		summary: { failing: 2, queuedMessages: 7 },
 	});
 	expect(handlers[3]?.summary).toEqual({
 		failing: 0,
 		unhandledEvents: 3,
-		bindings: [],
 	});
 	expect(handlers[1]?.summary.instances).toBe(9);
 });
@@ -481,7 +481,7 @@ test("a card has a chart only once its series has arrived", () => {
 	expect(handlers.find((h) => h.key === "a")?.history).toBeDefined();
 });
 
-test("a card says which kind of message its chart counts, and says none if it has no chart", () => {
+test("a card says that its chart counts commands, and has a chart only while the document says what it counts", () => {
 	const s = applied(
 		[
 			changed({
@@ -496,13 +496,17 @@ test("a card says which kind of message its chart counts, and says none if it ha
 		],
 		[{ kind: "recorded", series: "handlers/a", points: [[0, 1]] }, 0],
 		[{ kind: "recorded", series: "handlers/b", points: [[0, 1]] }, 0],
+		// The points of a series that the nodes have stopped supporting stay.
+		[{ kind: "recorded", series: "handlers/c", points: [[0, 1]] }, 0],
 	);
 
-	const handlers = selectCluster(s, 0);
-	const charted = Object.fromEntries(
-		(handlers?.overview.handlers ?? []).map((h) => [h.key, h.charted]),
-	);
-	expect(charted).toEqual({ a: "commands", b: "events", c: undefined });
+	const handlers = selectCluster(s, 0)?.overview.handlers ?? [];
+	const byKey = Object.fromEntries(handlers.map((h) => [h.key, h]));
+	expect(byKey.a?.charted).toBe("commands");
+	expect(byKey.a?.history).toBeDefined();
+	expect(byKey.b?.charted).toBeUndefined();
+	expect(byKey.b?.history).toBeDefined();
+	expect(byKey.c?.history).toBeUndefined();
 });
 
 test("a rate that is absent gives no figure, and an absent collection gives no tile", () => {
@@ -512,7 +516,7 @@ test("a rate that is absent gives no figure, and an absent collection gives no t
 	]);
 
 	const { overview } = selectCluster(s, 0) ?? {};
-	expect(overview?.events?.perMinute).toBeUndefined();
+	expect(overview?.events?.rate).toBeUndefined();
 	expect(overview?.queues).toBeUndefined();
 	expect(overview?.cluster.nodes).toEqual([]);
 	expect(overview?.handlers).toEqual([]);
@@ -524,14 +528,15 @@ test("a rate that a change removes gives no figure again", () => {
 			changed({
 				application: { name: "a", key: "k" },
 				eventStreams: {},
-				rates: { events: 3 },
+				rates: { events: { rate: 3 } },
 			}),
 			0,
 		],
-		[changed({ rates: { events: null } }), 1],
+		[changed({ rates: { events: { rate: null } } }), 1],
 	);
 
-	expect(selectCluster(s, 1)?.overview.events?.perMinute).toBeUndefined();
+	// The nodes still support the rate, so the tile still has it, with no number.
+	expect(selectCluster(s, 1)?.overview.events?.rate).toEqual({});
 });
 
 test("a part of the document that isn't well formed is left out and the others are not", () => {
