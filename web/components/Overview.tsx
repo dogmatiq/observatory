@@ -186,12 +186,13 @@ function ClusterTile({
 	// The levels drain between updates, so they are worked out again with each
 	// frame from the time that has passed.
 	const elapsed = useElapsed();
-	const levels = data.nodes.map((n) =>
-		heartbeatLevel(
+	const sections = data.nodes.map((n) => ({
+		id: n.id,
+		level: heartbeatLevel(
 			n.heartbeats.map((ago) => -ago),
 			elapsed,
 		),
-	);
+	}));
 
 	return (
 		<MetricTile
@@ -213,7 +214,7 @@ function ClusterTile({
 				)
 			}
 			bar={<NodeBar segments={nodeSegments(data.nodes)} />}
-			chart={<HeartbeatChart levels={levels} />}
+			chart={<HeartbeatChart sections={sections} />}
 		/>
 	);
 }

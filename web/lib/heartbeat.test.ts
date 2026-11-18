@@ -46,3 +46,55 @@ test("on a denser screen the line has more points but the same shape", () => {
 		expect(y).toBeCloseTo((sparse[i]?.[1] as number) * 2);
 	}
 });
+
+test("a node that is not there at all doesn't change the line", () => {
+	const without = heartbeatLine([1, 0.4], 200, 100, 1);
+	const among = heartbeatLine([1, 0.9, 0.4], 200, 100, 1, [1, 0, 1]);
+
+	expect(among).toHaveLength(without.length);
+	for (const [i, [x, y]] of among.entries()) {
+		expect(x).toBe(without[i]?.[0]);
+		expect(y).toBeCloseTo(without[i]?.[1] as number);
+	}
+});
+
+test("a node that is almost not there hardly changes the line, so one that joins or leaves doesn't make it jump", () => {
+	const reference = (levels: number[]) => heartbeatLine(levels, 400, 100, 1);
+
+	// An empty node in the middle, and one at an end.
+	for (const [levels, presence, without] of [
+		[
+			[1, 0, 0.4],
+			[1, 1e-6, 1],
+			[1, 0.4],
+		],
+		[
+			[0, 1, 0.4],
+			[1e-6, 1, 1],
+			[1, 0.4],
+		],
+		[
+			[1, 0.4, 0],
+			[1, 1, 1e-6],
+			[1, 0.4],
+		],
+	] as const) {
+		const near = heartbeatLine([...levels], 400, 100, 1, [...presence]);
+		const far = reference([...without]);
+
+		for (const [i, [, y]] of near.entries()) {
+			expect(Math.abs(y - (far[i]?.[1] as number))).toBeLessThan(5);
+		}
+	}
+});
+
+test("a node that is partly there has a smaller share, and a level that is partly that of its neighbours", () => {
+	// The second node has half its share, so the shares are 2/3 and 1/3 of 300
+	// pixels, and the middles are at 100 and 250. Its level is halfway between
+	// its own and its neighbour's.
+	const points = heartbeatLine([1, 0], 300, 100, 1, [1, 0.5]);
+	const at = (x: number) => points.find(([px]) => px === x)?.[1];
+
+	expect(at(100)).toBeCloseTo(98 - 60);
+	expect(at(250)).toBeCloseTo(98 - 30);
+});

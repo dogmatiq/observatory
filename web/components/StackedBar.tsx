@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import {
 	type BarSegment,
@@ -50,6 +50,23 @@ function useExtent(count: number): number {
 }
 
 /**
+ * useKept returns how many segments a bar draws, as [useExtent] does, and the
+ * segment that each of them has, or had last, so that a segment that is shrinking
+ * away keeps its look until it is gone and doesn't flash in another's.
+ */
+function useKept<T>(segments: readonly T[]): { extent: number; kept: T[] } {
+	const extent = useExtent(segments.length);
+	const last = useRef<T[]>([]);
+
+	const kept = Array.from({ length: extent }, (_, i) =>
+		i < segments.length ? (segments[i] as T) : (last.current[i] as T),
+	);
+
+	last.current = kept;
+	return { extent, kept };
+}
+
+/**
  * StackedBar draws a bar like a disk usage bar, whose segments are proportional
  * to their values and are in the given order, with a gap between them.
  *
@@ -67,7 +84,7 @@ export function StackedBar({
 }) {
 	const rects = layoutSegments(segments);
 	const described = segments.length > 0;
-	const extent = useExtent(segments.length);
+	const { extent, kept } = useKept(segments);
 
 	// A segment that has no width, or has gone, is drawn with none, where it
 	// would begin, so that it can shrink away and grow back.
@@ -98,6 +115,7 @@ export function StackedBar({
 		>
 			{drawn.map((rect, i) => {
 				const s = segments[i];
+				const look = kept[i];
 
 				return (
 					<rect
@@ -105,7 +123,9 @@ export function StackedBar({
 						// biome-ignore lint/suspicious/noArrayIndexKey: see above
 						key={i}
 						className={cn(
-							s?.isOther ? "fill-faint" : cn("fill-(--subsystem)", shades[i]),
+							look?.isOther
+								? "fill-faint"
+								: cn("fill-(--subsystem)", shades[i]),
 							// A segment moves and grows as its value changes, and a new one
 							// grows from nothing.
 							"transition-[x,width] duration-500 ease-out starting:w-0 motion-reduce:transition-none",
@@ -132,7 +152,7 @@ export function StackedBar({
  */
 export function NodeBar({ segments }: { segments: NodeSegment[] }) {
 	// A segment that has gone shrinks away before it is removed.
-	const extent = useExtent(segments.length);
+	const { extent, kept } = useKept(segments);
 
 	return (
 		<div className="flex h-2 gap-0.5 overflow-hidden rounded bg-sunk">
@@ -161,7 +181,7 @@ export function NodeBar({ segments }: { segments: NodeSegment[] }) {
 									: s.percent === undefined
 										? 8
 										: `${s.percent.toFixed(3)}%`,
-							opacity: s?.opacity,
+							opacity: kept[i]?.opacity,
 						}}
 						{...(s
 							? { role: "img", "aria-label": s.title, title: s.title }
