@@ -119,39 +119,6 @@
 	}
 }
 
-/*
- * The sky of a chart with nothing to draw: a star twinkles, and a tumbleweed
- * rolls across for a little of each long turn of its animation, and rests for the
- * rest of it.
- */
-@keyframes twinkle {
-	0%,
-	100% {
-		opacity: 0.1;
-	}
-
-	50% {
-		opacity: 0.7;
-	}
-}
-
-@keyframes tumble {
-	0% {
-		left: -8%;
-		transform: rotate(0deg);
-	}
-
-	10% {
-		left: 104%;
-		transform: rotate(900deg);
-	}
-
-	100% {
-		left: 104%;
-		transform: rotate(900deg);
-	}
-}
-
 @layer base {
 	:root {
 		color-scheme: light;

@@ -8,7 +8,6 @@ import {
 	sparklineWidth,
 } from "../lib/sparkline.ts";
 import type { Chart } from "../model.ts";
-import { EmptySky } from "./EmptySky.tsx";
 
 /**
  * Sparkline draws a chart of how a number changed over the last minute, with
@@ -37,36 +36,30 @@ export function Sparkline({
 	const scrolled = useScrolled();
 	const geometry = sparklineGeometry({ ...chart, end: chart.end + scrolled });
 
-	// A chart with nothing to draw, or with only zeros, is empty.
-	const empty = chart.points.every((p) => p.value === 0);
-
 	return (
-		<>
-			{empty && <EmptySky className={className} />}
-			<svg
-				className={cn("absolute inset-x-0 bottom-0 w-full", className)}
-				viewBox={`0 0 ${sparklineWidth} ${sparklineHeight}`}
-				preserveAspectRatio="none"
-				aria-hidden="true"
-			>
-				{geometry && (
-					<g>
-						{geometry.leadIn ? (
-							<LedPaths id={id} geometry={geometry} />
-						) : (
-							<>
-								<path className="fill-(--subsystem-soft)" d={geometry.area} />
-								<path
-									className="fill-none stroke-(--subsystem) [stroke-width:1.5]"
-									d={geometry.line}
-									vectorEffect="non-scaling-stroke"
-								/>
-							</>
-						)}
-					</g>
-				)}
-			</svg>
-		</>
+		<svg
+			className={cn("absolute inset-x-0 bottom-0 w-full", className)}
+			viewBox={`0 0 ${sparklineWidth} ${sparklineHeight}`}
+			preserveAspectRatio="none"
+			aria-hidden="true"
+		>
+			{geometry && (
+				<g>
+					{geometry.leadIn ? (
+						<LedPaths id={id} geometry={geometry} />
+					) : (
+						<>
+							<path className="fill-(--subsystem-soft)" d={geometry.area} />
+							<path
+								className="fill-none stroke-(--subsystem) [stroke-width:1.5]"
+								d={geometry.line}
+								vectorEffect="non-scaling-stroke"
+							/>
+						</>
+					)}
+				</g>
+			)}
+		</svg>
 	);
 }
 
