@@ -155,7 +155,7 @@ export function Failing({
 		return null;
 	}
 
-	return (
+	const shown = (
 		<span
 			className={cn(
 				"inline-grid grid-cols-[1fr] align-baseline",
@@ -180,6 +180,18 @@ export function Failing({
 			</span>
 		</span>
 	);
+
+	// In a stat it has no width, so that it can't widen the stat and wrap the row
+	// of stats that it is in. It hangs to the right of the number instead.
+	if (size === "stat") {
+		return (
+			<span className="inline-block w-0 overflow-visible align-baseline whitespace-nowrap">
+				{shown}
+			</span>
+		);
+	}
+
+	return shown;
 }
 
 /**

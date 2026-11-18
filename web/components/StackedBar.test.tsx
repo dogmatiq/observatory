@@ -1,6 +1,6 @@
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
-import { StackedBar } from "./StackedBar.tsx";
+import { act, cleanup, render } from "@testing-library/react";
+import { afterEach, expect, test, vi } from "vitest";
+import { NodeBar, StackedBar } from "./StackedBar.tsx";
 
 afterEach(cleanup);
 
@@ -37,7 +37,7 @@ test("each segment is a rectangle whose tooltip is its title", () => {
 	]);
 });
 
-test("a segment that has no width is not drawn", () => {
+test("a segment that has no width is drawn with none, so that it can shrink away", () => {
 	const { container } = render(
 		<StackedBar
 			subsystem="streams"
@@ -50,5 +50,60 @@ test("a segment that has no width is not drawn", () => {
 	);
 
 	// The tiny segment is narrower than the gap after it.
+	const rects = [...container.querySelectorAll("rect")];
+	expect(rects).toHaveLength(3);
+	expect(rects[1]?.getAttribute("width")).toBe("0.000");
+});
+
+test("a segment that has gone is kept with no width while it shrinks away, and then removed", () => {
+	vi.useFakeTimers();
+
+	const bar = (n: number) => (
+		<StackedBar
+			subsystem="streams"
+			segments={Array.from({ length: n }, (_, i) => ({
+				value: 1,
+				title: `${i}`,
+			}))}
+		/>
+	);
+	const { container, rerender } = render(bar(3));
+
+	rerender(bar(2));
+	const rects = [...container.querySelectorAll("rect")];
+	expect(rects).toHaveLength(3);
+	expect(rects[2]?.getAttribute("width")).toBe("0.000");
+	expect(rects[2]?.querySelector("title")).toBeNull();
+
+	act(() => {
+		vi.advanceTimersByTime(700);
+	});
 	expect(container.querySelectorAll("rect")).toHaveLength(2);
+
+	vi.useRealTimers();
+});
+
+test("the bar of nodes keeps a segment that has gone while it shrinks away, and hides it from assistive technology", () => {
+	vi.useFakeTimers();
+
+	const segments = (n: number) =>
+		Array.from({ length: n }, (_, i) => ({
+			title: `node ${i}`,
+			opacity: 1,
+			percent: 100 / n,
+		}));
+	const { container, rerender } = render(<NodeBar segments={segments(3)} />);
+
+	rerender(<NodeBar segments={segments(2)} />);
+	const bars = [...container.querySelectorAll("div.flex > div")];
+	expect(bars).toHaveLength(3);
+	expect(bars[2]?.getAttribute("aria-hidden")).toBe("true");
+	expect(container.querySelectorAll("[role=img]")).toHaveLength(2);
+
+	act(() => {
+		vi.advanceTimersByTime(700);
+	});
+	expect(container.querySelectorAll("div.flex > div")).toHaveLength(2);
+
+	vi.useRealTimers();
 });

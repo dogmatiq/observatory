@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import {
 	type BarSegment,
@@ -20,6 +21,35 @@ const shades = [
 ];
 
 /**
+ * How long a segment takes to shrink away, in milliseconds, which is the time
+ * that its width takes to change.
+ */
+const leaving = 500;
+
+/**
+ * useExtent returns how many segments a bar draws, which is the number that it
+ * has, and, for the time that a segment takes to shrink away after the bar has
+ * fewer, the number that it had.
+ */
+function useExtent(count: number): number {
+	const [extent, setExtent] = useState(count);
+
+	useEffect(() => {
+		if (count > extent) {
+			setExtent(count);
+			return;
+		}
+
+		if (count < extent) {
+			const timer = window.setTimeout(() => setExtent(count), leaving + 100);
+			return () => window.clearTimeout(timer);
+		}
+	}, [count, extent]);
+
+	return Math.max(count, extent);
+}
+
+/**
  * StackedBar draws a bar like a disk usage bar, whose segments are proportional
  * to their values and are in the given order, with a gap between them.
  *
@@ -37,6 +67,20 @@ export function StackedBar({
 }) {
 	const rects = layoutSegments(segments);
 	const described = segments.length > 0;
+	const extent = useExtent(segments.length);
+
+	// A segment that has no width, or has gone, is drawn with none, where it
+	// would begin, so that it can shrink away and grow back.
+	let cursor = 0;
+	const drawn = Array.from({ length: extent }, (_, i) => {
+		const rect = rects[i];
+		if (rect === undefined) {
+			return { x: cursor, width: 0 };
+		}
+
+		cursor = rect.x + rect.width;
+		return rect;
+	});
 
 	return (
 		<svg
@@ -52,11 +96,8 @@ export function StackedBar({
 			}
 			aria-hidden={described ? undefined : true}
 		>
-			{segments.map((s, i) => {
-				const rect = rects[i];
-				if (rect === undefined) {
-					return null;
-				}
+			{drawn.map((rect, i) => {
+				const s = segments[i];
 
 				return (
 					<rect
@@ -64,7 +105,7 @@ export function StackedBar({
 						// biome-ignore lint/suspicious/noArrayIndexKey: see above
 						key={i}
 						className={cn(
-							s.isOther ? "fill-faint" : cn("fill-(--subsystem)", shades[i]),
+							s?.isOther ? "fill-faint" : cn("fill-(--subsystem)", shades[i]),
 							// A segment moves and grows as its value changes, and a new one
 							// grows from nothing.
 							"transition-[x,width] duration-500 ease-out starting:w-0 motion-reduce:transition-none",
@@ -74,7 +115,7 @@ export function StackedBar({
 						width={rect.width.toFixed(3)}
 						height="10"
 					>
-						<title>{s.title}</title>
+						{s && <title>{s.title}</title>}
 					</rect>
 				);
 			})}
@@ -90,29 +131,44 @@ export function StackedBar({
  * segments shrink in proportion to make room for the gaps and the squares.
  */
 export function NodeBar({ segments }: { segments: NodeSegment[] }) {
+	// A segment that has gone shrinks away before it is removed.
+	const extent = useExtent(segments.length);
+
 	return (
 		<div className="flex h-2 gap-0.5 overflow-hidden rounded bg-sunk">
-			{segments.map((s, i) => (
-				<div
-					// A segment has no identity but its position.
-					// biome-ignore lint/suspicious/noArrayIndexKey: see above
-					key={i}
-					className={cn(
-						"min-w-0 bg-cluster",
-						s.percent === undefined ? "flex-none" : "flex-initial",
-						// A segment grows and shrinks as its share changes, and a new one
-						// grows from nothing.
-						"transition-[width] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out]",
-					)}
-					style={{
-						width: s.percent === undefined ? 8 : `${s.percent.toFixed(3)}%`,
-						opacity: s.opacity,
-					}}
-					role="img"
-					aria-label={s.title}
-					title={s.title}
-				/>
-			))}
+			{Array.from({ length: extent }, (_, i) => {
+				const s = segments[i];
+
+				return (
+					<div
+						// A segment has no identity but its position.
+						// biome-ignore lint/suspicious/noArrayIndexKey: see above
+						key={i}
+						className={cn(
+							"min-w-0 bg-cluster",
+							s === undefined || s.percent !== undefined
+								? "flex-initial"
+								: "flex-none",
+							// A segment grows and shrinks as its share changes, and a new one
+							// grows from nothing.
+							"transition-[width,margin] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out]",
+							s === undefined && "-ml-0.5",
+						)}
+						style={{
+							width:
+								s === undefined
+									? 0
+									: s.percent === undefined
+										? 8
+										: `${s.percent.toFixed(3)}%`,
+							opacity: s?.opacity,
+						}}
+						{...(s
+							? { role: "img", "aria-label": s.title, title: s.title }
+							: { "aria-hidden": true })}
+					/>
+				);
+			})}
 		</div>
 	);
 }

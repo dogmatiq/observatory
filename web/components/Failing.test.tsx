@@ -4,6 +4,10 @@ import { Failing } from "./MetricTile.tsx";
 
 afterEach(cleanup);
 
+/** The element that the count's animations are on. */
+const animating = (container: HTMLElement) =>
+	container.querySelector(".inline-grid");
+
 const failing = () => screen.queryByText(/^\+/);
 
 /**
@@ -34,7 +38,7 @@ test("the count is shown with a plus sign, and in full to a screen reader", () =
 test("a count that is in place when the page loads doesn't animate", () => {
 	const { container } = render(<Failing count={3} size="stat" />);
 
-	expect(container.firstElementChild?.className).not.toContain("failing-in");
+	expect(animating(container)?.className).not.toContain("failing-in");
 });
 
 test("a count that begins grows from nothing", () => {
@@ -43,10 +47,10 @@ test("a count that begins grows from nothing", () => {
 	rerender(<Failing count={2} size="stat" />);
 
 	expect(failing()?.textContent).toBe("+2");
-	expect(container.firstElementChild?.className).toContain("failing-in");
+	expect(animating(container)?.className).toContain("failing-in");
 
-	endAnimation(container.firstElementChild);
-	expect(container.firstElementChild?.className).not.toContain("failing-in");
+	endAnimation(animating(container));
+	expect(animating(container)?.className).not.toContain("failing-in");
 });
 
 test("a count that stops stays while it shrinks away, and then goes", () => {
@@ -55,9 +59,9 @@ test("a count that stops stays while it shrinks away, and then goes", () => {
 	rerender(<Failing count={0} size="stat" />);
 
 	expect(failing()?.textContent).toBe("+2");
-	expect(container.firstElementChild?.className).toContain("failing-out");
+	expect(animating(container)?.className).toContain("failing-out");
 
-	endAnimation(container.firstElementChild);
+	endAnimation(animating(container));
 	expect(container.textContent).toBe("");
 });
 
@@ -68,7 +72,7 @@ test("a count that begins again while it shrinks away grows again", () => {
 	rerender(<Failing count={5} size="stat" />);
 
 	expect(failing()?.textContent).toBe("+5");
-	expect(container.firstElementChild?.className).toContain("failing-in");
+	expect(animating(container)?.className).toContain("failing-in");
 });
 
 test("a count that changes while it is shown shows the new count", () => {
