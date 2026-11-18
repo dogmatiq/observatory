@@ -49,7 +49,7 @@ export function HandlerCard({
 		subsystemColors[handlerSubsystem(handler.kind)],
 		// A card with failing messages has an accent along its top.
 		failing
-			? "[box-shadow:inset_0_3px_0_var(--color-bad),var(--shadow-raised)]"
+			? "[box-shadow:inset_0_3px_0_var(--color-failing),var(--shadow-raised)]"
 			: raisedClasses,
 		// A card with a chart has room for it along the bottom. So does a card
 		// with a bar of its nodes, which has no chart of its own yet, so that its
@@ -310,10 +310,10 @@ function zeroOrNormal(n: number): Tone {
 }
 
 /**
- * How a number stands out: red when messages are failing, faint when it is
- * zero, and the page's text color otherwise.
+ * How a number stands out: faint when it is zero, and the page's text color
+ * otherwise.
  */
-type Tone = "normal" | "zero" | "bad";
+type Tone = "normal" | "zero";
 
 interface StatProps {
 	tone: Tone;
@@ -355,7 +355,6 @@ function Stat({ tone, icon, value, label, title, end }: StatProps) {
 				className={cn(
 					"text-2xl leading-[1.2] tabular-nums",
 					tone === "zero" ? "font-medium text-faint" : "font-semibold",
-					tone === "bad" && "text-bad",
 				)}
 			>
 				{icon && (

@@ -146,15 +146,15 @@ test("failing messages are counted after the others that wait, and the card is n
 	});
 });
 
-test("the number that waits is not red because some of it is failing, and only the failing count is", () => {
+test("the number that waits is not coloured because some of it is failing, and only the failing count is", () => {
 	card("integration", { failing: 1, queuedMessages: 4 });
 
 	// The count is in a box that is red, inside the one that holds it beside the
 	// number that waits, which is not.
 	const failing = screen.getByText("+1").parentElement?.parentElement;
-	expect(failing?.className).toContain("text-bad");
+	expect(failing?.className).toContain("text-failing");
 	expect(failing?.parentElement?.parentElement?.className).not.toContain(
-		"text-bad",
+		"text-failing",
 	);
 });
 

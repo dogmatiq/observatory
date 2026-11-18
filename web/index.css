@@ -28,9 +28,16 @@
 	--color-accent: #4f46e5;
 	--color-accent-soft: #eef0ff;
 
-	/* Something that needs attention. */
+	/* A health Issue, which is a judgment that something is wrong. */
 	--color-bad: #c81e1e;
 	--color-bad-soft: #fde8e8;
+
+	/*
+	 * Messages whose delivery is failing, which is a fact that may pass, and not
+	 * a judgment. It is not red, which is kept for Issues, and it is deeper than
+	 * the yellow of an aggregate.
+	 */
+	--color-failing: #c2570c;
 
 	/*
 	 * The engine's subsystems: teal for the cluster, blue for queues and the
@@ -203,6 +210,7 @@
 			--color-accent-soft: rgb(143 140 255 / 0.12);
 			--color-bad: #ff6b6b;
 			--color-bad-soft: rgb(255 107 107 / 0.13);
+			--color-failing: #fb923c;
 			--color-cluster: #2bd4a8;
 			--color-cluster-soft: rgb(43 212 168 / 0.13);
 			--color-queues: #38bdf8;

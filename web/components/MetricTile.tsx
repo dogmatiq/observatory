@@ -182,7 +182,7 @@ export function Failing({
 			)}
 			onAnimationEnd={() => setPhase((p) => (p === "out" ? "gone" : "steady"))}
 		>
-			<span className="min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-bad">
+			<span className="min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-failing">
 				<span className={cn("block", size === "headline" ? "pl-1.5" : "pl-1")}>
 					<span aria-hidden="true">{`+${formatCompact(last.current)}`}</span>
 					<span className="sr-only">
