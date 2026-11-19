@@ -22,7 +22,7 @@ import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
 import { describedClasses, Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
-import { RateCard } from "./RateCard.tsx";
+import { RateCard, type RateWords } from "./RateCard.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import { useRate } from "./useRate.ts";
@@ -107,7 +107,7 @@ export function Overview({
 }
 
 /** What the card of the rate of the events tile says. */
-export const eventRateWords = {
+export const eventRateWords: RateWords = {
 	kind: "Event rate",
 	description: "The rate at which the application is recording new events",
 };
@@ -154,8 +154,7 @@ export function EventsTile({
 		<RateCard
 			subsystem="streams"
 			icon="event"
-			kind={eventRateWords.kind}
-			description={eventRateWords.description}
+			words={eventRateWords}
 			state={state}
 		/>
 	);
@@ -325,14 +324,7 @@ export function QueuesTile({
 
 	// The number and the words beside it both have the card of the rate.
 	const rateCard = (
-		<RateCard
-			subsystem="queues"
-			icon="message"
-			kind={wording.kind}
-			description={wording.description}
-			note={wording.note}
-			state={state}
-		/>
+		<RateCard subsystem="queues" icon="message" words={wording} state={state} />
 	);
 
 	const rate = (

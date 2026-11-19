@@ -423,9 +423,7 @@ export function StatesPage() {
 								<RateCard
 									subsystem="queues"
 									icon="message"
-									kind={countedWords.removed.kind}
-									description={countedWords.removed.description}
-									note={countedWords.removed.note}
+									words={countedWords.removed}
 									state={state}
 								/>
 							</Panel>
@@ -438,9 +436,7 @@ export function StatesPage() {
 									<RateCard
 										subsystem="queues"
 										icon="message"
-										kind={countedWords[counted].kind}
-										description={countedWords[counted].description}
-										note={countedWords[counted].note}
+										words={countedWords[counted]}
 										state="known"
 									/>
 								</Panel>
@@ -542,7 +538,7 @@ export function StatesPage() {
 const rateCard = {
 	subsystem: "streams",
 	icon: "event",
-	...eventRateWords,
+	words: eventRateWords,
 } as const;
 
 /** The data of the events tile, with the given rate, or without one. */

@@ -39,7 +39,7 @@ export function VitalsPage() {
 									<RateCard
 										subsystem="streams"
 										icon="event"
-										{...eventRateWords}
+										words={eventRateWords}
 										state={state}
 									/>
 								</Panel>
@@ -65,9 +65,7 @@ export function VitalsPage() {
 										<RateCard
 											subsystem="queues"
 											icon="message"
-											kind={countedWords[counted].kind}
-											description={countedWords[counted].description}
-											note={countedWords[counted].note}
+											words={countedWords[counted]}
 											state={state}
 										/>
 									</Panel>
