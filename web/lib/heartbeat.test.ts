@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { heartbeatLine } from "./heartbeat.ts";
+import { heartbeatLine, levelY } from "./heartbeat.ts";
 
 test("there is no line without nodes", () => {
 	expect(heartbeatLine([], 400, 48, 1)).toEqual([]);
@@ -97,4 +97,11 @@ test("a node that is partly there has a smaller share, and a level that is partl
 
 	expect(at(100)).toBeCloseTo(98 - 60);
 	expect(at(250)).toBeCloseTo(98 - 30);
+});
+
+test("the line of a level is the same height as the line that heartbeatLine draws for it", () => {
+	for (const level of [0, 0.3, 1]) {
+		const points = heartbeatLine([level], 100, 50, 2);
+		expect(points.every(([, y]) => y === levelY(level, 50, 2))).toBe(true);
+	}
 });

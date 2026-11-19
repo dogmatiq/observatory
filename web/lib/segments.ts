@@ -32,6 +32,9 @@ export interface BarSegment {
 	/** The full ID of the thing that the segment is of. */
 	id?: string;
 
+	/** What the ID is of, such as "queue", for the button that copies it. */
+	of?: string;
+
 	/**
 	 * What the segment is of, for a popover that is a card about it. A segment
 	 * that has this is drawn as a card, and its `lead` and `id` are not used.
@@ -65,10 +68,11 @@ export type SegmentAbout = {
 
 /**
  * ofThing returns the title, lead and ID of a segment that is of one thing, such
- * as a queue, which has an ID. The title ends with the first part of the ID.
+ * as a queue, which has an ID. The title ends with the first part of the ID. `of`
+ * says what the thing is.
  */
-function ofThing(lead: string, id: string) {
-	return { title: `${lead} ${shortId(id)}`, lead, id };
+function ofThing(lead: string, id: string, of: string) {
+	return { title: `${lead} ${shortId(id)}`, lead, id, of };
 }
 
 /**
@@ -150,7 +154,11 @@ export function streamSegments(streams: SpreadPart[]): BarSegment[] {
 	return limitSegments(
 		largestFirst.map((s) => ({
 			value: s.size,
-			...ofThing(`${formatCompact(s.size)} events on event stream`, s.id),
+			...ofThing(
+				`${formatCompact(s.size)} events on event stream`,
+				s.id,
+				"event stream",
+			),
 			about: {
 				thing: "event-stream",
 				id: s.id,
@@ -174,7 +182,11 @@ export function queueSegments(queues: SpreadPart[]): BarSegment[] {
 	return limitSegments(
 		queues.map((q) => ({
 			value: q.size,
-			...ofThing(`${countOf(q.size, "message", "messages")} in queue`, q.id),
+			...ofThing(
+				`${countOf(q.size, "message", "messages")} in queue`,
+				q.id,
+				"queue",
+			),
 			about: {
 				thing: "queue" as const,
 				id: q.id,
@@ -208,6 +220,7 @@ export function bindingSegments(
 				: ofThing(
 						`${countOf(b.instances, "instance", "instances")} on ${singular}`,
 						b.id,
+						singular,
 					)),
 		})),
 		(total, count) =>
@@ -276,6 +289,7 @@ export function nodeSegments(nodes: LiveNode[]): NodeSegment[] {
 		...ofThing(
 			`${countOf(n.workloads, "workload", "workloads")} owned by node`,
 			n.id,
+			"node",
 		),
 		opacity: nodeOpacity(i, nodes.length),
 		percent: n.workloads > 0 ? (n.workloads / total) * 100 : undefined,
@@ -303,6 +317,7 @@ export function handlerNodeSegments(
 		...ofThing(
 			`${formatCompact(Math.round(n.rate * 60))} ${noun}/min on node`,
 			n.id,
+			"node",
 		),
 		opacity: nodeOpacity(i, busy.length),
 		percent: (n.rate / total) * 100,

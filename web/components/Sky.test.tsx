@@ -59,8 +59,8 @@ test("a sky that is drawn later doesn't take the moon from one that is there", (
 	expect(withMoon(container)).toEqual(["b"]);
 });
 
-/** The quote that a card of the moon shows, found by who said it. */
-const quoteIn = (tip: string) => moonQuotes.find((q) => tip.includes(q.by));
+/** The quote that a card of the moon shows, found by its words. */
+const quoteIn = (tip: string) => moonQuotes.find((q) => tip.includes(q.text));
 
 /** What a card of the moon starts with, which depends on its quote. */
 const heading = (q: (typeof moonQuotes)[number]) =>

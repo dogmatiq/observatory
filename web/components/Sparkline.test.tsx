@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { overview } from "../fixtures/overview.ts";
+import { Distrusted } from "../lib/distrust.tsx";
 import { LiveData } from "../lib/live.tsx";
 import { type Readout, ReadoutContext } from "../lib/readout.tsx";
 import { sparklineWidth } from "../lib/sparkline.ts";
@@ -151,6 +152,22 @@ describe("between updates", () => {
 		);
 
 		const { container } = renderLive();
+		const before = line(container);
+
+		now = 6000;
+		act(() => frames.pop()?.(0));
+
+		expect(line(container)).toBe(before);
+	});
+
+	test("the chart doesn't scroll if the numbers around it are not current", () => {
+		const { container } = render(
+			<Distrusted value>
+				<LiveData receivedAt={0} clock={{ now: () => now }}>
+					<Sparkline chart={chart} />
+				</LiveData>
+			</Distrusted>,
+		);
 		const before = line(container);
 
 		now = 6000;

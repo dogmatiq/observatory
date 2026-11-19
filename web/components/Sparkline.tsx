@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { cn } from "../lib/cn.ts";
+import { useDistrusted } from "../lib/distrust.tsx";
 import { useScrolled } from "../lib/live.tsx";
 import { type Readout, useSetReadout } from "../lib/readout.tsx";
 import {
@@ -20,7 +21,7 @@ import type { Chart } from "../model.ts";
  * the largest reaches the top.
  *
  * Between updates the chart scrolls left as time passes, unless the viewer
- * prefers reduced motion, so new values enter from the right without a jump.
+ * prefers reduced motion, or the numbers around it are not current, so new values enter from the right without a jump.
  * See {@link LiveData}.
  *
  * It is positioned along the bottom edge of the nearest ancestor that is
@@ -44,8 +45,12 @@ export function Sparkline({
 	describe?: (value: number) => { figure: string; unit: string };
 }) {
 	const id = useId();
+
+	// A chart stands still if the numbers around it are not current, as they are not
+	// for a cluster with no node reporting, and shows what it showed when the last
+	// node reported.
 	const scrolled = useScrolled();
-	const end = chart.end + scrolled;
+	const end = chart.end + (useDistrusted() ? 0 : scrolled);
 	const geometry = sparklineGeometry({ ...chart, end });
 
 	return (

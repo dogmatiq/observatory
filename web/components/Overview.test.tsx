@@ -111,7 +111,7 @@ test("failing messages are shown in the queues tile, and the plural is exact", (
 	expect(tile.textContent).not.toContain("442/min, ");
 });
 
-test("a cluster with no live nodes says so", () => {
+test("a cluster with no live nodes has a red number, and the words after it still make a sentence", () => {
 	render(
 		<Overview
 			application={application}
@@ -122,9 +122,9 @@ test("a cluster with no live nodes says so", () => {
 		/>,
 	);
 
-	expect(screen.getByRole("article", { name: "Cluster" }).textContent).toBe(
-		"0no live nodes",
-	);
+	const tile = screen.getByRole("article", { name: "Cluster" });
+	expect(tile.textContent).toBe("0cluster nodes, 0 workloads");
+	expect(tile.querySelector(".text-bad")?.textContent).toBe("0");
 });
 
 test("one node and one workload are in the singular", () => {
@@ -430,4 +430,142 @@ test("a rate of less than one event per minute is a whole number per hour", () =
 	expect(events.textContent).toBe(
 		"24events per hour, 1.2K events in 2 streams",
 	);
+});
+
+test("the icon of the cluster tile has a card that says which cluster it is, by its ID, and what it is about", async () => {
+	const id = "3f6c1a52-9d1b-4c52-8f0a-2a7d6b1e9c04";
+	render(
+		<Overview
+			application={{ ...application, site: "eu-west" }}
+			data={overview}
+			clusterId={id}
+		/>,
+	);
+
+	const cluster = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Cluster" });
+	const icon = cluster.querySelector("svg")?.parentElement as Element;
+
+	fireEvent.pointerEnter(icon);
+	const tip = (await screen.findByRole("group")).textContent;
+
+	expect(tip).not.toContain("across");
+	expect(tip).toContain(id.slice(0, 8));
+	expect(tip).toContain(
+		"This section shows information about the nodes of the cluster that runs the statements application at the eu-west site.",
+	);
+});
+
+test("the cards of the tiles name the site of the application, if it has one", async () => {
+	render(
+		<Overview
+			application={{ ...application, site: "eu-west" }}
+			data={overview}
+		/>,
+	);
+
+	const events = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Events" });
+	const icon = events.querySelector("svg")?.parentElement as Element;
+
+	expect(await tipOf(icon)).toContain(
+		"in the statements application at the eu-west site.",
+	);
+});
+
+test("a tile in an error state has an accent along its top, orange for failing messages and red for no live nodes, and others have none", () => {
+	const accentOf = (name: string) =>
+		within(screen.getByRole("region", { name: "Totals" }))
+			.getByRole("article", { name })
+			.className.match(/inset_0_3px_0_var\(--color-(\w+)\)/)?.[1];
+
+	const { rerender } = render(
+		<Overview application={application} data={overview} />,
+	);
+	expect(accentOf("Events")).toBeUndefined();
+	expect(accentOf("Queues")).toBeUndefined();
+	expect(accentOf("Cluster")).toBeUndefined();
+
+	rerender(
+		<Overview
+			application={application}
+			data={{
+				...overview,
+				queues: { ...(overview.queues as object), failing: 2 } as never,
+				cluster: { nodes: [] },
+			}}
+		/>,
+	);
+	expect(accentOf("Events")).toBeUndefined();
+	expect(accentOf("Queues")).toBe("failing");
+	expect(accentOf("Cluster")).toBe("bad");
+});
+
+test("a cluster that is down keeps its tiles and its cards, with their numbers as zeros that are not available, and not the cluster tile's", () => {
+	const { container, rerender } = render(
+		<Overview application={application} data={overview} />,
+	);
+	expect(container.querySelector(".distrust-blur")).toBeNull();
+
+	rerender(
+		<Overview
+			application={application}
+			data={{ ...overview, cluster: { nodes: [] } }}
+			down
+		/>,
+	);
+
+	const totals = within(screen.getByRole("region", { name: "Totals" }));
+	for (const name of ["Events", "Queues"]) {
+		expect(
+			totals.getByRole("article", { name }).querySelector(".distrust-blur")
+				?.textContent,
+		).not.toBe("");
+	}
+	expect(
+		totals
+			.getByRole("article", { name: "Cluster" })
+			.querySelector(".distrust-blur"),
+	).toBeNull();
+
+	// None of the numbers is current, so each is a zero that is not available, as
+	// on a page that loads with the cluster down.
+	cleanup();
+	render(
+		<Overview
+			application={application}
+			data={{ ...overview, cluster: { nodes: [] } }}
+			down
+		/>,
+	);
+	const unavailableTotals = within(
+		screen.getByRole("region", { name: "Totals" }),
+	);
+	for (const name of ["Events", "Queues"]) {
+		const tile = unavailableTotals.getByRole("article", { name });
+		const unavailable = within(tile).getAllByRole("img", {
+			name: "not available",
+		});
+		expect(unavailable.length).toBeGreaterThan(0);
+		for (const n of unavailable) {
+			expect(n.textContent).toBe("0");
+		}
+	}
+	expect(
+		within(screen.getByRole("region", { name: "Handlers" }))
+			.getAllByRole("img", { name: "not available" })
+			.every((n) => n.textContent === "0"),
+	).toBe(true);
+	expect(
+		within(screen.getByRole("region", { name: "Handlers" })).getAllByRole(
+			"article",
+		).length,
+	).toBeGreaterThan(0);
+	expect(
+		screen
+			.getByRole("region", { name: "Handlers" })
+			.querySelector(".distrust-blur"),
+	).not.toBeNull();
 });

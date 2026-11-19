@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { FakeEventSource, stubEventSource } from "../test-support.ts";
-import { retryInterval, useWatched } from "./watch.ts";
+import { retryInterval, unknownInterval, useWatched } from "./watch.ts";
 
 let now = 42;
 const clock = { now: () => now };
@@ -154,7 +154,7 @@ test("it never asks about the cluster while the stream is healthy", async () => 
 	expect(fetch).not.toHaveBeenCalled();
 });
 
-test("a cluster that isn't known ends the stream for good, and so the watch", async () => {
+test("a cluster that isn't known ends the stream for good, and is shown as unknown", async () => {
 	const fetch = answers(404);
 	const { result } = renderHook(() => useWatched("c", clock));
 	await settle();
@@ -166,6 +166,32 @@ test("a cluster that isn't known ends the stream for good, and so the watch", as
 	expect(fetch).toHaveBeenCalledTimes(1);
 	expect(result.current).toEqual({ status: "unknown" });
 	expect(open()).toHaveLength(0);
+});
+
+test("a cluster that isn't known is asked about again, and the page comes alive when it becomes known", async () => {
+	const fetch = answers(404, 404, 200);
+	const { result } = renderHook(() => useWatched("c", clock));
+	await settle();
+	act(() => open()[0]?.fail(true));
+	await settle();
+	expect(result.current).toEqual({ status: "unknown" });
+
+	// Still not known, five seconds later.
+	await later(unknownInterval);
+	expect(fetch).toHaveBeenCalledTimes(2);
+	expect(result.current).toEqual({ status: "unknown" });
+	expect(open()).toHaveLength(0);
+
+	// Known by the next time, so the stream is opened, and the burst is shown.
+	await later(unknownInterval);
+	expect(fetch).toHaveBeenCalledTimes(3);
+	expect(open()).toHaveLength(1);
+
+	burst(open()[0], "a");
+	expect(result.current).toMatchObject({
+		status: "ready",
+		data: { application: { name: "a" } },
+	});
 });
 
 test("while the browser connects again the data is kept, as stale, until the next burst ends", async () => {
@@ -218,7 +244,7 @@ test("a stream that ended for good is replaced after the cluster is asked about 
 	});
 });
 
-test("a cluster that is gone when its stream ends for good is unknown", async () => {
+test("a cluster that is gone altogether when its stream ends for good is unknown", async () => {
 	answers(404);
 	const { result } = renderHook(() => useWatched("c", clock));
 	await settle();

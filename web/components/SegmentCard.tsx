@@ -43,7 +43,7 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 			subsystem={of.subsystem}
 			icon={of.icon}
 			kind={of.kind}
-			identifier={<Identifier id={about.id} />}
+			identifier={<Identifier id={about.id} of={of.kind.toLowerCase()} />}
 			figure={{
 				value: <Ramped value={amount} format={formatCompact} />,
 				unit: of.amount[amount === 1 ? 0 : 1],

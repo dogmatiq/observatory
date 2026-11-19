@@ -687,5 +687,7 @@ export function selectCluster(
 			a.key.localeCompare(b.key),
 	);
 
-	return { application, overview };
+	return doc.down === true
+		? { application, overview, down: true }
+		: { application, overview };
 }

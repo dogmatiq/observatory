@@ -4,6 +4,16 @@
 export type Point = readonly [x: number, y: number];
 
 /**
+ * levelY returns how far down a canvas of `height` pixels the line of the
+ * heartbeat chart is when a node's level is `level`, from 0 when it is empty to 1
+ * when it is full. An empty level is 2 CSS pixels above the bottom edge, and the
+ * line rises by up to 60% of the canvas's height.
+ */
+export function levelY(level: number, height: number, ratio: number): number {
+	return height - 2 * ratio - height * 0.6 * level;
+}
+
+/**
  * heartbeatLine returns the points of the heartbeat chart's line, from the left
  * edge of a canvas to its right edge.
  *
@@ -66,9 +76,7 @@ export function heartbeatLine(
 		return around + (level - around) * w;
 	});
 
-	const base = height - 2 * ratio;
-	const rise = height * 0.6;
-	const ys = shown.map((level) => base - rise * level);
+	const ys = shown.map((level) => levelY(level, height, ratio));
 	const last = levels.length - 1;
 
 	// The middle of each node's share, as a fraction of the width.

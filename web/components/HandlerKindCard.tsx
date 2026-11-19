@@ -1,4 +1,5 @@
 import type { Application, HandlerKind } from "../model.ts";
+import { ApplicationName } from "./ApplicationName.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { handlerSubsystem, kindColors } from "./subsystems.ts";
 
@@ -44,8 +45,7 @@ export function HandlerKindCard({
 			<p>
 				This section shows information about the{" "}
 				<span className="font-semibold text-fg">{name}</span> {kind} in the{" "}
-				<span className="font-semibold text-fg">{application.name}</span>{" "}
-				application.
+				<ApplicationName application={application} />.
 			</p>
 			<p>{reminders[kind]}</p>
 		</InfoCard>

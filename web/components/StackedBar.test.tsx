@@ -6,6 +6,7 @@ import {
 	screen,
 } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
+import { Distrusted } from "../lib/distrust.tsx";
 import { tipOf } from "../test-support.ts";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 
@@ -22,6 +23,19 @@ test("an empty bar is an empty track that assistive technology skips", () => {
 	const track = container.querySelector("div.h-2");
 	expect(track?.getAttribute("aria-hidden")).toBe("true");
 	expect(track?.getAttribute("role")).toBeNull();
+	expect(segmentsOf(container)).toHaveLength(0);
+});
+
+test("a bar is an empty track if the numbers around it are not current", () => {
+	const { container } = render(
+		<Distrusted value>
+			<StackedBar
+				segments={[{ id: "a", title: "A", lead: "A", value: 1 } as never]}
+				subsystem="queues"
+			/>
+		</Distrusted>,
+	);
+
 	expect(segmentsOf(container)).toHaveLength(0);
 });
 
@@ -204,6 +218,7 @@ test("the popover of a segment of one thing has its ID as an identifier, that ca
 					title: "3 events on event stream 8b0081fd",
 					lead: "3 events on event stream",
 					id,
+					of: "event stream",
 				},
 				{ value: 1, title: "5 events on 2 other event streams" },
 			]}
@@ -214,7 +229,9 @@ test("the popover of a segment of one thing has its ID as an identifier, that ca
 	fireEvent.pointerEnter(boxes[0] as Element);
 	const tip = await screen.findByRole("group");
 	expect(tip.textContent).toBe("3 events on event stream 8b0081fd");
-	expect(screen.getByRole("button", { name: "Copy ID" })).toBeDefined();
+	expect(
+		screen.getByRole("button", { name: "Copy event stream ID" }),
+	).toBeDefined();
 	fireEvent.pointerLeave(boxes[0] as Element);
 
 	// The merged segment is of no one thing, and has nothing to copy.

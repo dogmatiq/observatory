@@ -3,7 +3,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 const lines: { levels: readonly number[]; weights: readonly number[] }[] = [];
 
-vi.mock("../lib/heartbeat.ts", () => ({
+vi.mock("../lib/heartbeat.ts", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../lib/heartbeat.ts")>()),
 	heartbeatLine: (
 		levels: readonly number[],
 		_width: number,

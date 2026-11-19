@@ -6,7 +6,9 @@ import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
 /**
  * Scope says where the thing that a card is about is, or what it is of: "within
- * the Account application", "across the Dev cluster" or "on the Web 1 node".
+ * the Account application" or "on the Web 1 node". An application is at a site, if
+ * it is at one, and the scope says so: "within the Account application at the
+ * Dev site".
  */
 export interface Scope {
 	preposition: "within" | "across" | "on";
@@ -15,6 +17,9 @@ export interface Scope {
 	kind: string;
 
 	name: string;
+
+	/** The site that it is at, if it has one, which is said after it. */
+	site?: string;
 
 	/** The ID of what the scope is of, if it has one, shown under the scope. */
 	id?: string;
@@ -105,9 +110,19 @@ export function InfoCard({
 							{scope.preposition} the{" "}
 							<span className="font-semibold text-fg">{scope.name}</span>{" "}
 							{scope.kind}
+							{scope.site !== undefined && (
+								<>
+									{" "}
+									at the{" "}
+									<span className="font-semibold text-fg">{scope.site}</span>{" "}
+									site
+								</>
+							)}
 						</span>
 					)}
-					{scope?.id !== undefined && <Identifier id={scope.id} named />}
+					{scope?.id !== undefined && (
+						<Identifier id={scope.id} of={scope.kind} named />
+					)}
 					{identifier}
 				</div>
 			</div>

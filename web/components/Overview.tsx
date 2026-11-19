@@ -1,3 +1,4 @@
+import { Distrusted, useCurrent } from "../lib/distrust.tsx";
 import {
 	countOf,
 	formatCompact,
@@ -13,10 +14,12 @@ import {
 	streamSegments,
 } from "../lib/segments.ts";
 import type { Application, Counted, OverviewData } from "../model.ts";
+import { ApplicationName } from "./ApplicationName.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Figure } from "./Figure.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
+import { Identifier } from "./Identifier.tsx";
 import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
 import { describedClasses, Popover } from "./Popover.tsx";
@@ -42,6 +45,76 @@ export interface OverviewLinks {
 }
 
 /**
+ * Totals is the three tiles of the overview, with the totals for the cluster's
+ * events, queues and nodes. A tile whose metrics no node supports is not there.
+ *
+ * The tiles fill each row, so a row never ends in a gap: when all three fit on one
+ * row, they share it; when two fit, the third has a row to itself, across its whole
+ * width; and when one fits, they are stacked. Two tiles share a row, or are
+ * stacked, in the same way.
+ *
+ * If the cluster is `down`, the numbers of the events and queues tiles are what they
+ * were when a node last reported, and are drawn as not to be trusted, so that the
+ * tiles keep their shape for when a node reports again. The cluster tile is not
+ * blurred, because it knows that no node is live.
+ */
+export function Totals({
+	application,
+	data,
+	links = {},
+	clusterId,
+	down = false,
+}: {
+	application: Application;
+	data: OverviewData;
+	links?: OverviewLinks;
+	clusterId?: string;
+	down?: boolean;
+}) {
+	return (
+		<section
+			className="flex flex-wrap gap-5 [&>*]:min-w-0 [&>*]:flex-[1_1_260px]"
+			aria-label="Totals"
+		>
+			<Presence shape="fade">
+				{data.events && (
+					<ErrorBoundary>
+						<Distrusted value={down}>
+							<EventsTile
+								application={application}
+								data={data.events}
+								href={links.events}
+							/>
+						</Distrusted>
+					</ErrorBoundary>
+				)}
+			</Presence>
+			<Presence shape="fade">
+				{data.queues && (
+					<ErrorBoundary>
+						<Distrusted value={down}>
+							<QueuesTile
+								application={application}
+								data={data.queues}
+								href={links.queues}
+							/>
+						</Distrusted>
+					</ErrorBoundary>
+				)}
+			</Presence>
+			<ErrorBoundary>
+				<ClusterTile
+					application={application}
+					clusterId={clusterId}
+					data={data.cluster}
+					href={links.cluster}
+				/>
+			</ErrorBoundary>
+		</section>
+	);
+}
+
+/**
  * Overview is the cluster view's body: three tiles with the totals for the
  * cluster's events, queues and nodes, and a card for each of its handlers.
  *
@@ -52,56 +125,43 @@ export function Overview({
 	application,
 	data,
 	links = {},
+	clusterId,
+	down = false,
 }: {
 	application: Application;
 	data: OverviewData;
 	links?: OverviewLinks;
+
+	/** The ID of the cluster, which the card of the cluster tile gives. */
+	clusterId?: string;
+
+	/** True if no node of the cluster is reporting, so its numbers are not trusted. */
+	down?: boolean;
 }) {
 	return (
 		<div className="grid gap-8">
-			<section
-				className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5"
-				aria-label="Totals"
-			>
-				<Presence shape="fade">
-					{data.events && (
-						<ErrorBoundary>
-							<EventsTile
-								application={application}
-								data={data.events}
-								href={links.events}
-							/>
-						</ErrorBoundary>
-					)}
-				</Presence>
-				<Presence shape="fade">
-					{data.queues && (
-						<ErrorBoundary>
-							<QueuesTile
-								application={application}
-								data={data.queues}
-								href={links.queues}
-							/>
-						</ErrorBoundary>
-					)}
-				</Presence>
-				<ErrorBoundary>
-					<ClusterTile data={data.cluster} href={links.cluster} />
-				</ErrorBoundary>
-			</section>
+			<Totals
+				application={application}
+				data={data}
+				links={links}
+				clusterId={clusterId}
+				down={down}
+			/>
 			<section
 				className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5"
 				aria-label="Handlers"
 			>
-				{data.handlers.map((handler) => (
-					<ErrorBoundary key={handler.key}>
-						<HandlerCard
-							application={application}
-							handler={handler}
-							href={links.handler?.(handler.key)}
-						/>
-					</ErrorBoundary>
-				))}
+				<Distrusted value={down}>
+					{data.handlers.map((handler) => (
+						<ErrorBoundary key={handler.key}>
+							<HandlerCard
+								application={application}
+								handler={handler}
+								href={links.handler?.(handler.key)}
+							/>
+						</ErrorBoundary>
+					))}
+				</Distrusted>
 			</section>
 		</div>
 	);
@@ -123,8 +183,7 @@ export function eventsAbout(application: Application) {
 	return (
 		<p>
 			This section shows information about the events and event streams in the{" "}
-			<span className="font-semibold text-fg">{application.name}</span>{" "}
-			application.
+			<ApplicationName application={application} />.
 		</p>
 	);
 }
@@ -196,14 +255,18 @@ export function EventsTile({
 							<>
 								{", "}
 								<Ramped value={total} format={formatCompact} />
-								{` ${nounFor(total, "event", "events")} in ${countOf(streams.length, "stream", "streams")}`}
+								{` ${nounFor(total, "event", "events")} in `}
+								<Ramped value={streams.length} format={String} />
+								{` ${nounFor(streams.length, "stream", "streams")}`}
 							</>
 						)}
 					</>
 				) : (
 					<>
 						<Noun>{nounFor(total, "event", "events")}</Noun>
-						{` in ${countOf(streams?.length ?? 0, "stream", "streams")}`}
+						{" in "}
+						<Ramped value={streams?.length ?? 0} format={String} />
+						{` ${nounFor(streams?.length ?? 0, "stream", "streams")}`}
 					</>
 				)
 			}
@@ -284,8 +347,7 @@ export function queuesAbout(application: Application) {
 	return (
 		<p>
 			This section shows information about the messages and queues in the{" "}
-			<span className="font-semibold text-fg">{application.name}</span>{" "}
-			application.
+			<ApplicationName application={application} />.
 		</p>
 	);
 }
@@ -312,7 +374,8 @@ export function QueuesTile({
 	// as in "24 +1", because the failing ones are part of the queues' messages. If
 	// no node supports the messages in queues, it is the messages that are removed
 	// per minute.
-	const healthy = Math.max(0, messages - data.failing);
+	const failing = useCurrent(data.failing);
+	const healthy = Math.max(0, messages - failing);
 
 	// The rate of removal is a whole number per minute, or per hour or per day if
 	// it is less than one per minute, as the rate of events is.
@@ -341,6 +404,7 @@ export function QueuesTile({
 			icon="message"
 			about={queuesAbout(application)}
 			href={href}
+			accent={failing > 0 ? "failing" : undefined}
 			value={
 				queues ? (
 					<Popover card content={<MessagesWaitingCard />}>
@@ -359,7 +423,9 @@ export function QueuesTile({
 				queues ? (
 					<>
 						<Noun>{nounFor(messages, "message", "messages")}</Noun>
-						{` in ${countOf(queues.length, "queue", "queues")}`}
+						{" in "}
+						<Ramped value={queues.length} format={String} />
+						{` ${nounFor(queues.length, "queue", "queues")}`}
 						{throughput && (
 							<>
 								{", "}
@@ -403,10 +469,31 @@ export function QueuesTile({
 	);
 }
 
-function ClusterTile({
+/**
+ * clusterAbout returns what the card of the cluster tile says, which is what the
+ * part of the page is about, as [eventsAbout] does.
+ */
+export function clusterAbout(application: Application) {
+	return (
+		<p>
+			This section shows information about the nodes of the cluster that runs
+			the <ApplicationName application={application} />.
+		</p>
+	);
+}
+
+/**
+ * ClusterTile is the cluster tile, whose headline is the number of nodes that are
+ * live, with the workloads that they own, and a bar of how those are shared.
+ */
+export function ClusterTile({
+	application,
+	clusterId,
 	data,
 	href,
 }: {
+	application: Application;
+	clusterId?: string;
 	data: OverviewData["cluster"];
 	href: string | undefined;
 }) {
@@ -428,19 +515,30 @@ function ClusterTile({
 			subsystem="cluster"
 			label="Cluster"
 			icon="cluster"
-			href={href}
-			value={<Ramped value={data.nodes.length} format={String} />}
-			detail={
-				data.nodes.length > 0 ? (
-					<>
-						<Noun>
-							{nounFor(data.nodes.length, "cluster node", "cluster nodes")}
-						</Noun>
-						{`, ${countOf(workloads, "workload", "workloads")}`}
-					</>
-				) : (
-					<Alarm>no live nodes</Alarm>
+			about={clusterAbout(application)}
+			identifier={
+				clusterId === undefined ? undefined : (
+					<Identifier id={clusterId} of="cluster" />
 				)
+			}
+			href={href}
+			accent={data.nodes.length === 0 ? "bad" : undefined}
+			value={
+				data.nodes.length === 0 ? (
+					<Alarm>
+						<Ramped value={0} format={String} />
+					</Alarm>
+				) : (
+					<Ramped value={data.nodes.length} format={String} />
+				)
+			}
+			detail={
+				<>
+					<Noun>
+						{nounFor(data.nodes.length, "cluster node", "cluster nodes")}
+					</Noun>
+					{`, ${countOf(workloads, "workload", "workloads")}`}
+				</>
 			}
 			bar={<NodeBar segments={nodeSegments(data.nodes)} />}
 			chart={<HeartbeatChart sections={sections} />}

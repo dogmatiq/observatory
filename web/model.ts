@@ -13,6 +13,13 @@ export interface Application {
 
 	/** The key of the application's identity, which is a UUID. */
 	key: string;
+
+	/**
+	 * The name of the site that the cluster that runs it is deployed to, if it has
+	 * one. An application may run at several sites, so wherever the page names the
+	 * application it names the site too.
+	 */
+	site?: string;
 }
 
 /**
@@ -27,6 +34,12 @@ export interface ClusterSummary {
 
 	/** The name of the site that the cluster is deployed to, if it has one. */
 	site?: string;
+
+	/**
+	 * Whether any node of the cluster is reporting. A cluster that is not has been
+	 * seen before, and is down.
+	 */
+	reporting: boolean;
 }
 
 /**
@@ -35,6 +48,12 @@ export interface ClusterSummary {
 export interface ClusterData {
 	application: Application;
 	overview: OverviewData;
+
+	/**
+	 * True if no node of the cluster is reporting. What the overview shows is then
+	 * what it showed when a node last reported, and is not to be trusted.
+	 */
+	down?: boolean;
 }
 
 /**

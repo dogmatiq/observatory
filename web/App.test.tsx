@@ -153,8 +153,12 @@ test("the title bar's color mode control changes the page's colors", () => {
 
 test("the first page lists the clusters, each linking to its own page", async () => {
 	const clusters: ClusterSummary[] = [
-		{ id: "aaa", application: { name: "statements", key: "k1" } },
-		{ id: "b/b", application: { name: "billing", key: "k2" } },
+		{
+			id: "aaa",
+			application: { name: "statements", key: "k1" },
+			reporting: true,
+		},
+		{ id: "b/b", application: { name: "billing", key: "k2" }, reporting: true },
 	];
 	const requests = serve(() => json(clusters));
 

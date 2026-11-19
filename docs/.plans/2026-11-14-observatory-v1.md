@@ -351,7 +351,7 @@ parts. An item that says "Done" is built.
     that a segment is of with its identifier (below); and the events tile's detail line and icon. A number that is abbreviated
     has no popover with its exact value, because the exact value is not wanted. The icon of a tile has a card that says
     what the tile is about in general, and not what it shows, because that depends on what the nodes can tell it, and
-    each part has a popover of its own. A help card says its scope under its kind, such as "across the … cluster" or "on the … node", only
+    each part has a popover of its own. A help card says its scope under its kind, such as "on the … node", only
     if the thing is narrower than the page, because a scope of the application would repeat the title bar. The events
     tile's card has none. The icon of an application is Lucide's `blocks`, which is not in use yet. The icon of a tile, and the kind icon of a handler card, grow a
     little, to 115%, when pointed at, because an icon is a compact target and a chip behind it was tried and not liked. The
@@ -404,6 +404,52 @@ parts. An item that says "Done" is built.
   can be seen for each. The number of messages waiting stays the
   tile's headline and its bar. A level and a rate on one chart was considered and not done, because they are in different
   units and each is scaled to its own peak.
+- The cluster tile, in progress: its headline is the number of live nodes with the workloads that they own, and "0 cluster
+  nodes" with the number in red (`Alarm`), and not the words, so that they still make a sentence, with a red accent along the top of the tile, and the heartbeat chart drawn as a flat gray line in the
+  middle of its room, because the accent and the words already say what is wrong. It is not the moon's sky, because that
+  is for a metric that nothing reports, and this is an outage.
+  Its icon has a card that says what the tile is about, with the cluster's ID under its kind, as the cards of an event
+  stream and a queue have theirs, because an application may run in several clusters and nothing else on the page says
+  which one this is. A cluster has no name, only an ID, so the card has no scope line. Still to do: the card of
+  a node, for a segment of the bar ("on the … node"), and the popover and hover rule of the heartbeat wave.
+- Wherever the page names the application, it names the site as well, if the cluster has one ("the statements application at the
+  eu-west site"; the title bar says "statements at eu-west"), because an application may run at several sites and a site
+  may have several clusters. The site comes from the nodes' preambles, in `ClusterView.Site`, and the state document
+  gives it in `application.site`. A site does not identify a cluster, so it is never used as the cluster's name.
+- A cluster's page is a permalink that stays valid for any cluster that the Observatory has ever had a node of. The Observer
+  keeps a `ClusterRecord` of each cluster (its application, name and key, and its site) after `ForgetIdle` has forgotten
+  the nodes, and only `Forget`, the explicit removal, deletes it, and a restart loses all of them. A cluster that has no node
+  reporting is down (`ClusterView.Down`, `down` in the document). If the Observer still has nodes of it, which it has
+  until `ForgetIdle` forgets them after three days, its page keeps its shape: the tiles and cards keep their places, with their bars empty and their charts standing
+  still, as they were when a node last reported (the server draws them as of that time), and the cluster tile says "0 cluster nodes", with the red accent and
+  the grey line, so that nothing moves when a node reports again. No number is current, so each is the muted, blurred
+  zero of a figure that is not available (`Distrusted`, which `Ramped`, `Figure`, `Failing` and the handler card's numbers
+  read). What the page shows depends on the state of the cluster and not on how it got there: the numbers are those
+  zeros both when the page loads with the cluster down and when the cluster goes down while the page is open, where
+  they ramp down to zero at once instead of being kept for a minute as a lost figure is. If it has none, the page shows the
+  application and site in the title bar and the cluster tile, and nothing else, because nothing about it is current. The
+  page comes alive when a node connects, as the stream goes on. A cluster that it has no record of is unknown, and its page
+  says so with a 404 from the API, and asks again every five seconds, so that it comes alive when the cluster becomes
+  known. The clusters page lists a cluster that is not reporting after those that are, marked "not reporting".
+- The grey line of the cluster tile with no live node is quiet, then breaks into a short burst of static, and
+  then a lens passes along it for ten seconds or more, to and fro at different speeds and with pauses, as of something
+  searching the line for the cluster, and then gives up: it stops where it is and shrinks to nothing, slowly, as it loses
+  its focus, before the next burst, with its circle as grey as the line the whole time, so that it blends into the line as
+  it closes. The lens is a plain circle, as thick and as grey as
+  the line, with a gap between it and every line so that none touches it, which gets bigger and smaller as it goes, and is
+  kept inside the chart, and through which the line is seen in
+  more detail and in the cluster's teal: it is rough inside the circle, as a telescope shows what the eye does not see, and the roughness is the same wherever the
+  lens is, because it belongs to the line. When the first node comes back the lens finds it: if it was scanning there is
+  no static, and it finds it where it is. If it was not, there is a burst of static first, and the lens appears and
+  looks to one side and back a little. It then comes into focus and zooms in with a start, a little past where it stops,
+  which sharpens and magnifies the roughness and leaves the circle as big as it was. As it does, the roughness inside
+  resolves into a clean heartbeat, as a heart monitor draws one, and the heartbeat grows out of that place: the lens is gone almost at once, and a ripple, which is a crest that flicks up from the flat line, then a
+  trough and a crest again, each smaller than the one before, as in the wake of a wave, rolls out to both ends, taking the heartbeat's color as it goes, and behind it the line
+  flows to the height of its heartbeat. The flat line is at the height of a full heartbeat, which is where a node that has just come back is, so
+  the settle moves it only if the heartbeat has drained. The flat line and the heartbeat are one line that changes its
+  height and its color, and are never two lines that fade into each other. When the last node goes the line settles back
+  to the height of the flat line as it turns grey, so that it never jumps. The states page lets nodes be added and
+  removed, each beating at its own pace. All of it is still for a viewer who asks for less motion.
 - The same for a sparkline: pointing at a place on it shows the value there.
   - Done for the sparklines of the events and queues tiles: a cursor line, which fades out upward and downward, so that it ends in the chart's area, and has a round dot of five pixels
     where it meets the chart's line, of which only the center pixel has the full color of the text, and the rest is fainter
@@ -521,7 +567,7 @@ parts. An item that says "Done" is built.
   at the start and not often after. A node that leaves stops counting at once either way.
 - Places for the `Glitch`, which James likes and which is in use in one place so far, a lost figure just before its
   zero: somewhere that needs attention, kept for the
-  exceptional so that it keeps its meaning. Candidates so far: the cluster tile's "no live nodes", the notice that updates
+  exceptional so that it keeps its meaning. Candidates so far: the cluster tile's "0 cluster nodes", the notice that updates
   have stopped because the Observatory can't be reached, a node leaving the cluster, a handler's failing count when it
   first rises, and the health Issues when the rules come back. It would be a short burst and not a constant shake, and
   with reduced motion only the split. More are added as they are found.
@@ -599,7 +645,7 @@ with nothing left is not shown. A slot has one candidate for now. Letting a slot
 ### Changes asked for after the cluster view was built
 
 - Failing counts are orange, and red is kept for health Issues. Done: the failing count and the accent along the top of
-  a card with failing messages are orange (`--color-failing`, a red-orange). The "no live nodes" alarm stays red, because it is a
+  a card with failing messages are orange (`--color-failing`, a red-orange). The red number of "0 cluster nodes" stays red, because it is a
   judgment, as an Issue will be.
 - Animating the numbers themselves, such as rolling the digits of a counter like a flip clock, was tried and is too
   much. Numbers change at once. What around them changes may be animated.

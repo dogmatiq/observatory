@@ -1,4 +1,5 @@
 import { cn } from "../lib/cn.ts";
+import type { Application } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import { Logo } from "./Logo.tsx";
 import { Popover } from "./Popover.tsx";
@@ -33,7 +34,7 @@ export function TitleBar({
 	 * The application that the cluster runs, which is where the page is. A page
 	 * that is not about one cluster has none.
 	 */
-	application?: { name: string; key: string };
+	application?: Application;
 
 	/**
 	 * The page's links, in groups. A line separates one group from the next.
@@ -52,10 +53,13 @@ export function TitleBar({
 				</a>
 				{application && (
 					<Popover
-						content={`Application ${application.name}, key ${application.key}`}
+						content={`Application ${application.name}${application.site === undefined ? "" : ` at the ${application.site} site`}, key ${application.key}`}
 					>
 						<span className="font-medium whitespace-nowrap text-muted">
 							{application.name}
+							{application.site !== undefined && (
+								<span className="font-normal"> at {application.site}</span>
+							)}
 						</span>
 					</Popover>
 				)}

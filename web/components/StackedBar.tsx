@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
+import { useDistrusted } from "../lib/distrust.tsx";
 import {
 	type BarSegment,
 	layoutSegments,
@@ -79,6 +80,7 @@ function describe(s: {
 	title: string;
 	lead?: string;
 	id?: string;
+	of?: string;
 	about?: SegmentAbout;
 }): ReactNode {
 	if (s.about !== undefined) {
@@ -89,7 +91,7 @@ function describe(s: {
 		s.title
 	) : (
 		<>
-			{s.lead} <Identifier id={s.id} />
+			{s.lead} <Identifier id={s.id} of={s.of ?? "thing"} />
 		</>
 	);
 }
@@ -118,18 +120,21 @@ function useHovered() {
  * of the bar by a pixel above and below, at full opacity. The bar as a whole is
  * described to assistive technology by the titles of all its segments. A bar with
  * no segments is an empty track, which keeps its place so that the page does not
- * move when it fills.
+ * move when it fills. A bar is empty in a cluster whose numbers are not current.
  *
  * A rising segment reaches outside the bar, so whatever holds the bar must not
  * clip it.
  */
 export function StackedBar({
-	segments,
+	segments: given,
 	subsystem,
 }: {
 	segments: BarSegment[];
 	subsystem: Subsystem;
 }) {
+	// What a bar spreads is not current if the numbers around it are not, so it is
+	// an empty track, as the segments shrink away. See [Distrusted].
+	const segments = useDistrusted() ? [] : given;
 	const rects = layoutSegments(segments);
 	const described = segments.length > 0;
 	const { extent, kept } = useKept(segments);

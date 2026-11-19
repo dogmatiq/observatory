@@ -14,6 +14,12 @@ import {
 export const retryInterval = 1000;
 
 /**
+ * How long to wait before asking again about a cluster that isn't known, which
+ * may become known when a node of it connects.
+ */
+export const unknownInterval = 5000;
+
+/**
  * useWatched returns what the cluster view shows for the cluster with the given
  * ID, which the Observatory keeps up to date. The state has the same form as the
  * one that {@link usePolled} returns, and `at` is when the data last changed,
@@ -29,9 +35,11 @@ export const retryInterval = 1000;
  * While the browser connects again after the stream breaks, the data is kept,
  * as stale, until the next burst ends. If the stream ends for good, which is
  * what a cluster that isn't known does, the Observatory is asked about the
- * cluster to find out why: a cluster that isn't known ends the watch, and any
- * other cluster is watched again. A question that fails is asked again after
- * {@link retryInterval}, and they never overlap.
+ * cluster to find out why: a cluster that isn't known is shown as unknown, and
+ * asked about again after {@link unknownInterval}, so that the page comes alive
+ * when a node of the cluster connects, and any other cluster is watched again.
+ * A question that fails is asked again after {@link retryInterval}, and they
+ * never overlap.
  *
  * Nothing is asked, and the stream is closed, once the page no longer shows the
  * cluster.
@@ -90,6 +98,7 @@ export function useWatched(
 
 				if (error instanceof NotFound) {
 					dispatch({ type: "unknown" });
+					timer = window.setTimeout(check, unknownInterval);
 					return;
 				}
 

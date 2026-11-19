@@ -8,7 +8,9 @@ const copiedTime = 1500;
 
 /**
  * Identifier shows an ID, which is a UUID, as its first eight characters in
- * monospace type, with a button that copies the whole ID.
+ * monospace type, with a button that copies the whole ID. `of` says what the ID is
+ * of, such as "cluster", so that the button can say what it copied: "Copied
+ * cluster ID".
  *
  * An ID is the identity of a thing that has no name, so it is in the color of
  * the text. If the thing has a name, which the page shows beside it, the name is
@@ -16,7 +18,15 @@ const copiedTime = 1500;
  *
  * It is made to be inside a popover that can be pointed at.
  */
-export function Identifier({ id, named }: { id: string; named?: boolean }) {
+export function Identifier({
+	id,
+	of,
+	named,
+}: {
+	id: string;
+	of: string;
+	named?: boolean;
+}) {
 	const [copied, setCopied] = useState(false);
 	const timer = useRef<number | undefined>(undefined);
 
@@ -49,11 +59,16 @@ export function Identifier({ id, named }: { id: string; named?: boolean }) {
 			<button
 				type="button"
 				className="-m-1 inline-flex cursor-pointer rounded-control p-1 text-muted transition-colors duration-150 hover:bg-sunk hover:text-fg motion-reduce:transition-none"
-				aria-label={copied ? "ID copied" : "Copy ID"}
+				aria-label={copied ? `Copied ${of} ID` : `Copy ${of} ID`}
 				onClick={copy}
 			>
 				<Icon name={copied ? "check" : "copy"} className="size-3" />
 			</button>
+			{copied && (
+				<span className="text-[0.625rem]/[1.5] text-muted" role="status">
+					Copied {of} ID
+				</span>
+			)}
 		</span>
 	);
 }

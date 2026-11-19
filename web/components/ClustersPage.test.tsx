@@ -22,8 +22,13 @@ test("it tells apart clusters of one application by their site, or else by the s
 			id: "11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
 			application,
 			site: "eu-west",
+			reporting: true,
 		},
-		{ id: "22222222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", application },
+		{
+			id: "22222222-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+			application,
+			reporting: true,
+		},
 	];
 
 	render(<ClustersPage clusters={clusters} />);
@@ -36,6 +41,7 @@ test("it lists the clusters by the name of their application, whatever order it 
 	const named = (id: string, name: string): ClusterSummary => ({
 		id,
 		application: { name, key: "k" },
+		reporting: true,
 	});
 
 	render(
@@ -57,5 +63,30 @@ test("it lists the clusters by the name of their application, whatever order it 
 		"Queues: 10" + "11111111",
 		"statements" + "22222222",
 		"statements" + "33333333",
+	]);
+});
+
+test("a cluster that is not reporting is marked, and listed after those that are, whatever its name", () => {
+	const named = (
+		id: string,
+		name: string,
+		reporting: boolean,
+	): ClusterSummary => ({ id, application: { name, key: "k" }, reporting });
+
+	render(
+		<ClustersPage
+			clusters={[
+				named("11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "alpha", false),
+				named("22222222-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "omega", true),
+				named("33333333-cccc-4ccc-8ccc-cccccccccccc", "beta", false),
+			]}
+		/>,
+	);
+
+	const items = screen.getAllByRole("listitem").map((i) => i.textContent);
+	expect(items).toEqual([
+		"omega" + "22222222",
+		"alpha" + "11111111" + "not reporting",
+		"beta" + "33333333" + "not reporting",
 	]);
 });

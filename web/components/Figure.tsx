@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useDistrusted } from "../lib/distrust.tsx";
 import { prefersReducedMotion, useRamped } from "../lib/ramped.ts";
 import { Glitch } from "./Glitch.tsx";
 
@@ -86,6 +87,10 @@ const untrusted = "distrust-blur";
  * The zero is described to assistive technology as "not available", because it
  * isn't a measure.
  *
+ * In a cluster that is down, as [Distrusted] says, no figure has a number: each is
+ * the zero with no trust, as it is when the page loads with the cluster down, and a
+ * figure that was showing a number ramps down to it.
+ *
  * Nothing here is about a figure that no node supports. That is not shown at all.
  */
 export function Figure({
@@ -103,7 +108,16 @@ export function Figure({
 	/** How long the figure is kept when it is lost, in milliseconds. */
 	keep?: number;
 }) {
-	const { value, lost } = useKept(number, keep);
+	const kept = useKept(number, keep);
+
+	// What a figure shows depends on the state of the cluster, and not on how the
+	// page got there. A cluster that is down has no number that is current, so the
+	// figures that are worked out from what its nodes report are not available,
+	// whether they were showing a number when the cluster went down, or the page
+	// has just loaded with it down.
+	const down = useDistrusted();
+	const value = down ? undefined : kept.value;
+	const lost = down ? false : kept.lost;
 
 	// A figure with no number is a zero, which a lost figure ramps down to.
 	const ramped = useRamped(value ?? 0, unit) ?? 0;

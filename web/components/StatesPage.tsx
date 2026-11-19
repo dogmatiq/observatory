@@ -1,11 +1,17 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { application, overview } from "../fixtures/overview.ts";
 import { formatCompact } from "../lib/format.ts";
+import { LiveData } from "../lib/live.tsx";
 import { moonPhase } from "../lib/moon.ts";
 import { moonQuotes } from "../lib/moon-lore.ts";
 import type { SegmentAbout } from "../lib/segments.ts";
 import { chartWindowMs, heightOf, valueAt } from "../lib/sparkline.ts";
-import type { Counted, HandlerData, OverviewData } from "../model.ts";
+import type {
+	Application,
+	Counted,
+	HandlerData,
+	OverviewData,
+} from "../model.ts";
 import { Figure, glitchTime, keepTime } from "./Figure.tsx";
 import { Glitch } from "./Glitch.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
@@ -16,12 +22,16 @@ import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Failing } from "./MetricTile.tsx";
 import { MoonCard } from "./MoonCard.tsx";
 import {
+	ClusterTile,
+	clusterAbout,
 	countedWords,
 	EventsTile,
 	eventRateWords,
 	eventsAbout,
+	Overview,
 	QueuesTile,
 	queuesAbout,
+	Totals,
 } from "./Overview.tsx";
 import { Page } from "./Page.tsx";
 import { panelClasses } from "./Popover.tsx";
@@ -110,6 +120,186 @@ export function StatesPage() {
 							</Panel>
 						</State>
 					))}
+				</Section>
+
+				<Section
+					title="The tiles, in each width"
+					note="The tiles fill each row, so a row never ends in a gap. All three share a row when they fit, else the third has a row to itself, across its whole width, else they are stacked. Two tiles share a row, or are stacked."
+				>
+					{(
+						[
+							["Three tiles, wide", 900, false],
+							["Three tiles, two to a row", 600, false],
+							["Three tiles, stacked", 340, false],
+							["Two tiles, wide", 900, true],
+							["Two tiles, stacked", 340, true],
+						] as const
+					).map(([label, width, noEvents]) => (
+						<div key={label} className="col-span-full">
+							<p className="mb-2 font-semibold">
+								{label}{" "}
+								<span className="font-normal text-muted">({width}px)</span>
+							</p>
+							<div style={{ width }}>
+								<Totals
+									application={application}
+									data={{
+										...overview,
+										events: noEvents ? undefined : overview.events,
+									}}
+								/>
+							</div>
+						</div>
+					))}
+				</Section>
+
+				<Section
+					title="Cluster tile: nodes come and go"
+					note="With no node live, the grey line breaks into static now and then, and a lens passes along it: a plain circle, as thick and as grey as the line, with a gap between it and every line so that none touches it, which gets bigger and smaller as it goes, never so big or so near an edge that it is cut off, and through which the line is seen in the cluster's color and in more detail, rough where it looks smooth to the eye. When the first node comes back the lens finds it: if it was scanning, it finds it where it is, with no static. If it was not, there is static first, then the lens appears and looks to one side and back a little. Either way it then gains clarity and zooms in with a start, a little past where it stops, without getting any smaller, and as it does the roughness inside it resolves into a clean heartbeat, as a heart monitor draws one. The heartbeat then grows out of that place as a ripple that rolls out to both ends. Each node beats at its own pace while it is there. When the last node goes, the heartbeat settles back to the height of the flat line."
+				>
+					<State label="Add and remove nodes">
+						<Nodes application={application} />
+					</State>
+				</Section>
+
+				<Section
+					title="A cluster that is down"
+					note="No node of the cluster is reporting, but the Observatory still has them, so the page keeps its shape, with the bars and charts of what it showed when a node last reported, and the cluster tile says that no node is live. No number is current, so each is a muted, blurred zero that is not available, as a figure that has been lost for a while is, whether the page loads with the cluster down or the cluster goes down while the page is open, where the numbers ramp down to zero. When a node reports again the numbers come back, and nothing moves."
+				>
+					<div className="col-span-full">
+						<div style={{ width: 960 }}>
+							<Overview
+								application={application}
+								data={{
+									...overview,
+									cluster: { nodes: [] },
+									// No rate can be worked out any more, so they have no value.
+									events: overview.events && {
+										...overview.events,
+										rate: overview.events.rate && {},
+									},
+									queues: overview.queues && {
+										...overview.queues,
+										throughput: overview.queues.throughput && {
+											of: overview.queues.throughput.of,
+										},
+									},
+									handlers: overview.handlers.slice(0, 4),
+								}}
+								down
+							/>
+						</div>
+					</div>
+				</Section>
+
+				<Section
+					title="Queues tile: failing messages"
+					note="The tile has the orange accent along its top while any message is failing, as a handler's card does, as well as the count in the headline."
+				>
+					<State label="Failing messages" note="Three messages are failing.">
+						<QueuesTile
+							application={application}
+							data={queuesTile(
+								{ perMinute: 442, of: "removed" },
+								{ failing: 3 },
+							)}
+							href={undefined}
+						/>
+					</State>
+					<State label="None failing" note="No accent.">
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 442, of: "removed" })}
+							href={undefined}
+						/>
+					</State>
+				</Section>
+
+				<Section
+					title="Cluster tile: the headline"
+					note="The number of nodes that are live, and the workloads that they own, with a bar of how the workloads are shared."
+				>
+					{(
+						[
+							["Several nodes", "Three live nodes.", 3],
+							["One node", "The words are singular.", 1],
+							[
+								"No live nodes",
+								"The number is red, and so is the accent along the top, because the cluster is not running. The words still make a sentence with the number.",
+								0,
+							],
+						] as const
+					).map(([label, note, nodes]) => (
+						<State key={label} label={label} note={note}>
+							<ClusterTile
+								application={application}
+								data={clusterTile(nodes)}
+								href={undefined}
+							/>
+						</State>
+					))}
+				</Section>
+
+				<Section
+					title="Cluster tile: the card of the tile"
+					note="The popover of the tile's icon. It says what the tile is about, and, because an application may run in several clusters, which cluster this is, by the ID that tells them apart."
+				>
+					<State label="Cluster">
+						<Panel>
+							<InfoCard
+								subsystem="cluster"
+								icon="cluster"
+								kind="Cluster"
+								identifier={
+									<Identifier
+										id="3f6c1a52-9d1b-4c52-8f0a-2a7d6b1e9c04"
+										of="cluster"
+									/>
+								}
+							>
+								{clusterAbout(application)}
+							</InfoCard>
+						</Panel>
+					</State>
+				</Section>
+
+				<Section
+					title="An application at a site"
+					note="Wherever the page names the application, it names the site too, if the cluster has one, because an application may run at several sites."
+				>
+					<State label="Cluster tile's card">
+						<Panel>
+							<InfoCard
+								subsystem="cluster"
+								icon="cluster"
+								kind="Cluster"
+								identifier={
+									<Identifier
+										id="3f6c1a52-9d1b-4c52-8f0a-2a7d6b1e9c04"
+										of="cluster"
+									/>
+								}
+							>
+								{clusterAbout(atSite)}
+							</InfoCard>
+						</Panel>
+					</State>
+					<State label="Events tile's card">
+						<Panel>
+							<InfoCard subsystem="streams" icon="event" kind="Events">
+								{eventsAbout(atSite)}
+							</InfoCard>
+						</Panel>
+					</State>
+					<State label="Handler's card">
+						<Panel>
+							<HandlerKindCard
+								application={atSite}
+								name="account"
+								kind="aggregate"
+							/>
+						</Panel>
+					</State>
 				</Section>
 
 				<Section
@@ -273,7 +463,10 @@ export function StatesPage() {
 									icon="event-stream"
 									kind="Event stream"
 									identifier={
-										<Identifier id="9f3a7c1e-5b2d-4e8a-a1c6-0d4b8e2f7a93" />
+										<Identifier
+											id="9f3a7c1e-5b2d-4e8a-a1c6-0d4b8e2f7a93"
+											of="event stream"
+										/>
 									}
 								/>
 							</Panel>
@@ -283,7 +476,10 @@ export function StatesPage() {
 									icon="queue"
 									kind="Queue"
 									identifier={
-										<Identifier id="3b6d2f90-84c1-4a57-9e0b-72a5c1d8f346" />
+										<Identifier
+											id="3b6d2f90-84c1-4a57-9e0b-72a5c1d8f346"
+											of="queue"
+										/>
 									}
 								/>
 							</Panel>
@@ -595,6 +791,138 @@ const rateCard = {
 	icon: "event",
 	words: eventRateWords,
 } as const;
+
+/** A node that the demonstration of the cluster tile adds, and its heartbeats. */
+interface DemoNode {
+	id: string;
+	workloads: number;
+
+	/** The usual time between its heartbeats, in milliseconds. */
+	interval: number;
+
+	/** When it next beats, on the browser's clock. */
+	next: number;
+
+	/** The times of its latest heartbeats, oldest first, on the browser's clock. */
+	beats: number[];
+}
+
+/** The most nodes that the demonstration adds. */
+const demoNodes = 8;
+
+/**
+ * A cluster tile that has no node, to which nodes can be added and from which they
+ * can be taken away, as nodes join and leave a cluster. Each node beats at its own
+ * pace while it is there, and each beat is data that arrives, as it does on the
+ * cluster's page.
+ */
+function Nodes({ application }: { application: Application }) {
+	const nodes = useRef<DemoNode[]>([]);
+	const added = useRef(0);
+	const [receivedAt, setReceivedAt] = useState(() => performance.now());
+
+	useEffect(() => {
+		const timer = window.setInterval(() => {
+			const now = performance.now();
+			let beat = false;
+
+			for (const n of nodes.current) {
+				if (now >= n.next) {
+					beat = true;
+					n.beats = [...n.beats, now].slice(-9);
+					n.next = now + n.interval * (0.9 + Math.random() * 0.2);
+				}
+			}
+
+			if (beat) {
+				setReceivedAt(now);
+			}
+		}, 50);
+
+		return () => window.clearInterval(timer);
+	}, []);
+
+	const add = () => {
+		if (nodes.current.length >= demoNodes) {
+			return;
+		}
+
+		const now = performance.now();
+		added.current++;
+		nodes.current = [
+			...nodes.current,
+			{
+				// Ascending, because the page lists nodes by ID.
+				id: `00000000-0000-4000-8000-${String(added.current).padStart(12, "0")}`,
+				workloads: 1 + Math.floor(Math.random() * 3),
+				interval: 1500 + Math.random() * 2000,
+				next: now + 1500 + Math.random() * 2000,
+				beats: [now],
+			},
+		];
+		setReceivedAt(now);
+	};
+
+	const remove = (all: boolean) => {
+		nodes.current = all ? [] : nodes.current.slice(0, -1);
+		setReceivedAt(performance.now());
+	};
+
+	const button =
+		"cursor-pointer rounded-control border border-line bg-panel px-3 py-1.5 text-sm text-fg-soft hover:border-line-strong disabled:cursor-default disabled:opacity-40";
+
+	return (
+		<div className="flex flex-col gap-3">
+			<LiveData receivedAt={receivedAt}>
+				<ClusterTile
+					application={application}
+					data={{
+						nodes: nodes.current.map((n) => ({
+							id: n.id,
+							workloads: n.workloads,
+							heartbeats: n.beats.map((t) => receivedAt - t),
+						})),
+					}}
+					href={undefined}
+				/>
+			</LiveData>
+			<div className="flex flex-wrap gap-2">
+				<button
+					type="button"
+					className={button}
+					disabled={nodes.current.length >= demoNodes}
+					onClick={add}
+				>
+					Add a node
+				</button>
+				<button
+					type="button"
+					className={button}
+					disabled={nodes.current.length === 0}
+					onClick={() => remove(false)}
+				>
+					Remove a node
+				</button>
+				<button
+					type="button"
+					className={button}
+					disabled={nodes.current.length === 0}
+					onClick={() => remove(true)}
+				>
+					Remove them all
+				</button>
+			</div>
+		</div>
+	);
+}
+
+/** The application, at a site. */
+const atSite = { ...application, site: "eu-west" };
+
+/** The data of the cluster tile, with the given number of the fixture's nodes. */
+function clusterTile(nodes: number): OverviewData["cluster"] {
+	return { nodes: overview.cluster.nodes.slice(0, nodes) };
+}
 
 /** The data of the events tile, with the given rate, or without one. */
 function eventsTile(

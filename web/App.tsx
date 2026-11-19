@@ -43,6 +43,7 @@ export function App({ path = window.location.pathname }: { path?: string }) {
 		case "vitals":
 			return <VitalsPage />;
 
+
 		case "not-found":
 			return (
 				<Message title="This page isn't here">
@@ -96,7 +97,8 @@ function Cluster({ id }: { id: string }) {
 			return (
 				<Message title="This cluster isn't known">
 					The Observatory has no cluster with this ID. It may have been removed,
-					or it may never have connected.
+					or it may not have connected since the Observatory started. This page
+					shows the cluster as soon as a node of it connects.
 				</Message>
 			);
 
@@ -107,6 +109,8 @@ function Cluster({ id }: { id: string }) {
 					<ClusterPage
 						application={watched.data.application}
 						data={watched.data.overview}
+						down={watched.data.down}
+						clusterId={id}
 						notice={watched.status === "stale" ? staleNotice : undefined}
 					/>
 				</LiveData>

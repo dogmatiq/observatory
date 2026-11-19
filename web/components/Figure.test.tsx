@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { Distrusted } from "../lib/distrust.tsx";
 import { Figure, glitchTime, keepTime } from "./Figure.tsx";
 
 beforeEach(() => {
@@ -186,4 +187,33 @@ test("a figure that comes back gets its trust back, and then is only its text", 
 		vi.advanceTimersByTime(1000);
 	});
 	expect(container.innerHTML).toBe("351");
+});
+
+test("a figure of a cluster that goes down is the same as one on a page that loads with the cluster down", () => {
+	const loaded = render(
+		<Distrusted value>
+			<Figure number={undefined} format={String} />
+		</Distrusted>,
+	);
+	const expected = loaded.container.innerHTML;
+	loaded.unmount();
+
+	const { container, rerender } = render(
+		<Distrusted value={false}>
+			<Figure number={347} format={String} />
+		</Distrusted>,
+	);
+
+	rerender(
+		<Distrusted value>
+			<Figure number={undefined} format={String} />
+		</Distrusted>,
+	);
+
+	// It ramps down to the zero, and doesn't keep the number for a minute.
+	act(() => {
+		vi.advanceTimersByTime(5000);
+	});
+
+	expect(container.innerHTML).toBe(expected);
 });

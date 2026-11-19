@@ -1,10 +1,11 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
+import { useCurrent } from "../lib/distrust.tsx";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
 import { type Readout, ReadoutContext } from "../lib/readout.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
-import { InfoCard, type Scope } from "./InfoCard.tsx";
+import { InfoCard } from "./InfoCard.tsx";
 import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
@@ -17,6 +18,16 @@ import { type Subsystem, subsystemColors } from "./subsystems.ts";
 export const cardClasses =
 	"relative overflow-hidden rounded-card bg-panel text-fg";
 export const raisedClasses = "[box-shadow:var(--shadow-raised)]";
+
+/**
+ * What a card looks like when it is in an error state: raised, with an accent along
+ * its top.
+ */
+export const accentClasses = {
+	failing:
+		"[box-shadow:inset_0_3px_0_var(--color-failing),var(--shadow-raised)]",
+	bad: "[box-shadow:inset_0_3px_0_var(--color-bad),var(--shadow-raised)]",
+};
 
 /**
  * How a card that is a link looks when it is pointed at: it is outlined.
@@ -38,13 +49,14 @@ export function MetricTile({
 	label,
 	icon,
 	about,
-	scope,
+	identifier,
 	value,
 	valueTitle,
 	detail,
 	bar,
 	chart,
 	href,
+	accent,
 }: {
 	subsystem: Subsystem;
 
@@ -59,8 +71,11 @@ export function MetricTile({
 	 */
 	about?: ReactNode;
 
-	/** What the card of the icon says that the tile is within, across or on. */
-	scope?: Scope;
+	/**
+	 * What identifies what the tile is about, for the card of the icon to show under
+	 * its kind, such as the ID of a cluster, which has no name.
+	 */
+	identifier?: ReactNode;
 
 	/** The headline number. */
 	value: ReactNode;
@@ -78,16 +93,25 @@ export function MetricTile({
 	chart?: ReactNode;
 
 	href?: string;
+
+	/**
+	 * An accent along the top of the tile, for a tile that is in an error state:
+	 * "failing", in orange, for failing messages, as on a handler's card, or "bad",
+	 * in red, for something that has stopped. The tile says what is wrong in words
+	 * too, so that the color is not the only sign.
+	 */
+	accent?: "failing" | "bad";
 }) {
 	const classes = cn(
 		cardClasses,
-		raisedClasses,
+		accent ? accentClasses[accent] : raisedClasses,
 		"flex min-h-44 flex-col px-5 pt-5",
 		// The room for the chart is only there if there is one.
 		"transition-[padding-bottom] duration-400 motion-reduce:transition-none",
 		chart ? "pb-16" : "pb-5",
 		subsystemColors[subsystem],
-		href !== undefined && linkedCardClasses,
+		href !== undefined && !accent && linkedCardClasses,
+		href !== undefined && accent && "no-underline hover:no-underline",
 	);
 
 	// What the chart says about the place on it that is pointed at, which is
@@ -129,7 +153,7 @@ export function MetricTile({
 					</span>
 					<Popover
 						card={about !== undefined}
-						interactive={scope?.id !== undefined}
+						interactive={identifier !== undefined}
 						content={
 							about === undefined ? (
 								label
@@ -138,7 +162,7 @@ export function MetricTile({
 									subsystem={subsystem}
 									icon={icon}
 									kind={label}
-									scope={scope}
+									identifier={identifier}
 								>
 									{about}
 								</InfoCard>
@@ -214,6 +238,9 @@ export function Failing({
 	count: number;
 	size: "headline" | "stat";
 }) {
+	// A count that is not current is no count.
+	count = useCurrent(count);
+
 	const [phase, setPhase] = useState<"gone" | "in" | "steady" | "zero" | "out">(
 		count > 0 ? "steady" : "gone",
 	);
@@ -290,8 +317,15 @@ export function Failing({
 }
 
 /**
- * Alarm marks a number of things that need attention.
+ * Alarm colors a figure red, because it says that something has stopped, such as
+ * a headline of no live nodes. It is the figure that is red, and not the words
+ * after it, so that the words still make a sentence with it: "0 cluster nodes". It
+ * keeps the weight of the figure.
  */
 export function Alarm({ children }: { children: ReactNode }) {
-	return <span className="font-semibold text-bad">{children}</span>;
+	return (
+		<span className="text-bad transition-colors duration-300 motion-reduce:transition-none">
+			{children}
+		</span>
+	);
 }

@@ -410,6 +410,16 @@ function full(): Snapshot {
 	);
 }
 
+test("a cluster is down if the document says so, and is not otherwise", () => {
+	expect(selectCluster(full(), 10_000)?.down).toBeUndefined();
+
+	const down = applied([
+		changed({ application: { name: "statements", key: "k" }, down: true }),
+		10_000,
+	]);
+	expect(selectCluster(down, 10_000)?.down).toBe(true);
+});
+
 test("the cluster view is selected from a snapshot, with times measured from the reference", () => {
 	const data = selectCluster(full(), 10_000);
 
