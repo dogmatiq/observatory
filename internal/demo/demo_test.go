@@ -19,7 +19,7 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				if err := Run(ctx, o); err != nil {
+				if err := Run(ctx, o, false); err != nil {
 					t.Error(err)
 				}
 			}()
@@ -80,7 +80,7 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				if err := Run(ctx, o); err != nil {
+				if err := Run(ctx, o, false); err != nil {
 					t.Error(err)
 				}
 			}()
@@ -115,7 +115,7 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				if err := Run(ctx, o); err != nil {
+				if err := Run(ctx, o, false); err != nil {
 					t.Error(err)
 				}
 			}()
@@ -150,7 +150,7 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				if err := Run(ctx, o); err != nil {
+				if err := Run(ctx, o, false); err != nil {
 					t.Error(err)
 				}
 			}()
@@ -186,7 +186,7 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				if err := Run(ctx, o); err != nil {
+				if err := Run(ctx, o, false); err != nil {
 					t.Error(err)
 				}
 			}()
@@ -242,7 +242,7 @@ func TestRun(t *testing.T) {
 			done := make(chan struct{})
 			go func() {
 				defer close(done)
-				if err := Run(ctx, o); err != nil {
+				if err := Run(ctx, o, false); err != nil {
 					t.Error(err)
 				}
 			}()
@@ -285,6 +285,83 @@ func TestRun(t *testing.T) {
 				if !seen[want] {
 					t.Fatalf("never saw the nodes support: %s", want)
 				}
+			}
+
+			cancel()
+			<-done
+		})
+	})
+}
+
+func TestRunCombinations(t *testing.T) {
+	t.Run("it connects a cluster for each combination of what the queues tile is made from, which shows what that gives", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o, r := observe.NewObserver(), observe.NewRecorder()
+
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				if err := Run(ctx, o, true); err != nil {
+					t.Error(err)
+				}
+			}()
+
+			for range 12 {
+				time.Sleep(time.Second)
+				r.Record(time.Now(), o.Nodes())
+			}
+
+			// What each cluster reports is in its name, which is how this finds what
+			// it should show.
+			want := map[string]string{
+				"Queues: nothing":                                              "no tile",
+				"Queues: sizes":                                                "none",
+				"Queues: removals":                                             "removed",
+				"Queues: sizes, removals":                                      "removed",
+				"Queues: commands handled":                                     "partly handled",
+				"Queues: deadlines handled":                                    "partly handled",
+				"Queues: sizes, commands handled":                              "partly handled",
+				"Queues: removals, commands handled":                           "removed",
+				"Queues: commands handled, deadlines handled":                  "handled",
+				"Queues: sizes, commands handled, deadlines handled":           "handled",
+				"Queues: removals, commands handled, deadlines handled":        "handled",
+				"Queues: removals, deadlines handled":                          "removed",
+				"Queues: sizes, removals, deadlines handled":                   "removed",
+				"Queues: sizes, deadlines handled":                             "partly handled",
+				"Queues: sizes, removals, commands handled":                    "removed",
+				"Queues: sizes, removals, commands handled, deadlines handled": "handled",
+			}
+
+			clusters := observe.Clusters(time.Now(), o.Nodes())
+			if len(clusters) != 1+len(want) {
+				t.Fatalf("unexpected number of clusters: got %d, want %d", len(clusters), 1+len(want))
+			}
+
+			for _, c := range clusters {
+				expected, ok := want[c.Application.Name]
+				if !ok {
+					continue
+				}
+				delete(want, c.Application.Name)
+
+				view, _ := r.View(time.Now(), o.Nodes(), c.ID)
+				q := view.Overview.Queues
+
+				got := "no tile"
+				switch {
+				case q == nil:
+				case q.Throughput == nil:
+					got = "none"
+				default:
+					got = q.Counted
+				}
+				if got != expected {
+					t.Errorf("%s: got %q, want %q", c.Application.Name, got, expected)
+				}
+			}
+			if len(want) != 0 {
+				t.Fatalf("clusters are missing: %v", want)
 			}
 
 			cancel()

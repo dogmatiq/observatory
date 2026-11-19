@@ -304,7 +304,7 @@ test("a rate that is built from the messages that handlers handle says so, in it
 	const tip = await tipOf(words);
 	expect(tip).toContain("Message handling rate");
 	expect(tip).toContain(
-		"No node reports how fast messages are removed from the queues, so this is built from the messages that handlers have handled.",
+		"It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled.",
 	);
 });
 

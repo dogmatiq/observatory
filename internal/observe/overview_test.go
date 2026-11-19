@@ -452,7 +452,39 @@ func TestOverview(t *testing.T) {
 				})
 			})
 
-			t.Run("it prefers the removal of messages to the handling of them", func(t *testing.T) {
+			t.Run("it prefers the handling of commands and deadlines to the removal of messages", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					q := uuidpb.Generate()
+					handler := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
+						supports(name(new(metricsgrpc.HandlerCommandsHandled)), reach),
+						supports(name(new(metricsgrpc.HandlerDeadlinesHandled)), reach),
+					)
+					n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+					n.sample(t, 1, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					n.sample(t, 2, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					time.Sleep(10 * time.Second)
+					n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 50}.Build())
+					n.sample(t, 1, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 20}.Build())
+					n.sample(t, 2, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 10}.Build())
+
+					tile := viewOf(t, r, o, c).Overview.Queues
+					if tile == nil || tile.Counted != "handled" {
+						t.Fatalf("unexpected queues tile: %+v", tile)
+					}
+					expectFloat(t, tile.Throughput.PerSecond, 30.0/10)
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it uses the removal of messages if only one kind of message that handlers handle is reported", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
 					o, r := NewObserver(), NewRecorder()
@@ -475,6 +507,31 @@ func TestOverview(t *testing.T) {
 						t.Fatalf("unexpected queues tile: %+v", tile)
 					}
 					expectFloat(t, tile.Throughput.PerSecond, 50.0/10)
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it counts the one kind of message that handlers handle, as a part, if nothing else is reported", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					handler := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						supports(name(new(metricsgrpc.HandlerDeadlinesHandled)), reach),
+					)
+					n.sample(t, 0, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					time.Sleep(10 * time.Second)
+					n.sample(t, 0, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 20}.Build())
+
+					tile := viewOf(t, r, o, c).Overview.Queues
+					if tile == nil || tile.Counted != "partly handled" {
+						t.Fatalf("unexpected queues tile: %+v", tile)
+					}
+					expectFloat(t, tile.Throughput.PerSecond, 20.0/10)
 
 					cancel()
 					<-n.Engine.Done

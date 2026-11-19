@@ -397,6 +397,11 @@ function attempt<T>(read: () => T): T | undefined {
 	}
 }
 
+/** Returns what the throughput counts, which is the messages removed if it isn't said. */
+function throughputOf(v: unknown): "handled" | "removed" | "partly handled" {
+	return v === "handled" || v === "partly handled" ? v : "removed";
+}
+
 /** Returns a field that must be a number. */
 function number(v: unknown, what: string): number {
 	if (!isNumber(v)) {
@@ -615,10 +620,7 @@ export function selectCluster(
 			if (rates.throughput !== undefined) {
 				queues.throughput = {
 					...rateOf(rates.throughput, "rates.throughput"),
-					of:
-						object(rates.throughput, "rates.throughput").of === "handled"
-							? "handled"
-							: "removed",
+					of: throughputOf(object(rates.throughput, "rates.throughput").of),
 				};
 				queues.history = chartOf(snapshot.series.get("throughput"), ref, 60);
 			}

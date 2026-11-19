@@ -177,14 +177,19 @@ type QueuesTile struct {
 	// is zero if no node reports it.
 	Failing uint64 `json:"failing"`
 
-	// Throughput is how many messages per second are removed from the queues,
-	// commands and deadlines together, or, if no node supports the metrics of
-	// that, how many are handled successfully by the handlers, which stands in
-	// for it. It is nil if no node supports the metrics of either.
+	// Throughput is how many messages per second the queues get through. It is
+	// the commands and deadlines that handlers have handled successfully, if nodes
+	// report both, because that is what was done, and is complete. Otherwise it is
+	// the commands and deadlines that are removed from the queues, which are
+	// complete too, but include those that are removed without being handled, such
+	// as the deadlines of a process that has ended. If nodes report neither of
+	// those, it is the commands or the deadlines that handlers have handled, if
+	// nodes report one of them, which is only a part of the messages. It is nil if
+	// nodes report none of them.
 	Throughput *Rate `json:"throughput,omitempty"`
 
-	// Counted is what Throughput counts, which is "removed" or "handled". It is
-	// empty if Throughput is nil.
+	// Counted is what Throughput counts, which is "handled", "removed" or "partly
+	// handled". It is empty if Throughput is nil.
 	Counted string `json:"counted,omitempty"`
 
 	// History is how Throughput changed over the last minute. It is nil if
@@ -520,24 +525,28 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		supported[metric(new(metricsgrpc.QueueDeadlinesPending))]
 	removed := supported[metric(new(metricsgrpc.QueueCommandsRemoved))] ||
 		supported[metric(new(metricsgrpc.QueueDeadlinesRemoved))]
-	handled := supported[metric(new(metricsgrpc.HandlerCommandsHandled))] ||
-		supported[metric(new(metricsgrpc.HandlerDeadlinesHandled))]
-	if pending || removed || handled {
+	handledCommands := supported[metric(new(metricsgrpc.HandlerCommandsHandled))]
+	handledDeadlines := supported[metric(new(metricsgrpc.HandlerDeadlinesHandled))]
+	if pending || removed || handledCommands || handledDeadlines {
 		o.Queues = &QueuesTile{Failing: f.failing}
 
 		if pending {
 			o.Queues.Queues = spreadOf(f.pendingInQueue)
 		}
 
-		// The messages that are removed from the queues are the throughput, and
-		// the messages that handlers handle stand in for them.
+		// The messages that have been handled are the throughput, if all kinds of
+		// them are reported, and, if not, those that are removed from the queues
+		// are, and, if they are not either, the kind of message that is reported.
 		switch {
+		case handledCommands && handledDeadlines:
+			o.Queues.Throughput = &Rate{f.handled.rate()}
+			o.Queues.Counted = "handled"
 		case removed:
 			o.Queues.Throughput = &Rate{f.removed.rate()}
 			o.Queues.Counted = "removed"
-		case handled:
+		case handledCommands || handledDeadlines:
 			o.Queues.Throughput = &Rate{f.handled.rate()}
-			o.Queues.Counted = "handled"
+			o.Queues.Counted = "partly handled"
 		}
 		if o.Queues.Throughput != nil {
 			o.Queues.History = &Chart{Points: []ChartPoint{}}

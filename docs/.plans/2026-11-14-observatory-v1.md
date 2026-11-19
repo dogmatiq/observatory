@@ -388,12 +388,17 @@ parts. An item that says "Done" is built.
   deadlines are all messages, and each chart counts one kind of them per minute. The verb differs: events recorded,
   events handled, commands handled, messages removed. The cluster tile's wave is not a sparkline. The queues tile's chart
   was the number of messages waiting, which is a level, and which sits at zero in a healthy system, so it is now the rate
-  at which messages are removed from the queues, from the running totals of commands and deadlines removed. Done. When no
-  node supports those, the messages that the handlers have handled successfully stand in for them, from the running
-  totals of commands and deadlines handled, as James decided on 2026-11-19. The Observatory says which in `counted`, and
-  the page says it too: the words beside the headline say "handled", the card is "Message handling rate" and says that it
-  is built from the messages that handlers have handled, because no node reports the removals, and the chart's readout
-  is "handled/min". When no node supports either, the chart is left out. The number of messages waiting stays the
+  at which messages are removed from the queues, from the running totals of commands and deadlines removed. Done. The throughput is chosen by what the nodes report, as James decided on 2026-11-19: if
+  they report both the commands and the deadlines that handlers have handled, it is those, because it is what was done,
+  it is complete, and it is what the handlers' cards add up to; otherwise, if they report the removal of messages from
+  the queues, it is those, which are complete too, but include messages that are removed without being handled, such as
+  the deadlines of a process that has ended; otherwise, if they report one kind of handled message, it is that, which is
+  only a part. The Observatory says which in `counted`, and the page says it too: the words beside the headline say
+  "handled" or "removed", the card is "Message handling rate" or "Message removal rate", and says what it counts, or
+  that it counts only some of the messages, and the chart's readout is "handled/min" or "removals/min". When nodes
+  report none of them, the chart is left out. `go run ./cmd/demo -combinations` also serves a cluster of one node for
+  each of the sixteen combinations of what the queues tile is made from, named by what they report, so that the tile
+  can be seen for each. The number of messages waiting stays the
   tile's headline and its bar. A level and a rate on one chart was considered and not done, because they are in different
   units and each is scaled to its own peak.
 - The same for a sparkline: pointing at a place on it shows the value there.

@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -22,7 +23,15 @@ import (
 
 const address = "localhost:8080"
 
+var combinations = flag.Bool(
+	"combinations",
+	false,
+	"also simulate a cluster for each combination of what the nodes report that the queues tile is made from",
+)
+
 func main() {
+	flag.Parse()
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
@@ -50,7 +59,7 @@ func run(ctx context.Context) error {
 	}()
 
 	go func() {
-		if err := demo.Run(ctx, observer); err != nil {
+		if err := demo.Run(ctx, observer, *combinations); err != nil {
 			log.Print(err)
 		}
 	}()

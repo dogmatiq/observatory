@@ -264,9 +264,10 @@ export function QueuesTile({
 	// it is less than one per minute, as the rate of events is.
 	const { scaled, per, state } = useRate(throughput?.perMinute);
 
-	// What the rate counts, which is the messages that are removed, or, if no node
-	// reports them, those that handlers have handled, which the card says.
-	const handled = throughput?.of === "handled";
+	// What the rate counts, which is the messages that handlers have handled, or
+	// those that are removed from the queues, or only some kinds of the first. The
+	// card says which, because it is built from the statistics of the nodes.
+	const handled = throughput !== undefined && throughput.of !== "removed";
 
 	// The number and the words beside it both have the card of the rate.
 	const rateCard = (
@@ -280,9 +281,11 @@ export function QueuesTile({
 					: "The rate at which messages are being removed from the queues"
 			}
 			note={
-				handled
-					? "No node reports how fast messages are removed from the queues, so this is built from the messages that handlers have handled."
-					: undefined
+				throughput?.of === "handled"
+					? "It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled."
+					: throughput?.of === "partly handled"
+						? "It counts only some of the messages that handlers have handled, because only some kinds of them are reported."
+						: undefined
 			}
 			state={state}
 		/>

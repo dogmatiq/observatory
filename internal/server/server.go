@@ -46,9 +46,10 @@
 //     messages removed from the queues, each {"rate"} in times per second. A
 //     rate that no node supports the metrics for is absent. A rate that the
 //     nodes support and that isn't known yet is {}, which has no "rate". The
-//     throughput also has "of", which is "removed", or "handled" if no node
-//     supports the removal of messages, and the messages that handlers have
-//     handled stand in for them.
+//     throughput also has "of", which is what it counts: "handled", for the
+//     commands and deadlines that handlers have handled, "removed", for the
+//     messages that are removed from the queues, or "partly handled", for only the
+//     commands or only the deadlines that handlers have handled.
 //   - "handlers": each handler, {"name", "kind", "disabled",
 //     "minimizesConcurrency", "failing", "instances", "queued",
 //     "unhandledEvents", "schedulesDeadlines", "charted", "bindings"}. A fact

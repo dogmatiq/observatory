@@ -354,12 +354,22 @@ export function StatesPage() {
 						/>
 					</State>
 					<State
-						label="Handled instead of removed"
-						note="No node reports the removals, so the rate, and the chart, are of the messages that handlers have handled, and the words say so."
+						label="Handled"
+						note="The rate, and the chart, are of the messages that handlers have handled, whether or not nodes report the removals, and the words say so."
 					>
 						<QueuesTile
 							application={application}
 							data={queuesTile({ perMinute: 442, of: "handled" })}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Partly handled"
+						note="Only the commands, or only the deadlines, that handlers handle are reported, and not the removals, so the rate is of part of the messages."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 442, of: "partly handled" })}
 							href={undefined}
 						/>
 					</State>
@@ -409,8 +419,8 @@ export function StatesPage() {
 						</State>
 					))}
 					<State
-						label="Built from the messages that handlers handle"
-						note="When no node reports the removals."
+						label="Partly handled"
+						note="When only the commands, or only the deadlines, that handlers handle are reported, and the removals are not."
 					>
 						<Panel>
 							<RateCard
@@ -418,7 +428,22 @@ export function StatesPage() {
 								icon="message"
 								kind="Message handling rate"
 								description="The rate at which handlers are handling messages"
-								note="No node reports how fast messages are removed from the queues, so this is built from the messages that handlers have handled."
+								note="It counts only some of the messages that handlers have handled, because only some kinds of them are reported."
+								state="known"
+							/>
+						</Panel>
+					</State>
+					<State
+						label="Handled"
+						note="What the card says when handled messages are counted."
+					>
+						<Panel>
+							<RateCard
+								subsystem="queues"
+								icon="message"
+								kind="Message handling rate"
+								description="The rate at which handlers are handling messages"
+								note="It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled."
 								state="known"
 							/>
 						</Panel>
@@ -572,7 +597,9 @@ function Lost({ backAfter }: { backAfter?: number }) {
  * failing messages.
  */
 function queuesTile(
-	throughput: { perMinute?: number; of: "removed" | "handled" } | undefined,
+	throughput:
+		| { perMinute?: number; of: "handled" | "removed" | "partly handled" }
+		| undefined,
 	options: { queues?: boolean; failing?: number } = {},
 ): NonNullable<OverviewData["queues"]> {
 	const { queues, history } = overview.queues ?? {};

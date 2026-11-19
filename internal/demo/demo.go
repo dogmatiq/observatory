@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
+	"strings"
 	"sync"
 	"time"
 
@@ -69,9 +70,17 @@ const (
 // of them go down for a while, now and then, and come back, so that the number
 // of nodes, and the workloads that each owns, change.
 //
+// If combinations is true, it also simulates a cluster of one node for each
+// combination of what the nodes can report that the queues tile is made from, so
+// that the tile can be seen for each. Each of those clusters is named by what its
+// node reports.
+//
 // It returns when ctx ends, or when a node can't be served.
-func Run(ctx context.Context, o *observe.Observer) error {
-	c := newCluster()
+func Run(ctx context.Context, o *observe.Observer, combinations bool) error {
+	clusters := []*cluster{newCluster("statements", nodeCount, nil)}
+	if combinations {
+		clusters = append(clusters, combinationClusters()...)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -82,19 +91,67 @@ func Run(ctx context.Context, o *observe.Observer) error {
 		err  error
 	)
 
-	wg.Go(func() { c.run(ctx) })
+	for _, c := range clusters {
+		wg.Go(func() { c.run(ctx) })
 
-	for i := range nodeCount {
-		wg.Go(func() {
-			if e := c.runNode(ctx, o, i); e != nil {
-				once.Do(func() { err = e })
-				cancel()
-			}
-		})
+		for i := range c.nodes {
+			wg.Go(func() {
+				if e := c.runNode(ctx, o, i); e != nil {
+					once.Do(func() { err = e })
+					cancel()
+				}
+			})
+		}
 	}
 
 	wg.Wait()
 	return err
+}
+
+// combinationClusters returns a cluster for each combination of whether the
+// nodes report the number of messages in the queues, the removal of messages
+// from them, the commands that handlers have handled and the deadlines that they
+// have handled. Those are what the queues tile is made from. Each cluster has
+// one node, which always reports everything else.
+func combinationClusters() []*cluster {
+	parts := []struct {
+		name string
+		left []proto.Message
+	}{
+		{"sizes", []proto.Message{
+			new(metricsgrpc.QueueCommandsPending),
+			new(metricsgrpc.QueueDeadlinesPending),
+		}},
+		{"removals", []proto.Message{
+			new(metricsgrpc.QueueCommandsRemoved),
+			new(metricsgrpc.QueueDeadlinesRemoved),
+		}},
+		{"commands handled", []proto.Message{new(metricsgrpc.HandlerCommandsHandled)}},
+		{"deadlines handled", []proto.Message{new(metricsgrpc.HandlerDeadlinesHandled)}},
+	}
+
+	var out []*cluster
+	for combination := range 1 << len(parts) {
+		var (
+			reported []string
+			left     = []proto.Message{}
+		)
+		for i, p := range parts {
+			if combination&(1<<i) != 0 {
+				reported = append(reported, p.name)
+			} else {
+				left = append(left, p.left...)
+			}
+		}
+
+		name := "Queues: nothing"
+		if len(reported) > 0 {
+			name = "Queues: " + strings.Join(reported, ", ")
+		}
+		out = append(out, newCluster(name, 1, left))
+	}
+
+	return out
 }
 
 // cluster is the simulated cluster, which the nodes report on.
@@ -131,8 +188,13 @@ type cluster struct {
 	shares map[string][]float64
 	state  state
 
-	// profile is the index in [profiles] of what the nodes support now.
+	// profile is the index in [profiles] of what the nodes support now, unless
+	// fixed is set.
 	profile int
+
+	// fixed, if it is not nil, is what the nodes never support, in place of the
+	// profiles.
+	fixed []proto.Message
 }
 
 // state is the part of the cluster's state that is a number at a moment, not a
@@ -147,8 +209,12 @@ type state struct {
 	reconciling int
 }
 
-func newCluster() *cluster {
+// newCluster returns a cluster of the given number of nodes that runs an
+// application of the given name. If fixed is not nil, its nodes never support the
+// metrics in it, and all the others, and the profiles are not used.
+func newCluster(name string, nodes int, fixed []proto.Message) *cluster {
 	c := &cluster{
+		fixed:          fixed,
 		id:             uuidpb.Generate(),
 		streams:        [2]*uuidpb.UUID{uuidpb.Generate(), uuidpb.Generate()},
 		commandsQ:      uuidpb.Generate(),
@@ -166,7 +232,7 @@ func newCluster() *cluster {
 		state:          state{deadlinesQueued: 19},
 	}
 
-	for range nodeCount {
+	for range nodes {
 		c.nodes = append(c.nodes, uuidpb.Generate())
 		c.live = append(c.live, true)
 	}
@@ -176,7 +242,7 @@ func newCluster() *cluster {
 	c.changed = make(chan struct{})
 
 	c.app = configpb.Application_builder{
-		Identity: identity("statements", uuidpb.Generate()),
+		Identity: identity(name, uuidpb.Generate()),
 		Handlers: []*configpb.Handler{
 			handler("account", c.account, configpb.HandlerType_HANDLER_TYPE_AGGREGATE, nil),
 			handler("statement-schedule", c.schedule, configpb.HandlerType_HANDLER_TYPE_PROCESS,
@@ -250,7 +316,7 @@ func (c *cluster) grow(name string, amount float64) uint64 {
 	// Each node that is up counts a part of what happened, in proportion to the
 	// workloads that it owns.
 	if c.shares[name] == nil {
-		c.shares[name] = make([]float64, nodeCount)
+		c.shares[name] = make([]float64, len(c.nodes))
 	}
 	weights := c.weights()
 	var all int
@@ -284,7 +350,9 @@ func (c *cluster) advance() {
 
 	c.ticks++
 	t := float64(c.ticks)
-	c.profile = profileAt(c.ticks)
+	if c.fixed == nil {
+		c.profile = profileAt(c.ticks)
+	}
 
 	// The rate of events swells and falls away over a few minutes.
 	events := math.Max(0, 5+3*math.Sin(t/25)+c.randomness.Float64()*2)
@@ -403,13 +471,21 @@ func profileAt(ticks int) int {
 	return ((ticks-profileStart)/profileInterval + 1) % len(profiles)
 }
 
-// supportedBy returns the metrics of [supported] that a profile doesn't leave
-// out.
-func supportedBy(profile int) []int {
+// supportedNow returns the metrics of [supported] that the nodes of the cluster
+// support, as the indexes of them. c.m must be held.
+func (c *cluster) supportedNow() []int {
+	if c.fixed != nil {
+		return supportedBy(c.fixed)
+	}
+	return supportedBy(profiles[c.profile])
+}
+
+// supportedBy returns the metrics of [supported] that are not in leftOut.
+func supportedBy(leftOut []proto.Message) []int {
 	var out []int
 loop:
 	for i, m := range supported {
-		for _, left := range profiles[profile] {
+		for _, left := range leftOut {
 			if proto.MessageName(left) == proto.MessageName(m.message) {
 				continue loop
 			}
@@ -531,7 +607,7 @@ func (c *cluster) weights() []int {
 		}
 	}
 
-	weights := make([]int, nodeCount)
+	weights := make([]int, len(c.nodes))
 	if len(up) == 0 {
 		return weights
 	}
@@ -697,7 +773,7 @@ func (s *engineServer) WatchEngine(
 	select {
 	case <-stream.Context().Done():
 		return stream.Context().Err()
-	case <-time.After(heartbeatIntervals[s.node] * time.Duration(s.node) / nodeCount):
+	case <-time.After(heartbeatIntervals[s.node] * time.Duration(s.node) / time.Duration(len(s.c.nodes))):
 	}
 
 	ticker := time.NewTicker(heartbeatIntervals[s.node])
@@ -761,13 +837,14 @@ func (s *metricsServer) WatchMetrics(
 
 	c.m.Lock()
 	profile := c.profile
+	now := c.supportedNow()
 	c.m.Unlock()
 
 	// The metrics that the node supports now, and the index of each in the list
 	// that its preamble gives.
 	var metrics []*metricsgrpc.SupportedMetric
 	indexes := map[uint32]uint32{}
-	for _, i := range supportedBy(profile) {
+	for _, i := range now {
 		m := supported[i]
 		reach := m.reach
 		indexes[uint32(i)] = uint32(len(metrics))
