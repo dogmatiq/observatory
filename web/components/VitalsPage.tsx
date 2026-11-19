@@ -3,6 +3,7 @@ import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { countedWords, eventRateWords } from "./Overview.tsx";
 import { Page } from "./Page.tsx";
 import { panelClasses } from "./Popover.tsx";
+import { ProseFeedback } from "./ProseFeedback.tsx";
 import { RateCard } from "./RateCard.tsx";
 
 /** The states of a rate, which are the columns of the page. */
@@ -16,7 +17,8 @@ const states = ["known", "lost", "unavailable"] as const;
  * number that waits.
  *
  * The cards are drawn where they stand, in the frame of a panel, as the page of
- * states draws them.
+ * states draws them. Their sentences can be rewritten in place, as feedback. See
+ * [ProseFeedback].
  */
 export function VitalsPage() {
 	return (
@@ -28,56 +30,61 @@ export function VitalsPage() {
 				calculated.
 			</p>
 
-			<div className="grid gap-12">
-				<Group title="Events tile: the rate">
-					<Row label="Events recorded">
-						{states.map((state) => (
-							<Panel key={state}>
-								<RateCard
-									subsystem="streams"
-									icon="event"
-									{...eventRateWords}
-									state={state}
-								/>
-							</Panel>
-						))}
-					</Row>
-				</Group>
-
-				<Group title="Queues tile: the rate, by what it counts">
-					{(
-						[
-							"handled",
-							"removed",
-							"commands handled",
-							"deadlines handled",
-						] as const
-					).map((counted) => (
-						<Row key={counted} label={counted}>
+			<ProseFeedback>
+				<div className="grid gap-12">
+					<Group title="Events tile: the rate">
+						<Row label="Events recorded">
 							{states.map((state) => (
-								<Panel key={state}>
+								<Panel key={state} name={`Event rate, ${state}`}>
 									<RateCard
-										subsystem="queues"
-										icon="message"
-										kind={countedWords[counted].kind}
-										description={countedWords[counted].description}
-										note={countedWords[counted].note}
+										subsystem="streams"
+										icon="event"
+										{...eventRateWords}
 										state={state}
 									/>
 								</Panel>
 							))}
 						</Row>
-					))}
-				</Group>
+					</Group>
 
-				<Group title="Queues tile: the number that waits" states={false}>
-					<Row label="Messages waiting">
-						<Panel>
-							<MessagesWaitingCard />
-						</Panel>
-					</Row>
-				</Group>
-			</div>
+					<Group title="Queues tile: the rate, by what it counts">
+						{(
+							[
+								"handled",
+								"removed",
+								"commands handled",
+								"deadlines handled",
+							] as const
+						).map((counted) => (
+							<Row key={counted} label={counted}>
+								{states.map((state) => (
+									<Panel
+										key={state}
+										name={`${countedWords[counted].kind}, ${state}`}
+									>
+										<RateCard
+											subsystem="queues"
+											icon="message"
+											kind={countedWords[counted].kind}
+											description={countedWords[counted].description}
+											note={countedWords[counted].note}
+											state={state}
+										/>
+									</Panel>
+								))}
+							</Row>
+						))}
+					</Group>
+
+					<Group title="Queues tile: the number that waits" states={false}>
+						<Row label="Messages waiting">
+							<Panel name="Messages waiting">
+								<MessagesWaitingCard />
+							</Panel>
+						</Row>
+					</Group>
+				</div>
+			</ProseFeedback>
 		</Page>
 	);
 }
@@ -124,7 +131,11 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 	);
 }
 
-/** A popover where it stands, in the frame of a panel. */
-function Panel({ children }: { children: ReactNode }) {
-	return <div className={`w-fit ${panelClasses}`}>{children}</div>;
+/** A popover where it stands, in the frame of a panel, named for the feedback. */
+function Panel({ name, children }: { name: string; children: ReactNode }) {
+	return (
+		<div data-card={name} className={`w-fit ${panelClasses}`}>
+			{children}
+		</div>
+	);
 }

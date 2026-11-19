@@ -345,7 +345,7 @@ parts. An item that says "Done" is built.
     reaches the unusual ones only by chance. A new element gets its section there before it is presented. A button at
     the top of the page plays the animations again.
     `/vitals` has the words of the popovers of the vital statistics on one page, in every combination of what they
-    count and of the state of the rate, so that they can be read in one go.
+    count and of the state of the rate, so that they can be read in one go. Its sentences can be rewritten in place: a bar says how many have changed, copies each change, as it was and as it is now, with the card that it is in, to be sent as feedback, and puts them back. The edits are kept in the browser.
   - What each popover says, and the hover state of its element, are being settled one element at a time, by using them,
     and the hover state of an element follows from its content. Done: the bar segments, whose popovers show the thing
     that a segment is of with its identifier (below); and the events tile's detail line and icon. A number that is abbreviated

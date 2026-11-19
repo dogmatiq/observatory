@@ -44,6 +44,7 @@ export function MessagesWaitingCard() {
 						"mt-[1.5px] -rotate-6 text-lg leading-5 whitespace-nowrap transition-colors duration-150 [font-family:var(--font-hand)] tracking-[-0.04em]",
 						ink("waiting"),
 					)}
+					data-prose=""
 					{...hint("waiting")}
 				>
 					waiting
@@ -85,6 +86,7 @@ export function MessagesWaitingCard() {
 						"-mt-[4.5px] rotate-6 text-lg leading-5 whitespace-nowrap transition-colors duration-150 [font-family:var(--font-hand)] tracking-[-0.04em]",
 						ink("failing"),
 					)}
+					data-prose=""
 					{...hint("failing")}
 				>
 					failing
