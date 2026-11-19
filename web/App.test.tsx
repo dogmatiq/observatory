@@ -75,6 +75,28 @@ test("the states page shows each state of an element, including the ones that ar
 	}
 });
 
+test("the vitals page has the words of every combination of the popovers of the vital statistics", () => {
+	render(<App path="/vitals" />);
+
+	// The rate of the events tile, and each of the four things that the rate of the
+	// queues tile can count, each in the three states of a rate.
+	expect(screen.getAllByText("Event rate")).toHaveLength(3);
+	for (const kind of [
+		"Message handling rate",
+		"Message removal rate",
+		"Command handling rate",
+		"Deadline handling rate",
+	]) {
+		expect(screen.getAllByText(kind)).toHaveLength(3);
+	}
+	expect(
+		screen.getAllByText(
+			"No new samples are arriving, so this average is out of date.",
+		),
+	).toHaveLength(5);
+	expect(screen.getAllByText("Messages waiting")).toHaveLength(2);
+});
+
 test("the fixture is the prototype's overview, with the Observatory's name as the page's heading", () => {
 	render(<App path="/fixture" />);
 

@@ -106,6 +106,12 @@ export function Overview({
 	);
 }
 
+/** What the card of the rate of the events tile says. */
+export const eventRateWords = {
+	kind: "Event rate",
+	description: "The rate at which the application is recording new events",
+};
+
 /**
  * eventsAbout returns what the card of the events tile says, which is what the
  * part of the page is about. It says nothing of what the part shows, because
@@ -148,8 +154,8 @@ export function EventsTile({
 		<RateCard
 			subsystem="streams"
 			icon="event"
-			kind="Event rate"
-			description="The rate at which the application is recording new events"
+			kind={eventRateWords.kind}
+			description={eventRateWords.description}
 			state={state}
 		/>
 	);

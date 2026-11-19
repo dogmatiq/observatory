@@ -15,6 +15,7 @@ import { Failing } from "./MetricTile.tsx";
 import {
 	countedWords,
 	EventsTile,
+	eventRateWords,
 	eventsAbout,
 	QueuesTile,
 	queuesAbout,
@@ -540,8 +541,7 @@ export function StatesPage() {
 const rateCard = {
 	subsystem: "streams",
 	icon: "event",
-	kind: "Event rate",
-	description: "The rate at which the application is recording new events",
+	...eventRateWords,
 } as const;
 
 /** The data of the events tile, with the given rate, or without one. */

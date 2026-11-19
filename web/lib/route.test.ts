@@ -10,6 +10,8 @@ test.each([
 	["/fixture", { page: "fixture" }],
 	["/states", { page: "states" }],
 	["/states/x", { page: "not-found" }],
+	["/vitals", { page: "vitals" }],
+	["/vitals/x", { page: "not-found" }],
 	["/clusters", { page: "not-found" }],
 	["/clusters/abc/handlers", { page: "not-found" }],
 	["/clusters/%E0%A4%A", { page: "not-found" }],

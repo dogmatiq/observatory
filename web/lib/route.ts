@@ -6,6 +6,7 @@ export type Route =
 	| { page: "cluster"; id: string }
 	| { page: "fixture" }
 	| { page: "states" }
+	| { page: "vitals" }
 	| { page: "not-found" };
 
 /**
@@ -19,7 +20,9 @@ export type Route =
  * - `/fixture`, the cluster view with the numbers that the prototype's overview
  *   showed, which a person compares with the prototype;
  * - `/states`, every state that an element of the cluster view can be in, side
- *   by side, which a person looks at when judging the element.
+ *   by side, which a person looks at when judging the element;
+ * - `/vitals`, the words of the popovers of the vital statistics of the tiles, in
+ *   each combination, which a person reads in one go.
  */
 export function routeOf(path: string): Route {
 	const parts = path.split("/").filter((part) => part !== "");
@@ -45,6 +48,10 @@ export function routeOf(path: string): Route {
 
 	if (first === "states" && parts.length === 1) {
 		return { page: "states" };
+	}
+
+	if (first === "vitals" && parts.length === 1) {
+		return { page: "vitals" };
 	}
 
 	return { page: "not-found" };
