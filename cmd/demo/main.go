@@ -26,7 +26,7 @@ const address = "localhost:8080"
 var combinations = flag.Bool(
 	"combinations",
 	false,
-	"also simulate a cluster for each combination of what the nodes report that the queues tile is made from",
+	"also simulate a cluster for each combination of what the nodes report that the events tile and the queues tile are made from",
 )
 
 func main() {

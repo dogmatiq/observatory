@@ -294,7 +294,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunCombinations(t *testing.T) {
-	t.Run("it connects a cluster for each combination of what the queues tile is made from, which shows what that gives", func(t *testing.T) {
+	t.Run("it connects a cluster for each combination of what the tiles are made from, which shows what that gives", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			o, r := observe.NewObserver(), observe.NewRecorder()
@@ -314,7 +314,7 @@ func TestRunCombinations(t *testing.T) {
 
 			// What each cluster reports is in its name, which is how this finds what
 			// it should show.
-			want := map[string]string{
+			queues := map[string]string{
 				"Queues: nothing":                                              "no tile",
 				"Queues: sizes":                                                "none",
 				"Queues: removals":                                             "removed",
@@ -333,35 +333,60 @@ func TestRunCombinations(t *testing.T) {
 				"Queues: sizes, removals, commands handled, deadlines handled": "handled",
 			}
 
+			// The events tile is its rate, and the lengths of the streams.
+			events := map[string]string{
+				"Events: nothing":       "no tile",
+				"Events: rate":          "rate",
+				"Events: streams":       "streams",
+				"Events: rate, streams": "rate and streams",
+			}
+
 			clusters := observe.Clusters(time.Now(), o.Nodes())
-			if len(clusters) != 1+len(want) {
-				t.Fatalf("unexpected number of clusters: got %d, want %d", len(clusters), 1+len(want))
+			if len(clusters) != 1+len(queues)+len(events) {
+				t.Fatalf("unexpected number of clusters: got %d, want %d", len(clusters), 1+len(queues)+len(events))
 			}
 
 			for _, c := range clusters {
-				expected, ok := want[c.Application.Name]
-				if !ok {
-					continue
-				}
-				delete(want, c.Application.Name)
-
 				view, _ := r.View(time.Now(), o.Nodes(), c.ID)
-				q := view.Overview.Queues
 
-				got := "no tile"
-				switch {
-				case q == nil:
-				case q.Throughput == nil:
-					got = "none"
-				default:
-					got = q.Counted
+				if expected, ok := queues[c.Application.Name]; ok {
+					delete(queues, c.Application.Name)
+
+					q := view.Overview.Queues
+					got := "no tile"
+					switch {
+					case q == nil:
+					case q.Throughput == nil:
+						got = "none"
+					default:
+						got = q.Counted
+					}
+					if got != expected {
+						t.Errorf("%s: got %q, want %q", c.Application.Name, got, expected)
+					}
 				}
-				if got != expected {
-					t.Errorf("%s: got %q, want %q", c.Application.Name, got, expected)
+
+				if expected, ok := events[c.Application.Name]; ok {
+					delete(events, c.Application.Name)
+
+					e := view.Overview.Events
+					got := "no tile"
+					switch {
+					case e == nil:
+					case e.Rate != nil && e.Streams != nil:
+						got = "rate and streams"
+					case e.Rate != nil:
+						got = "rate"
+					case e.Streams != nil:
+						got = "streams"
+					}
+					if got != expected {
+						t.Errorf("%s: got %q, want %q", c.Application.Name, got, expected)
+					}
 				}
 			}
-			if len(want) != 0 {
-				t.Fatalf("clusters are missing: %v", want)
+			if len(queues)+len(events) != 0 {
+				t.Fatalf("clusters are missing: %v, %v", queues, events)
 			}
 
 			cancel()

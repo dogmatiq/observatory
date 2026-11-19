@@ -71,9 +71,9 @@ const (
 // of nodes, and the workloads that each owns, change.
 //
 // If combinations is true, it also simulates a cluster of one node for each
-// combination of what the nodes can report that the queues tile is made from, so
-// that the tile can be seen for each. Each of those clusters is named by what its
-// node reports.
+// combination of what the nodes can report that the events tile is made from, and
+// for each that the queues tile is made from, so that each tile can be seen for
+// each. Each of those clusters is named by its tile and what its node reports.
 //
 // It returns when ctx ends, or when a node can't be served.
 func Run(ctx context.Context, o *observe.Observer, combinations bool) error {
@@ -108,16 +108,27 @@ func Run(ctx context.Context, o *observe.Observer, combinations bool) error {
 	return err
 }
 
-// combinationClusters returns a cluster for each combination of whether the
-// nodes report the number of messages in the queues, the removal of messages
-// from them, the commands that handlers have handled and the deadlines that they
-// have handled. Those are what the queues tile is made from. Each cluster has
-// one node, which always reports everything else.
+// An ingredient is something that a tile is made from, which the nodes of a
+// cluster may report, with the metrics that they leave out if they don't.
+type ingredient struct {
+	name string
+	left []proto.Message
+}
+
+// combinationClusters returns a cluster for each combination of what the nodes
+// report that the events tile is made from, which is the rate of events and the
+// length of the event streams, and for each combination of what the queues tile
+// is made from, which is the number of messages in the queues, the removal of
+// messages from them, the commands that handlers have handled and the deadlines
+// that they have handled. Each cluster has one node, which always reports
+// everything else.
 func combinationClusters() []*cluster {
-	parts := []struct {
-		name string
-		left []proto.Message
-	}{
+	out := combinationsOf("Events", []ingredient{
+		{"rate", []proto.Message{new(metricsgrpc.HandlerEventsRecorded)}},
+		{"streams", []proto.Message{new(metricsgrpc.EventStreamLength)}},
+	})
+
+	return append(out, combinationsOf("Queues", []ingredient{
 		{"sizes", []proto.Message{
 			new(metricsgrpc.QueueCommandsPending),
 			new(metricsgrpc.QueueDeadlinesPending),
@@ -128,8 +139,13 @@ func combinationClusters() []*cluster {
 		}},
 		{"commands handled", []proto.Message{new(metricsgrpc.HandlerCommandsHandled)}},
 		{"deadlines handled", []proto.Message{new(metricsgrpc.HandlerDeadlinesHandled)}},
-	}
+	})...)
+}
 
+// combinationsOf returns a cluster of one node for each combination of whether
+// the node reports each of the parts. A cluster is named for the tile, and then
+// the parts that its node reports, such as "Queues: sizes, removals".
+func combinationsOf(tile string, parts []ingredient) []*cluster {
 	var out []*cluster
 	for combination := range 1 << len(parts) {
 		var (
@@ -144,9 +160,9 @@ func combinationClusters() []*cluster {
 			}
 		}
 
-		name := "Queues: nothing"
+		name := tile + ": nothing"
 		if len(reported) > 0 {
-			name = "Queues: " + strings.Join(reported, ", ")
+			name = tile + ": " + strings.Join(reported, ", ")
 		}
 		out = append(out, newCluster(name, 1, left))
 	}

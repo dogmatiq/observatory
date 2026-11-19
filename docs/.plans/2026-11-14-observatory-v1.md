@@ -400,7 +400,7 @@ parts. An item that says "Done" is built.
   rate", "Command handling rate" or "Deadline handling rate", and says what it counts and, for a kind of message, that
   it is only a part, and the chart's readout is "handled/min", "removals/min", "commands/min" or "deadlines/min". When nodes
   report none of them, the chart is left out. `go run ./cmd/demo -combinations` also serves a cluster of one node for
-  each of the sixteen combinations of what the queues tile is made from, named by what they report, so that the tile
+  each of the sixteen combinations of what the queues tile is made from, and one for each of the four combinations of what the events tile is made from (its rate, and the lengths of the streams), named by their tile and by what they report, so that each tile
   can be seen for each. The number of messages waiting stays the
   tile's headline and its bar. A level and a rate on one chart was considered and not done, because they are in different
   units and each is scaled to its own peak.
