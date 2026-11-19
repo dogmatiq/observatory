@@ -3,7 +3,9 @@ import {
 	countOf,
 	formatCompact,
 	formatNumber,
+	formatPercent,
 	nounFor,
+	scaleRate,
 	shortId,
 } from "./format.ts";
 
@@ -50,4 +52,32 @@ test("nounFor and countOf choose between the singular and the plural", () => {
 test("shortId keeps the first eight characters", () => {
 	expect(shortId("113cbdc3-a2d7-4415-b428-9cdce48b5dc0")).toBe("113cbdc3");
 	expect(shortId("abc")).toBe("abc");
+});
+
+test.each([
+	[1, "100%"],
+	[0.6234, "62%"],
+	[0.1, "10%"],
+	[0.0996, "10%"],
+	[0.034, "3.4%"],
+	[0.0095, "<1%"],
+	[0.0001, "<1%"],
+	[0.01, "1.0%"],
+	[0, "0.0%"],
+	[0.996, ">99%"],
+	[0.5, "50%"],
+])("formatPercent(%d) is %s", (share, want) => {
+	expect(formatPercent(share)).toBe(want);
+});
+
+test.each([
+	[529.34, 529, "minute"],
+	[0.5, 1, "minute"],
+	[0.49, 29, "hour"],
+	[0.01, 1, "hour"],
+	[0.008, 12, "day"],
+	[0.0001, 0, "minute"],
+	[0, 0, "minute"],
+])("scaleRate(%d) is %d per %s", (perMinute, amount, per) => {
+	expect(scaleRate(perMinute)).toEqual({ amount, per });
 });

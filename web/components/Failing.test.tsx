@@ -1,5 +1,12 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+} from "@testing-library/react";
+import { afterEach, expect, test, vi } from "vitest";
 import { Failing } from "./MetricTile.tsx";
 
 afterEach(cleanup);
@@ -53,32 +60,86 @@ test("a count that begins grows from nothing", () => {
 	expect(animating(container)?.className).not.toContain("failing-in");
 });
 
-test("a count that stops stays while it shrinks away, and then goes", () => {
+/** Lets the given time pass. */
+function wait(ms: number) {
+	act(() => {
+		vi.advanceTimersByTime(ms);
+	});
+}
+
+test("a count that stops ramps down to +0 and stays for a moment, and then shrinks away, and goes", () => {
+	vi.useFakeTimers();
 	const { container, rerender } = render(<Failing count={2} size="stat" />);
 
 	rerender(<Failing count={0} size="stat" />);
+	wait(600);
+	expect(failing()?.textContent).toBe("+0");
+	expect(animating(container)?.className).not.toContain("failing-out");
+	expect(container.textContent).not.toContain("failing");
 
-	expect(failing()?.textContent).toBe("+2");
+	wait(200);
+	expect(failing()?.textContent).toBe("+0");
+	expect(animating(container)?.className).not.toContain("failing-out");
+
+	wait(300);
 	expect(animating(container)?.className).toContain("failing-out");
 
 	endAnimation(animating(container));
 	expect(container.textContent).toBe("");
+	vi.useRealTimers();
+});
+
+test("a count that begins again while it stays at +0 stays, and doesn't grow again", () => {
+	vi.useFakeTimers();
+	const { container, rerender } = render(<Failing count={1} size="stat" />);
+
+	rerender(<Failing count={0} size="stat" />);
+	wait(500);
+	rerender(<Failing count={1} size="stat" />);
+	wait(100);
+	expect(failing()?.textContent).toBe("+1");
+
+	// The hold that it had is over, and it doesn't shrink away.
+	wait(5000);
+	expect(failing()?.textContent).toBe("+1");
+	expect(animating(container)?.className).not.toContain("failing-in");
+	expect(animating(container)?.className).not.toContain("failing-out");
+	vi.useRealTimers();
 });
 
 test("a count that begins again while it shrinks away grows again", () => {
+	vi.useFakeTimers();
 	const { container, rerender } = render(<Failing count={2} size="stat" />);
 
 	rerender(<Failing count={0} size="stat" />);
+	wait(2100);
+	expect(animating(container)?.className).toContain("failing-out");
+
 	rerender(<Failing count={5} size="stat" />);
+	wait(600);
 
 	expect(failing()?.textContent).toBe("+5");
 	expect(animating(container)?.className).toContain("failing-in");
+	vi.useRealTimers();
 });
 
-test("a count that changes while it is shown shows the new count", () => {
+test("a viewer who asks for less motion sees the count go when its moment is over", () => {
+	vi.useFakeTimers();
+	vi.stubGlobal("matchMedia", () => ({ matches: true }));
+	const { container, rerender } = render(<Failing count={2} size="stat" />);
+
+	rerender(<Failing count={0} size="stat" />);
+	wait(2100);
+
+	expect(container.textContent).toBe("");
+	vi.unstubAllGlobals();
+	vi.useRealTimers();
+});
+
+test("a count that changes while it is shown counts to the new count", async () => {
 	const { rerender } = render(<Failing count={2} size="stat" />);
 
 	rerender(<Failing count={7} size="stat" />);
 
-	expect(failing()?.textContent).toBe("+7");
+	await waitFor(() => expect(failing()?.textContent).toBe("+7"));
 });

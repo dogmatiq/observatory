@@ -1,6 +1,7 @@
 import { type ReactNode, useId } from "react";
 import { cn } from "../lib/cn.ts";
 import { formatCompact, nounFor } from "../lib/format.ts";
+import { useRamped } from "../lib/ramped.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
@@ -10,15 +11,17 @@ import {
 	linkedCardClasses,
 	raisedClasses,
 } from "./MetricTile.tsx";
+import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
 
 /**
- * The tooltip of the icon that marks a handler that minimizes concurrency.
+ * What the popover of the icon that marks a handler that minimizes concurrency
+ * says.
  */
-const minimizesConcurrencyTitle =
+const minimizesConcurrencyText =
 	"Minimize concurrency: this handler's configuration instructs the engine to attempt to process messages one at a time, minimizing conflicts and/or contention.";
 
 /**
@@ -65,42 +68,43 @@ export function HandlerCard({
 		<>
 			<div className="flex min-w-0 items-center gap-3">
 				<span className="flex min-w-0 flex-col">
-					<span
-						id={nameId}
-						className="min-w-0 truncate text-sm font-bold tracking-[0.04em] uppercase"
-						title={handler.name}
-					>
-						<HandlerName name={handler.name} />
-					</span>
+					<Popover content={handler.name}>
+						<span
+							id={nameId}
+							className="min-w-0 truncate text-sm font-bold tracking-[0.04em] uppercase"
+						>
+							<HandlerName name={handler.name} />
+						</span>
+					</Popover>
 					<span className="flex min-w-0 items-center gap-3 text-2xs font-medium tracking-[0.08em] text-muted uppercase">
 						<span className="min-w-0 truncate">
 							{handler.disabled ? `${handler.kind}, disabled` : handler.kind}
 							{handler.minimizesConcurrency && (
-								<span
-									className="ml-2 inline-block cursor-help text-fg-soft"
-									title={minimizesConcurrencyTitle}
-								>
-									<Icon
-										name="minimize-concurrency"
-										className="inline size-3 align-[-2px]"
-									/>
-								</span>
+								<Popover content={minimizesConcurrencyText}>
+									<span className="ml-2 inline-block cursor-help text-fg-soft">
+										<Icon
+											name="minimize-concurrency"
+											className="inline size-3 align-[-2px]"
+										/>
+									</span>
+								</Popover>
 							)}
 						</span>
 					</span>
 				</span>
-				<span
-					className={cn(
-						"ml-auto flex-none self-start",
-						kindColors[handler.kind],
-					)}
-					title={`${handler.kind} handler`}
-				>
-					<Icon
-						name={handler.kind}
-						className="inline size-5 align-text-bottom"
-					/>
-				</span>
+				<Popover content={`${handler.kind} handler`}>
+					<span
+						className={cn(
+							"ml-auto flex-none self-start",
+							kindColors[handler.kind],
+						)}
+					>
+						<Icon
+							name={handler.kind}
+							className="inline size-5 align-text-bottom"
+						/>
+					</span>
+				</Popover>
 			</div>
 			<Summary handler={handler} summary={summary} />
 			<Presence shape="fade" className="absolute inset-x-0 bottom-0">
@@ -180,14 +184,10 @@ function Summary({
 		if (queuedMessages !== undefined) {
 			const healthy = Math.max(0, queuedMessages - summary.failing);
 			stats.push({
-				tone: zeroOrNormal(healthy),
+				id: "queued",
 				icon,
-				value: (
-					<>
-						{formatCompact(healthy)}
-						<Failing count={summary.failing} size="stat" />
-					</>
-				),
+				number: healthy,
+				after: <Failing count={summary.failing} size="stat" />,
 				// A message kind on its own means the ones that are pending.
 				label: plural,
 				title: `${plural} pending`,
@@ -200,9 +200,9 @@ function Summary({
 		const { unhandledEvents } = summary;
 		if (unhandledEvents !== undefined) {
 			stats.push({
-				tone: zeroOrNormal(unhandledEvents),
+				id: "events",
 				icon: "event",
-				value: formatCompact(unhandledEvents),
+				number: unhandledEvents,
 				label: "events",
 				title: "events pending",
 				end: true,
@@ -215,8 +215,8 @@ function Summary({
 			const { instances } = summary;
 			if (instances !== undefined) {
 				stats.push({
-					tone: zeroOrNormal(instances),
-					value: formatCompact(instances),
+					id: "instances",
+					number: instances,
 					label: nounFor(instances, "instance", "instances"),
 				});
 			}
@@ -224,8 +224,8 @@ function Summary({
 			const { activeInstances } = summary;
 			if (activeInstances) {
 				stats.push({
-					tone: zeroOrNormal(activeInstances.count),
-					value: formatCompact(activeInstances.count),
+					id: "active",
+					number: activeInstances.count,
 					label: "active",
 					title: activeInstances.title,
 				});
@@ -257,8 +257,8 @@ function Summary({
 					0,
 				);
 				stats.push({
-					tone: zeroOrNormal(inProgress),
-					value: formatCompact(inProgress),
+					id: "in-progress",
+					number: inProgress,
 					label: "in progress",
 				});
 			}
@@ -311,43 +311,43 @@ function Summary({
 				{stats
 					.filter((s) => !s.end)
 					.map((s) => (
-						<Stat key={s.label} {...s} />
+						<Stat key={s.id} {...s} />
 					))}
 				<div className="ml-auto flex gap-x-5">
 					{stats
 						.filter((s) => s.end)
 						.map((s) => (
-							<Stat key={s.label} {...s} />
+							<Stat key={s.id} {...s} />
 						))}
 				</div>
 			</div>
 			<Presence className="mt-auto">
-				{bar && <div className="flex flex-col gap-4">{bar}</div>}
+				{bar && <div className="relative z-10 flex flex-col gap-4">{bar}</div>}
 			</Presence>
 		</>
 	);
 }
 
-function zeroOrNormal(n: number): Tone {
-	return n === 0 ? "zero" : "normal";
-}
-
-/**
- * How a number stands out: faint when it is zero, and the page's text color
- * otherwise.
- */
-type Tone = "normal" | "zero";
-
 interface StatProps {
-	tone: Tone;
+	/** Identifies the stat among the others of its card, whatever its label says. */
+	id: string;
 
 	/** The kind of thing that the number counts, shown as an icon before it. */
 	icon?: IconName;
 
-	value: ReactNode;
+	/**
+	 * The number that the stat is. It is faint when it is zero. It ramps to a new
+	 * number, and is faint only once it has got to zero, and gets its color back as
+	 * soon as it has left it.
+	 */
+	number: number;
+
+	/** What follows the number, such as the count of those that fail. */
+	after?: ReactNode;
+
 	label: string;
 
-	/** Explains the number, as a tooltip. */
+	/** Explains the number, as a popover. */
 	title?: string;
 
 	/**
@@ -368,32 +368,43 @@ const iconColors: Partial<Record<IconName, string>> = {
 	event: "text-streams",
 };
 
-function Stat({ tone, icon, value, label, title, end }: StatProps) {
+function Stat({ icon, number, after, label, title, end }: StatProps) {
+	const shown = useRamped(number) ?? number;
+	const zero = shown === 0;
+
 	return (
-		<div
-			className={cn("flex flex-col", end && "items-end text-right")}
-			title={title}
-		>
-			<span
+		<Popover content={title}>
+			<div
 				className={cn(
-					"text-2xl leading-[1.2] tabular-nums",
-					tone === "zero" ? "font-medium text-faint" : "font-semibold",
+					// A number with a popover has a chip behind it when it is pointed at,
+					// as a link in the title bar does. Its padding is taken back by a
+					// negative margin, so that the chip doesn't move the numbers.
+					"-mx-2 -my-1 flex flex-col rounded-control px-2 py-1 transition-colors duration-150 hover:bg-sunk motion-reduce:transition-none",
+					end && "items-end text-right",
 				)}
 			>
-				{icon && (
-					<Icon
-						name={icon}
-						className={cn(
-							"mr-1.5 inline size-[18px] align-[-1px]",
-							iconColors[icon],
-							tone === "zero" && "opacity-60",
-						)}
-					/>
-				)}
-				{value}
-			</span>
-			<span className="text-xs text-muted">{label}</span>
-		</div>
+				<span
+					className={cn(
+						"text-2xl leading-[1.2] tabular-nums transition-[color,font-weight] duration-500 motion-reduce:transition-none",
+						zero ? "font-medium text-faint" : "font-semibold",
+					)}
+				>
+					{icon && (
+						<Icon
+							name={icon}
+							className={cn(
+								"mr-1.5 inline size-[18px] align-[-1px] transition-opacity duration-500 motion-reduce:transition-none",
+								iconColors[icon],
+								zero && "opacity-60",
+							)}
+						/>
+					)}
+					{formatCompact(shown)}
+					{after}
+				</span>
+				<span className="text-xs text-muted">{label}</span>
+			</div>
+		</Popover>
 	);
 }
 

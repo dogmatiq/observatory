@@ -2,7 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
-import { stubBrowser, visibleText } from "../test-support.ts";
+import { stubBrowser, tipOf } from "../test-support.ts";
 import { Overview } from "./Overview.tsx";
 
 beforeEach(stubBrowser);
@@ -21,11 +21,11 @@ test("the totals are the prototype's", () => {
 	const queues = totals.getByRole("article", { name: "Queues" });
 	const cluster = totals.getByRole("article", { name: "Cluster" });
 
-	expect(visibleText(events)).toBe(
+	expect(events.textContent).toBe(
 		"347events per minute, 1.2K events in 2 streams",
 	);
-	expect(visibleText(queues)).toBe("19messages in 1 queue, 442/min");
-	expect(visibleText(cluster)).toBe("3cluster nodes, 5 workloads");
+	expect(queues.textContent).toBe("19messages in 1 queue, 442/min");
+	expect(cluster.textContent).toBe("3cluster nodes, 5 workloads");
 });
 
 test("the handlers are the prototype's", () => {
@@ -33,7 +33,7 @@ test("the handlers are the prototype's", () => {
 
 	const handlers = within(screen.getByRole("region", { name: "Handlers" }));
 
-	expect(handlers.getAllByRole("article").map(visibleText)).toEqual([
+	expect(handlers.getAllByRole("article").map((e) => e.textContent)).toEqual([
 		"accountaggregate100instances0commands",
 		"statement-scheduleprocess20in progress0events20deadlines",
 		"mailerintegration0commands",
@@ -209,7 +209,7 @@ test("a tile whose metrics the engine doesn't report is hidden", () => {
 	expect(screen.getByRole("article", { name: "Events" })).toBeDefined();
 });
 
-test("a rate that the Observatory has never had is a dash", () => {
+test("a rate that the Observatory has never had is a zero in dot-matrix type, that is described as not available", () => {
 	render(
 		<Overview
 			data={{
@@ -222,8 +222,47 @@ test("a rate that the Observatory has never had is a dash", () => {
 
 	const events = screen.getByRole("article", { name: "Events" });
 	const queues = screen.getByRole("article", { name: "Queues" });
-	expect(visibleText(events)).toBe(
-		"\u2014events per minute, 1.2K events in 2 streams",
+	expect(events.textContent).toBe(
+		"0events per minute, 1.2K events in 2 streams",
 	);
-	expect(visibleText(queues)).toBe("19messages in 1 queue, \u2014/min");
+	expect(queues.textContent).toBe("19messages in 1 queue, 0/min");
+	expect(
+		within(events).getByRole("img", { name: "not available" }),
+	).toBeDefined();
+});
+
+test("the number of events per minute and the words beside it both have the card of the rate", async () => {
+	render(<Overview data={overview} />);
+
+	const events = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Events" });
+	const number = events.querySelector("span.text-4xl span") as Element;
+	const words = screen.getByText("events per minute");
+
+	for (const target of [number, words]) {
+		const tip = await tipOf(target);
+
+		expect(tip).toContain("Event rate");
+		expect(tip).toContain(
+			"The rate at which the application is recording new events, averaged over the last minute.",
+		);
+		expect(tip).not.toContain("347");
+	}
+});
+
+test("a rate of less than one event per minute is a whole number per hour", () => {
+	const slow = structuredClone(overview);
+	if (slow.events) {
+		slow.events.rate = { perMinute: 0.4 };
+	}
+	render(<Overview data={slow} />);
+
+	const events = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Events" });
+
+	expect(events.textContent).toBe(
+		"24events per hour, 1.2K events in 2 streams",
+	);
 });

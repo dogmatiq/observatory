@@ -1,8 +1,11 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { countOf, formatCompact } from "../lib/format.ts";
+import { prefersReducedMotion } from "../lib/ramped.ts";
 import { Icon, type IconName } from "./Icon.tsx";
+import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
+import { Ramped } from "./Ramped.tsx";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
 /**
@@ -41,7 +44,7 @@ export function MetricTile({
 }: {
 	subsystem: Subsystem;
 
-	/** The name of what the tile shows, which is the icon's tooltip. */
+	/** The name of what the tile shows, which is the icon's popover. */
 	label: string;
 
 	icon: IconName;
@@ -49,7 +52,7 @@ export function MetricTile({
 	/** The headline number. */
 	value: ReactNode;
 
-	/** The headline number in full, as its tooltip. */
+	/** The headline number in full, as its popover. */
 	valueTitle?: string;
 
 	/** The words beside the number, which always take two lines of room. */
@@ -77,15 +80,16 @@ export function MetricTile({
 	const content = (
 		<>
 			<div className="flex items-center justify-between gap-3">
-				<span
-					className="self-start text-4xl leading-none font-bold tracking-[-0.02em] tabular-nums"
-					title={valueTitle}
-				>
-					{value}
-				</span>
-				<span className="flex-none text-(--subsystem)" title={label}>
-					<Icon name={icon} className="inline size-5 align-text-bottom" />
-				</span>
+				<Popover content={valueTitle}>
+					<span className="self-start text-4xl leading-none font-bold tracking-[-0.02em] tabular-nums">
+						{value}
+					</span>
+				</Popover>
+				<Popover content={label}>
+					<span className="flex-none text-(--subsystem)">
+						<Icon name={icon} className="inline size-5 align-text-bottom" />
+					</span>
+				</Popover>
 			</div>
 			<span className="relative z-10 mt-1 min-h-[calc(2*1.5em)] text-sm text-muted">
 				{detail}
@@ -123,6 +127,12 @@ export function Noun({ children }: { children: ReactNode }) {
 }
 
 /**
+ * How long a count of failing messages that has fallen to zero stays, in
+ * milliseconds, before it shrinks away.
+ */
+const holdTime = 1000;
+
+/**
  * Failing is the number of messages that are pending and failing, which comes
  * after the number of those that are not, such as "24 +1". It is red, and
  * smaller than the number it follows.
@@ -130,9 +140,12 @@ export function Noun({ children }: { children: ReactNode }) {
  * It is spoken in full, because "+1" says little to a screen reader.
  *
  * When there are none it is not shown. When there begin to be some it grows from
- * nothing, larger than it will stay for a moment, and when there stop being any
- * it shrinks away, so that it doesn't make the page jump. It does neither when
- * the page loads with it in place, nor for a viewer who asks for less motion.
+ * nothing, larger than it will stay for a moment. When there stop being any it
+ * ramps down to "+0", stays at that for [holdTime], and then shrinks away, so
+ * that it doesn't make the page jump. If there are some again while it stays, it
+ * stays, so that a count that goes up and down doesn't come and go. It does
+ * neither of the others when the page loads with it in place, nor for a viewer
+ * who asks for less motion.
  */
 export function Failing({
 	count,
@@ -141,22 +154,27 @@ export function Failing({
 	count: number;
 	size: "headline" | "stat";
 }) {
-	const [phase, setPhase] = useState<"gone" | "in" | "steady" | "out">(
+	const [phase, setPhase] = useState<"gone" | "in" | "steady" | "zero" | "out">(
 		count > 0 ? "steady" : "gone",
 	);
 
-	// The number that is shown while it shrinks away is the last that wasn't zero.
-	const last = useRef(count);
-	if (count > 0) {
-		last.current = count;
-	}
-
 	useEffect(() => {
 		if (count > 0) {
-			setPhase((p) => (p === "steady" || p === "in" ? p : "in"));
-		} else {
-			setPhase((p) => (p === "gone" ? p : "out"));
+			setPhase((p) =>
+				p === "steady" || p === "in" ? p : p === "zero" ? "steady" : "in",
+			);
+			return;
 		}
+
+		setPhase((p) => (p === "gone" || p === "out" ? p : "zero"));
+		const timer = window.setTimeout(
+			() =>
+				setPhase((p) =>
+					p === "zero" ? (prefersReducedMotion() ? "gone" : "out") : p,
+				),
+			holdTime,
+		);
+		return () => window.clearTimeout(timer);
 	}, [count]);
 
 	if (phase === "gone") {
@@ -180,14 +198,20 @@ export function Failing({
 				phase === "out" &&
 					"motion-safe:animate-[failing-out_0.8s_ease-in-out_forwards]",
 			)}
-			onAnimationEnd={() => setPhase((p) => (p === "out" ? "gone" : "steady"))}
+			onAnimationEnd={() =>
+				setPhase((p) => (p === "out" ? "gone" : p === "in" ? "steady" : p))
+			}
 		>
 			<span className="min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-failing">
 				<span className={cn("block", size === "headline" ? "pl-1.5" : "pl-1")}>
-					<span aria-hidden="true">{`+${formatCompact(last.current)}`}</span>
-					<span className="sr-only">
-						{` and ${countOf(last.current, "message", "messages")} failing`}
+					<span aria-hidden="true">
+						+<Ramped value={count} format={formatCompact} />
 					</span>
+					{count > 0 && (
+						<span className="sr-only">
+							{` and ${countOf(count, "message", "messages")} failing`}
+						</span>
+					)}
 				</span>
 			</span>
 		</span>

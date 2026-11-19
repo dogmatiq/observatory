@@ -2,6 +2,7 @@ import { ClusterPage } from "./components/ClusterPage.tsx";
 import { ClustersPage } from "./components/ClustersPage.tsx";
 import { Message } from "./components/Message.tsx";
 import { Page } from "./components/Page.tsx";
+import { StatesPage } from "./components/StatesPage.tsx";
 import { application, overview } from "./fixtures/overview.ts";
 import { fetchClusters } from "./lib/api.ts";
 import { LiveData } from "./lib/live.tsx";
@@ -34,6 +35,9 @@ export function App({ path = window.location.pathname }: { path?: string }) {
 			// What the prototype's overview showed. It is static, and it is how the
 			// cluster view is compared with the prototype.
 			return <ClusterPage application={application} data={overview} />;
+
+		case "states":
+			return <StatesPage />;
 
 		case "not-found":
 			return (

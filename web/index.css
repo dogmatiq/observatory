@@ -153,16 +153,137 @@
 }
 
 /*
- * A figure that has been lost fades from the color that it had to the muted one.
- * The time is the one that Figure gives it.
+ * How little a figure is trusted, from nothing to as little as there is. A figure
+ * that is lost loses trust as time passes, so this grows steadily, over as long as
+ * the figure is kept, and the treatment below turns it into a look that gets
+ * further from the live digits of the same font as it grows. It starts as no
+ * change at all, so that a figure doesn't change as it is lost. A figure that
+ * comes back brings it back to nothing in a moment.
  */
-@keyframes stale {
-	from {
-		color: inherit;
+@property --distrust {
+	syntax: "<number>";
+	inherits: true;
+	initial-value: 0;
+}
+
+@keyframes distrust {
+	to {
+		--distrust: 1;
+	}
+}
+
+/*
+ * How a figure looks as it is trusted less: it gets blurry, by an amount that
+ * grows with `--distrust`. It keeps the font and the color of the figure.
+ */
+.distrust-blur {
+	filter: blur(calc(var(--distrust) * 2.2px));
+}
+
+/*
+ * A glitch: the top half and the bottom half of a figure are
+ * copies of it that slip sideways on their own, each with a red and a cyan shadow
+ * that drift apart, by an amount that grows with `--distrust`. The figure
+ * itself only takes up the room.
+ */
+.glitch {
+	position: relative;
+	display: inline-block;
+}
+
+.glitch-room {
+	visibility: hidden;
+}
+
+.glitch-half {
+	position: absolute;
+	inset: 0;
+	text-shadow:
+		calc(var(--distrust) * -2px) 0 0 rgb(255 45 85 / 0.85),
+		calc(var(--distrust) * 2px) 0 0 rgb(0 210 200 / 0.85);
+}
+
+.glitch-top {
+	clip-path: inset(0 0 50% 0);
+	animation: glitch-top 2.3s steps(1) infinite;
+}
+
+.glitch-bottom {
+	clip-path: inset(50% 0 0 0);
+	animation: glitch-bottom 1.7s steps(1) infinite;
+}
+
+/* A burst slips once, in the time that --glitch-burst says. */
+.glitch-burst .glitch-half {
+	animation-duration: var(--glitch-burst);
+	animation-iteration-count: 1;
+}
+
+@keyframes glitch-top {
+	0%,
+	100% {
+		transform: translateX(calc(var(--distrust) * 1px));
 	}
 
+	10% {
+		transform: translateX(calc(var(--distrust) * 8px));
+	}
+
+	22% {
+		transform: translateX(calc(var(--distrust) * -3px));
+	}
+
+	28% {
+		transform: translateX(calc(var(--distrust) * 1px));
+	}
+
+	55% {
+		transform: translateX(calc(var(--distrust) * -10px));
+	}
+
+	68% {
+		transform: translateX(calc(var(--distrust) * 4px));
+	}
+
+	74% {
+		transform: translateX(calc(var(--distrust) * 1px));
+	}
+}
+
+@keyframes glitch-bottom {
+	0%,
+	100% {
+		transform: translateX(calc(var(--distrust) * -1px));
+	}
+
+	16% {
+		transform: translateX(calc(var(--distrust) * -9px));
+	}
+
+	30% {
+		transform: translateX(calc(var(--distrust) * 3px));
+	}
+
+	36% {
+		transform: translateX(calc(var(--distrust) * -1px));
+	}
+
+	62% {
+		transform: translateX(calc(var(--distrust) * 11px));
+	}
+
+	78% {
+		transform: translateX(calc(var(--distrust) * -4px));
+	}
+
+	84% {
+		transform: translateX(calc(var(--distrust) * -1px));
+	}
+}
+
+@keyframes turn {
 	to {
-		color: var(--color-faint);
+		transform: rotate(360deg);
 	}
 }
 
@@ -194,8 +315,18 @@
 	:root {
 		color-scheme: light;
 
+		/*
+		 * The two lightnesses of the color marks of identifiers, which combine with
+		 * the hues that an identifier picks to make the palette.
+		 */
+		--mark-lightness-a: 42%;
+		--mark-lightness-b: 60%;
+
 		@variant dark {
 			color-scheme: dark;
+
+			--mark-lightness-a: 58%;
+			--mark-lightness-b: 74%;
 
 			--color-page: #0a0d13;
 			--color-sunk: #070a0f;

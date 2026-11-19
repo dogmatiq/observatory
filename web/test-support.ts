@@ -1,3 +1,4 @@
+import { fireEvent, screen } from "@testing-library/react";
 import { vi } from "vitest";
 
 /**
@@ -31,15 +32,15 @@ export function stubBrowser() {
 }
 
 /**
- * visibleText returns the text of an element as a person sees it, which leaves
- * out the tooltips that are written into SVG graphics as `title` elements.
+ * tipOf points at an element, waits for its popover to appear, and returns the
+ * text of the popover, after moving the pointer away again.
  */
-export function visibleText(element: Element): string {
-	const copy = element.cloneNode(true) as Element;
-	for (const title of copy.querySelectorAll("title")) {
-		title.remove();
-	}
-	return copy.textContent ?? "";
+export async function tipOf(element: Element): Promise<string | null> {
+	fireEvent.pointerEnter(element);
+	const tip = await screen.findByRole("tooltip");
+	const text = tip.textContent;
+	fireEvent.pointerLeave(element);
+	return text;
 }
 
 /** An EventSource that a test drives. */

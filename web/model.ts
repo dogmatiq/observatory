@@ -232,7 +232,7 @@ export interface HandlerSummary {
 	instances?: number;
 
 	/**
-	 * The number of instances that recorded an event recently, with the tooltip
+	 * The number of instances that recorded an event recently, with the popover
 	 * that explains it. Only an aggregate has them, and the card shows them only
 	 * when this is given.
 	 */

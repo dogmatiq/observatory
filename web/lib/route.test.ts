@@ -8,6 +8,8 @@ test.each([
 	["/clusters/abc-123/", { page: "cluster", id: "abc-123" }],
 	["/clusters/a%20b", { page: "cluster", id: "a b" }],
 	["/fixture", { page: "fixture" }],
+	["/states", { page: "states" }],
+	["/states/x", { page: "not-found" }],
 	["/clusters", { page: "not-found" }],
 	["/clusters/abc/handlers", { page: "not-found" }],
 	["/clusters/%E0%A4%A", { page: "not-found" }],

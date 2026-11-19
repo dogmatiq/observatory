@@ -17,6 +17,9 @@ export const presenceTime = 400;
  *
  * `shape` is how the part makes room: "block" grows and shrinks in height, and
  * "fade" only fades, for a part that is placed by something else.
+ *
+ * A part that has grown in is not clipped, so that what is in it may reach outside
+ * its box.
  */
 export function Presence({
 	children,
@@ -40,6 +43,21 @@ export function Presence({
 
 	const [mounted, setMounted] = useState(present);
 	const [open, setOpen] = useState(present);
+
+	// Whether the part has finished growing in, which is when what is in it may
+	// reach outside it. While it grows or shrinks, it is clipped to its size.
+	const [settled, setSettled] = useState(present);
+	const was = useRef(present);
+	useEffect(() => {
+		if (was.current === present) {
+			return;
+		}
+
+		was.current = present;
+		setSettled(false);
+		const timer = window.setTimeout(() => setSettled(true), presenceTime);
+		return () => window.clearTimeout(timer);
+	}, [present]);
 
 	useEffect(() => {
 		if (present) {
@@ -83,7 +101,14 @@ export function Presence({
 				className,
 			)}
 		>
-			<div className="min-h-0 overflow-hidden">{kept.current}</div>
+			<div
+				className={cn(
+					"min-h-0",
+					open && settled ? "overflow-visible" : "overflow-hidden",
+				)}
+			>
+				{kept.current}
+			</div>
 		</div>
 	);
 }

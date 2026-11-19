@@ -4,25 +4,38 @@ import type { ReactNode, SVGProps } from "react";
  * The names of the icons.
  *
  * An icon stands for a kind of thing in the engine, such as an event or a
- * queue, and its name is the name of that thing.
+ * queue, and its name is the name of that thing, or for an action or a state,
+ * such as copying or working.
  */
 export type IconName =
 	| "aggregate"
+	| "check"
 	| "cluster"
 	| "command"
+	| "copy"
 	| "deadline"
 	| "event"
+	| "event-stream"
 	| "integration"
 	| "minimize-concurrency"
 	| "process"
 	| "projection"
-	| "queue";
+	| "queue"
+	| "spinner";
 
 /**
  * The shapes of the icons, which are from Lucide (https://lucide.dev) 1.64.0,
  * under the ISC license.
  */
 const shapes: Record<IconName, ReactNode> = {
+	check: <path d="M20 6 9 17l-5-5" />,
+	spinner: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
+	copy: (
+		<>
+			<rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+			<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+		</>
+	),
 	cluster: (
 		<>
 			<rect x="16" y="16" width="6" height="6" rx="1" />
@@ -64,6 +77,13 @@ const shapes: Record<IconName, ReactNode> = {
 	),
 	event: (
 		<path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" />
+	),
+	"event-stream": (
+		<>
+			<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+			<path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+			<path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+		</>
 	),
 	aggregate: (
 		<>

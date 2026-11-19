@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import {
 	type BarSegment,
 	layoutSegments,
 	type NodeSegment,
+	type SegmentAbout,
 } from "../lib/segments.ts";
+import { Identifier } from "./Identifier.tsx";
+import { Popover } from "./Popover.tsx";
+import { SegmentCard } from "./SegmentCard.tsx";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
 /**
@@ -67,13 +71,57 @@ function useKept<T>(segments: readonly T[]): { extent: number; kept: T[] } {
 }
 
 /**
+ * describe returns what the popover of a segment holds, which is the segment's
+ * title, or, for a segment of one thing that has an ID, the title without the ID,
+ * followed by the ID as an [Identifier].
+ */
+function describe(s: {
+	title: string;
+	lead?: string;
+	id?: string;
+	about?: SegmentAbout;
+}): ReactNode {
+	if (s.about !== undefined) {
+		return <SegmentCard about={s.about} />;
+	}
+
+	return s.id === undefined ? (
+		s.title
+	) : (
+		<>
+			{s.lead} <Identifier id={s.id} />
+		</>
+	);
+}
+
+/**
+ * useHovered returns the position of the segment that the pointer is on, if any,
+ * and the handlers to give the element of each segment.
+ */
+function useHovered() {
+	const [hovered, setHovered] = useState<number>();
+
+	return {
+		hovered,
+		handlers: (i: number) => ({
+			onPointerEnter: () => setHovered(i),
+			onPointerLeave: () => setHovered((h) => (h === i ? undefined : h)),
+		}),
+	};
+}
+
+/**
  * StackedBar draws a bar like a disk usage bar, whose segments are proportional
  * to their values and are in the given order, with a gap between them.
  *
- * Hovering a segment shows its title. The bar as a whole is described to
- * assistive technology by the titles of all its segments. A bar with no segments
- * is an empty track, which keeps its place so that the page does not move when
- * it fills.
+ * Pointing at a segment shows its title in a popover, and the segment rises out
+ * of the bar by a pixel above and below, at full opacity. The bar as a whole is
+ * described to assistive technology by the titles of all its segments. A bar with
+ * no segments is an empty track, which keeps its place so that the page does not
+ * move when it fills.
+ *
+ * A rising segment reaches outside the bar, so whatever holds the bar must not
+ * clip it.
  */
 export function StackedBar({
 	segments,
@@ -85,6 +133,7 @@ export function StackedBar({
 	const rects = layoutSegments(segments);
 	const described = segments.length > 0;
 	const { extent, kept } = useKept(segments);
+	const { hovered, handlers } = useHovered();
 
 	// A segment that has no width, or has gone, is drawn with none, where it
 	// would begin, so that it can shrink away and grow back.
@@ -100,46 +149,52 @@ export function StackedBar({
 	});
 
 	return (
-		<svg
+		<div
 			className={cn(
-				"block h-2 w-full overflow-hidden rounded bg-sunk",
+				"relative block h-2 w-full rounded bg-sunk",
 				subsystemColors[subsystem],
 			)}
-			viewBox="0 0 100 10"
-			preserveAspectRatio="none"
-			role={described ? "img" : undefined}
-			aria-label={
-				described ? segments.map((s) => s.title).join("; ") : undefined
-			}
-			aria-hidden={described ? undefined : true}
+			{...(described
+				? { role: "img", "aria-label": segments.map((s) => s.title).join("; ") }
+				: { "aria-hidden": true })}
 		>
 			{drawn.map((rect, i) => {
 				const s = segments[i];
 				const look = kept[i];
 
 				return (
-					<rect
+					<Popover
 						// A segment has no identity but its position.
 						// biome-ignore lint/suspicious/noArrayIndexKey: see above
 						key={i}
-						className={cn(
-							look?.isOther
-								? "fill-faint"
-								: cn("fill-(--subsystem)", shades[i]),
-							// A segment moves and grows as its value changes, and a new one
-							// grows from nothing.
-							"transition-[x,width] duration-500 ease-out starting:w-0 motion-reduce:transition-none",
-						)}
-						x={rect.x.toFixed(3)}
-						y="0"
-						width={rect.width.toFixed(3)}
-						height="10"
+						content={s && describe(s)}
+						interactive={s?.id !== undefined || s?.about !== undefined}
+						card={s?.about !== undefined}
 					>
-						{s && <title>{s.title}</title>}
-					</rect>
+						<div
+							className={cn(
+								"absolute transition-[left,width,top,bottom,opacity] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out] motion-reduce:transition-none",
+								look?.isOther ? "bg-faint" : "bg-(--subsystem)",
+								// The segments at the two ends of the bar have its rounded
+								// ends, which stay as round as the segment is high when it
+								// rises.
+								rect.x < 0.001 && "rounded-l-full",
+								rect.x + rect.width > 99.999 && "rounded-r-full",
+								// A segment rises out of the bar, and then has no shade.
+								hovered === i
+									? "-top-px -bottom-px opacity-100 duration-200"
+									: cn("top-0 bottom-0", !look?.isOther && shades[i]),
+							)}
+							style={{
+								left: `${rect.x.toFixed(3)}%`,
+								width: `${rect.width.toFixed(3)}%`,
+							}}
+							{...(s ? handlers(i) : {})}
+						/>
+					</Popover>
 				);
 			})}
-		</svg>
+		</div>
 	);
 }
 
@@ -149,44 +204,63 @@ export function StackedBar({
  *
  * A node that owns no workloads has a small square segment instead. The
  * segments shrink in proportion to make room for the gaps and the squares.
+ *
+ * Pointing at a segment shows its title in a popover, and the segment rises out
+ * of the bar by a pixel above and below, at full opacity, so whatever holds the
+ * bar must not clip it.
  */
 export function NodeBar({ segments }: { segments: NodeSegment[] }) {
 	// A segment that has gone shrinks away before it is removed.
 	const { extent, kept } = useKept(segments);
+	const { hovered, handlers } = useHovered();
 
 	return (
-		<div className="flex h-2 gap-0.5 overflow-hidden rounded bg-sunk">
+		<div className="flex h-2 gap-0.5 rounded bg-sunk">
 			{Array.from({ length: extent }, (_, i) => {
 				const s = segments[i];
 
 				return (
-					<div
+					<Popover
 						// A segment has no identity but its position.
 						// biome-ignore lint/suspicious/noArrayIndexKey: see above
 						key={i}
-						className={cn(
-							"min-w-0 bg-cluster",
-							s === undefined || s.percent !== undefined
-								? "flex-initial"
-								: "flex-none",
-							// A segment grows and shrinks as its share changes, and a new one
-							// grows from nothing.
-							"transition-[width,margin] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out]",
-							s === undefined && "-ml-0.5",
-						)}
-						style={{
-							width:
-								s === undefined
-									? 0
-									: s.percent === undefined
-										? 8
-										: `${s.percent.toFixed(3)}%`,
-							opacity: kept[i]?.opacity,
-						}}
-						{...(s
-							? { role: "img", "aria-label": s.title, title: s.title }
-							: { "aria-hidden": true })}
-					/>
+						content={s && describe(s)}
+						interactive={s?.id !== undefined || s?.about !== undefined}
+						card={s?.about !== undefined}
+					>
+						<div
+							className={cn(
+								"min-w-0 bg-cluster",
+								s === undefined || s.percent !== undefined
+									? "flex-initial"
+									: "flex-none",
+								// The segments at the two ends of the bar have its rounded
+								// ends, which stay as round as the segment is high when it
+								// rises.
+								i === 0 && "rounded-l-full",
+								i === segments.length - 1 && "rounded-r-full",
+								// A segment grows and shrinks as its share changes, and a new one
+								// grows from nothing.
+								"transition-[width,margin,opacity] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out]",
+								s === undefined && "-ml-0.5",
+								// A segment rises out of the bar, by the room that a negative
+								// margin gives a segment that stretches to the bar's height.
+								hovered === i && "-my-px duration-200",
+							)}
+							style={{
+								width:
+									s === undefined
+										? 0
+										: s.percent === undefined
+											? 8
+											: `${s.percent.toFixed(3)}%`,
+								opacity: hovered === i ? 1 : kept[i]?.opacity,
+							}}
+							{...(s
+								? { role: "img", "aria-label": s.title, ...handlers(i) }
+								: { "aria-hidden": true })}
+						/>
+					</Popover>
 				);
 			})}
 		</div>

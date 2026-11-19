@@ -20,11 +20,52 @@ export interface BarSegment {
 	/** The size of the segment, relative to the others. */
 	value: number;
 
-	/** Describes the segment, and is its tooltip. */
+	/** Describes the segment, and is its popover, unless it has an `id`. */
 	title: string;
+
+	/**
+	 * The title without the ID that ends it, for a segment of one thing that has
+	 * an ID, such as a queue. Its popover is this followed by the ID.
+	 */
+	lead?: string;
+
+	/** The full ID of the thing that the segment is of. */
+	id?: string;
+
+	/**
+	 * What the segment is of, for a popover that is a card about it. A segment
+	 * that has this is drawn as a card, and its `lead` and `id` are not used.
+	 */
+	about?: SegmentAbout;
 
 	/** True for the last segment, which merges all the smaller ones. */
 	isOther?: boolean;
+}
+
+/**
+ * SegmentAbout is what a card in the popover of a segment says about the thing
+ * that the segment is of.
+ */
+export type SegmentAbout = {
+	thing: "event-stream";
+	id: string;
+
+	/** The number of events on the stream. */
+	events: number;
+
+	/** The share of all the events that are on this stream, from 0 to 1. */
+	share: number;
+
+	/** What the bar is of: all the events, on all the streams. */
+	total: { events: number; streams: number };
+};
+
+/**
+ * ofThing returns the title, lead and ID of a segment that is of one thing, such
+ * as a queue, which has an ID. The title ends with the first part of the ID.
+ */
+function ofThing(lead: string, id: string) {
+	return { title: `${lead} ${shortId(id)}`, lead, id };
 }
 
 /**
@@ -69,8 +110,9 @@ const gap = 0.6;
 /**
  * layoutSegments returns where each segment goes on a bar that is 100 units
  * wide. A segment's width is proportional to its value, less a gap to the next
- * segment, and a segment that has no width is left out of the result, which is
- * indexed as the segments are, with `undefined` for each.
+ * segment that has a width, so the last one that has a width has no gap after it,
+ * and reaches the end of the bar. A segment that has no width is left out of the
+ * result, which is indexed as the segments are, with `undefined` for each.
  */
 export function layoutSegments(
 	segments: BarSegment[],
@@ -82,11 +124,12 @@ export function layoutSegments(
 		return segments.map(() => undefined);
 	}
 
+	const last = segments.findLastIndex((s) => s.value > 0);
 	let x = 0;
 
 	return segments.map((s, i) => {
 		const width = (s.value / total) * 100;
-		const drawn = i < segments.length - 1 ? width - gap : width;
+		const drawn = i < last ? width - gap : width;
 		const rect = drawn > 0 ? { x, width: drawn } : undefined;
 		x += width;
 		return rect;
@@ -99,11 +142,19 @@ export function layoutSegments(
  */
 export function streamSegments(streams: SpreadPart[]): BarSegment[] {
 	const largestFirst = [...streams].sort((a, b) => b.size - a.size);
+	const events = streams.reduce((sum, s) => sum + s.size, 0);
 
 	return limitSegments(
 		largestFirst.map((s) => ({
 			value: s.size,
-			title: `${formatCompact(s.size)} events on event stream ${shortId(s.id)}`,
+			...ofThing(`${formatCompact(s.size)} events on event stream`, s.id),
+			about: {
+				thing: "event-stream",
+				id: s.id,
+				events: s.size,
+				share: events === 0 ? 0 : s.size / events,
+				total: { events, streams: streams.length },
+			},
 		})),
 		(total, count) =>
 			`${formatCompact(total)} events on ${count} other event streams`,
@@ -118,7 +169,7 @@ export function queueSegments(queues: SpreadPart[]): BarSegment[] {
 	return limitSegments(
 		queues.map((q) => ({
 			value: q.size,
-			title: `${countOf(q.size, "message", "messages")} in queue ${shortId(q.id)}`,
+			...ofThing(`${countOf(q.size, "message", "messages")} in queue`, q.id),
 		})),
 		(total, count) =>
 			`${countOf(total, "message", "messages")} in ${count} other queues`,
@@ -138,10 +189,14 @@ export function bindingSegments(
 	return limitSegments(
 		bindings.map((b) => ({
 			value: b.instances,
-			title:
-				b.id === undefined
-					? `${countOf(b.instances, "instance", "instances")} with no ${singular} yet`
-					: `${countOf(b.instances, "instance", "instances")} on ${singular} ${shortId(b.id)}`,
+			...(b.id === undefined
+				? {
+						title: `${countOf(b.instances, "instance", "instances")} with no ${singular} yet`,
+					}
+				: ofThing(
+						`${countOf(b.instances, "instance", "instances")} on ${singular}`,
+						b.id,
+					)),
 		})),
 		(total, count) =>
 			`${countOf(total, "instance", "instances")} on ${count} other ${plural}`,
@@ -158,7 +213,17 @@ export const shadeOpacities = [1, 0.8, 0.64, 0.5, 0.38, 0.28];
  * NodeSegment is one live node's part of the bar of workloads.
  */
 export interface NodeSegment {
+	/** Describes the segment, as [BarSegment.title] does. */
 	title: string;
+
+	/** The title without the ID that ends it, as [BarSegment.lead] is. */
+	lead: string;
+
+	/** The full ID of the node. */
+	id: string;
+
+	/** What the segment is of, as [BarSegment.about] is. */
+	about?: SegmentAbout;
 
 	/** How opaque the segment is, which gives its shade. */
 	opacity: number;
@@ -196,7 +261,10 @@ export function nodeSegments(nodes: LiveNode[]): NodeSegment[] {
 	const total = nodes.reduce((sum, n) => sum + n.workloads, 0);
 
 	return nodes.map((n, i) => ({
-		title: `${countOf(n.workloads, "workload", "workloads")} owned by node ${shortId(n.id)}`,
+		...ofThing(
+			`${countOf(n.workloads, "workload", "workloads")} owned by node`,
+			n.id,
+		),
 		opacity: nodeOpacity(i, nodes.length),
 		percent: n.workloads > 0 ? (n.workloads / total) * 100 : undefined,
 	}));
@@ -220,7 +288,10 @@ export function handlerNodeSegments(
 	const noun = kind === "integration" ? "commands" : "events";
 
 	return busy.map((n, i) => ({
-		title: `${formatCompact(Math.round(n.rate * 60))} ${noun}/min on node ${shortId(n.id)}`,
+		...ofThing(
+			`${formatCompact(Math.round(n.rate * 60))} ${noun}/min on node`,
+			n.id,
+		),
 		opacity: nodeOpacity(i, busy.length),
 		percent: (n.rate / total) * 100,
 	}));

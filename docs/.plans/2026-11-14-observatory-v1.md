@@ -306,8 +306,7 @@ this list up to date as the plan evolves: add each new difference when it is fou
   the aggregate instances per event stream and the unhandled events of each handler, if runkit can't count them within
   its budget.
 - The cards and the queues tile use the spec's words, which keep their meaning though the grammar bends. A message kind on
-  its own, such as "commands", "events", "deadlines" or "messages", is the ones that are pending, and its tooltip, later its
-  popover, says "pending". The prototype said "command backlog", "event backlog" and "deadlines". Spelling "pending" out on
+  its own, such as "commands", "events", "deadlines" or "messages", is the ones that are pending, and its popover says "pending". The prototype said "command backlog", "event backlog" and "deadlines". Spelling "pending" out on
   every label made the process card's stats too wide for one row. "In progress" is the spec's word too. A process's
   instances that are bound to no queue are the last segment of its bar and are counted in "in progress".
 - Failing messages are the red "+N" after the number that waits, such as "24 +1", on the queues tile and on a handler
@@ -319,7 +318,7 @@ this list up to date as the plan evolves: add each new difference when it is fou
   views, and the cluster's own tile must not look healthy when its cluster isn't. The icon of each kind of handler has
   the color of the sticky note of the kind in event storming, where the prototype colored it by the messages that the
   kind works with: yellow for an aggregate, lilac for a process, pink for an integration and a lime green for a projection, which keeps it apart from the cluster's teal-green.
-- The tooltip of the messages removed per minute doesn't say that the figure comes from PostgreSQL's table statistics,
+- The popover of the messages removed per minute doesn't say that the figure comes from PostgreSQL's table statistics,
   because the Observatory reads no database.
 - Counts are exact and have no limit, so the Observatory never shows the prototype's "at least" form with a plus sign.
 - The prototype shows "Reading the database for the first time" before its first reading. The Observatory doesn't read a
@@ -328,9 +327,37 @@ this list up to date as the plan evolves: add each new difference when it is fou
 ## Changes wanted to the cluster view
 
 What has been asked for, in the order it came, to be settled before the site and universe views, because they reuse its
-parts. Nothing here is built yet.
+parts. An item that says "Done" is built.
 
-- Popovers in place of title text, for the bars and for everything else that has a tooltip.
+- Popovers in place of title text, for the bars and for everything else that has a tooltip. Done: no element of the
+  page has a `title` any more. A popover appears after the pointer has rested on an element for 0.3 s, at once if another
+  went less than 0.5 s before, so that moving along a bar shows each segment's. It is above the element, centered on the
+  pointer, or below it if there is no room, and inside the window. It also appears for the keyboard's focus, and goes with
+  the pointer, a press, Escape and a scroll. A finger doesn't show one. Only one is open at a time. The pointer can cross to a
+  popover, which stays while the pointer is on it and for 0.2 s after the pointer leaves it or its element. A popover can
+  hold something to click, such as the copy button of an identifier, and a keyboard can't reach that yet, because the
+  bar segments that open it can't take focus.
+  - In a popover, prose about whether the figure can be given at the moment, and why, is a status, with an icon and a
+    tinted ground under the rest, so it is clearly about the ability to give the figure, and not about what the figure
+    means. The rate's card has one when the rate is lost or unavailable, which says that the samples are being averaged,
+    with a turning icon, because the rate is being worked out.
+  - Every element that is reviewed is shown in every state that it can be in, side by side, at `/states`, because the demo
+    reaches the unusual ones only by chance. A new element gets its section there before it is presented. A button at
+    the top of the page plays the animations again.
+  - What each popover says, and the hover state of its element, are being settled one element at a time, by using them,
+    and the hover state of an element follows from its content. Done: the bar segments, whose popovers show the thing
+    that a segment is of with its identifier (below). The stats have a chip behind them when pointed at, because a stat
+    is a group of elements to read as a whole, and the chip is not for a single element, such as a name. To do, in this
+    order: the kind icon, which would define the kind of handler, not repeat the kind; every stat, including "instances"
+    and "in progress", which have a chip and no popover now, with the failing count in it; the tile figures, which would
+    give the exact value, and the window of a rate, and the tile icon, whose popover would go; the handler name, whose
+    popover would show its key as an identifier; the application name and the link of a cluster, whose popovers would
+    show their identifiers; the concurrency icon, whose question-mark pointer would go.
+- A hovered bar segment rises out of the bar, by a pixel above and below, and goes to full opacity, so its shade is
+  cancelled. Done, for every bar. Nothing else on the page changes. A smear that faded down over the chart and an underline
+  below the segment were tried first, and neither fit the page's style. A rising segment is outside its bar, so the
+  segments are boxes, and the two at the ends of the bar have its rounded corners, and a part of the page that holds a
+  bar doesn't clip once it has grown in.
 - The same for a sparkline: pointing at a place on it shows the value there.
   - A sparkline scrolls, so the point under the pointer moves. Until a click, the readout is whatever is under the
     pointer. A click anchors it to that time, and the cursor then moves with the graph.
@@ -348,6 +375,8 @@ parts. Nothing here is built yet.
   the site view will use and to the event streams' indigo, to be judged when they are side by side on a page.
 - The color mark that an identifier gets (below) comes from a palette that we control and that is reasonably large, so
   that two identifiers rarely share one.
+  Done for the bar segments: an identifier is a color mark, its first eight characters in monospace type, and a button
+  that copies the whole ID. The 48 colors are 24 hues in two lightnesses, chosen by a hash of the ID.
 - Identifiers. A UUID is inevitable on the page and it irks. It needs a special treatment, so that a person can tell
   one from another and knows what it is, without the 36 characters.
 - A handler card's chart is events recorded or handled, so the card of an integration that records no events, such as the
@@ -384,6 +413,53 @@ parts. Nothing here is built yet.
   needn't: an engine that lets one stream run hotter than the rest limits its throughput by how streams work, because a
   stream is consumed in order, so unevenness is a sign of harm whatever the engine's policy. It is a cue, and not an
   Issue, until it is clear that a rule for it would be about something that is already a problem.
+- The icon of a tile or a stat should be the entity that its number is about. The Events tile's headline, events per
+  minute, and the Queues tile's, messages waiting, are both about messages, so both would have a message icon. There is
+  none yet, only the icons for an event, a command and a deadline, so the Events tile has the event icon and the Queues
+  tile has the queue's, which is a container, and the mismatch stays until there is one.
+- A count of things that can't be divided, such as events, is never shown as a fraction. A rate of them is a whole number
+  per minute, and if that would be less than one, a whole number per hour, and then per day, so the unit of time scales
+  and not the number. Done for the headline of the events tile, which says "events per hour" below one a minute. Not yet
+  done for the queues tile's messages removed per minute or for the titles of the node bars, which round to whole numbers
+  per minute and so show 0 for a slow rate. Where it may fall down: a rate that is near one a minute would change its
+  unit back and forth, which would want a margin before it changes; the rate is an average over the last minute, so below
+  one a minute it is really whether there was an event in that minute, and a longer window would be needed for it to
+  mean more; and the nodes in one bar could have different units, which are hard to compare.
+- A figure ramps: when its number changes, it passes through the values in between, quickly, and doesn't skip, so a
+  change reads as a ramp and not as a jump. A figure is a number alone in its element, or leading its unit or noun, such
+  as "2 streams". A number inside a sentence, one with a verb, changes at once, and so does text for screen readers.
+  Done, with `useRamped`, for the numbers of the tiles, the stats and failing counts of the cards, and the figures of the
+  event stream's card. A change of one takes 0.16 s, and each further step adds 0.04 s, up to half a second, with the
+  last steps slower. A whole number ramps through whole numbers. It doesn't ramp when a number is first shown, when it
+  is in other units, such as per hour and per minute, and for a viewer who asks for less motion. A number that comes
+  back after it was lost ramps from the last value that it showed, and a lost figure ramps down to its zero when its
+  minute is up, because the ramp only eases the jump: the blur is what says that the zero isn't a measure. It is not the
+  flip-clock style that was tried and dropped, which animated the digits. It is on the states page, with buttons, which also lose a figure, expire it now and bring it back. The zero of a rate
+  that was lost is in the unit that the rate was in. The zero is the colour of the text while the figure ramps down to it, and then fades to muted. The numbers of a
+  handler's card that recede at zero do the same, and get their colour back as they rise from it. Both are on the states
+  page, with buttons. A
+  failing count that falls to zero ramps to "+0", stays for a second, and then shrinks away, so that a count that
+  goes up and down doesn't come and go. A stream's card keeps the explanation of the bar when there is one event, and says that there is only 1
+  event, so the segment is the whole bar.
+- A lost rate, undecided. A node joins or reconnects often in some clusters, and the rate pauses for a few seconds each
+  time, because it is the sum over the nodes and a node's rate needs a few seconds of readings. The suggestion is to sum
+  the nodes that have enough readings, so that the rate never pauses for a joined node, and dips by that node's share
+  until it counts, and to say so in the card's status, so that "lost" means that no node has enough readings, which is
+  at the start and not often after. A node that leaves stops counting at once either way.
+- Places for the `Glitch`, which James likes and which is in use in one place so far, a lost figure just before its
+  zero: somewhere that needs attention, kept for the
+  exceptional so that it keeps its meaning. Candidates so far: the cluster tile's "no live nodes", the notice that updates
+  have stopped because the Observatory can't be reached, a node leaving the cluster, a handler's failing count when it
+  first rises, and the health Issues when the rules come back. It would be a short burst and not a constant shake, and
+  with reduced motion only the split. More are added as they are found.
+- The prepositions of the page, proposed and not settled. The spec's own words are kept: events are "on" an event
+  stream, messages are "in" a queue, instances are "bound to" an event stream or a queue, and workloads are "owned by" a
+  node. A distribution is "across" the things that it is of, and "between" is not used, because it means two. The places
+  that differ are the Events tile's "events in 2 streams", which would be "on", and the titles and popovers of the
+  instance bars, which say "on event stream" for what is bound.
+- Some bars show load at this moment, such as the bar of the nodes that handled a handler's messages, and others show
+  values that build up over a long time, such as the bindings of instances. Both are worth having, so a card for which
+  both make sense may need to show both. For later.
 - A bar of the nodes that handled an integration's or a projection's messages could use the per-node rates of what the
   handler handled. The data is there, since each node reports its own totals, and Combine adds them up. A share of the
   rate would be volatile, so the shares would be smoothed with an exponentially weighted average. It says who did the
@@ -399,7 +475,7 @@ parts. Nothing here is built yet.
   rule that is called Backlog is about due messages, so it takes the spec's word "due" when the rules come back.
 - The minimize-concurrency icon on a handler card shows a question-mark pointer when pointed at. An information icon would
   be the usual cue for a tooltip, but this is already a small icon, so the pointer should not suggest more help is behind
-  it. A proper popover gives it its explanation.
+  it. A proper popover gives it its explanation. Done, with the popover above.
 
 ### What a page shows when a metric isn't available
 
@@ -409,9 +485,21 @@ responds to what the nodes can report and doesn't stretch what is available into
 with nothing left is not shown. A slot has one candidate for now. Letting a slot fall back to a similar metric is
 [dogmatiq/observatory#3](https://github.com/dogmatiq/observatory/issues/3).
 
-- A metric that is supported and has no value yet is not a missing slot. A rate that has never been known is a dash,
-  and one that is lost keeps its last value, fading to the muted colour, the one of a number that is zero, and becomes a
-  dash after a minute.
+- A metric that is supported and has no value yet is not a missing slot. A rate that has never been known is a zero in
+  the muted colour, as blurred as a figure gets, described to assistive technology as "not available". A placeholder
+  that is not a digit was tried as a dash, an oval, a rounded block and others, and none was liked, so it is a zero.
+  There is no place yet where an infinity symbol makes more sense. One that is lost keeps its last value, in the same
+  font, and the lost state is trust falling: it starts as the live figure was, and gets blurrier, steadily, over the
+  minute that the value is kept, and in the last half second it glitches, and it ramps down to the zero when the time is up. When the rate returns, it gets its trust
+  back in a moment. The blur was chosen over a grid, scanlines, and a glitch for the whole minute. The glitch is the
+  `Glitch` component, which plays once, as a burst, just before the zero: the top half and the bottom half of the figure slip sideways on their own,
+  with red and cyan shadows that drift apart. Dot-matrix type, with its own glyphs, was tried and dropped, because the
+  font must stay the same, and a halftone of dots over the digits looked like a texture. It was a dash, and muting
+  alone, and then dots that dimmed and shrank, whose pace was uneven.
+  - The card of a rate says what it is and that it is averaged over the last minute in every state, and under that a
+    status that says what is happening with the samples and what follows: "There aren't enough samples yet, so the average
+    can't be calculated." when there is none yet, which does not say how long that takes, because nodes can be flaky, and
+    "No new samples are arriving, so this average is out of date." when it is lost.
 - A part that begins or ends while a page is open grows in or shrinks away, with some animation, and not necessarily the
   same one for every part. Stats on a card appear and go without one so far.
 - The state document says which: a part that no node supports is absent, and a rate that is supported and not yet known

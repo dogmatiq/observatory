@@ -62,3 +62,22 @@ test("a part that comes back while it is shrinking away stays", () => {
 	expect(screen.getByText("part")).toBeDefined();
 	expect(wrapper()?.className).toContain("opacity-100");
 });
+
+test("a part is clipped to its size while it grows in, and not once it has", () => {
+	const { rerender } = render(<Presence>{undefined}</Presence>);
+	rerender(<Presence>part</Presence>);
+
+	const box = () => screen.getByText("part");
+	expect(box()?.className).toContain("overflow-hidden");
+
+	act(() => {
+		vi.advanceTimersByTime(presenceTime + 1);
+	});
+	expect(box()?.className).toContain("overflow-visible");
+});
+
+test("a part that is there when it first draws is not clipped", () => {
+	render(<Presence>part</Presence>);
+
+	expect(screen.getByText("part").className).toContain("overflow-visible");
+});

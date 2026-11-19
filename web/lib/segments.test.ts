@@ -58,7 +58,7 @@ test("the handlers' bars are what the prototype drew", () => {
 	).toEqual(want(golden.bars.statementSchedule));
 });
 
-test("the segments carry the prototype's tooltips", () => {
+test("the segments carry the prototype's titles", () => {
 	expect(streamSegments(overview.events.streams).map((s) => s.title)).toEqual(
 		golden.bars.events.map((r) => r.title),
 	);
@@ -67,7 +67,7 @@ test("the segments carry the prototype's tooltips", () => {
 	);
 });
 
-test("the nodes' bar has the prototype's widths and tooltips", () => {
+test("the nodes' bar has the prototype's widths and titles", () => {
 	const segments = nodeSegments(overview.cluster.nodes);
 	expect(segments.map((s) => `${(s.percent ?? 0).toFixed(3)}%`)).toEqual(
 		golden.nodeWidths,
@@ -111,7 +111,7 @@ test("six segments are not merged", () => {
 	expect(limitSegments(six, () => "")).toEqual(six);
 });
 
-test("an instance that is bound to nothing yet has its own tooltip", () => {
+test("an instance that is bound to nothing yet has its own title", () => {
 	const [segment] = bindingSegments(
 		[{ id: undefined, instances: 2 }],
 		"event stream",
@@ -141,6 +141,17 @@ test("the last segment has no gap after it", () => {
 	]);
 	expect(a).toEqual({ x: 0, width: 49.4 });
 	expect(b).toEqual({ x: 50, width: 50 });
+});
+
+test("a segment that has no value after the last one that has doesn't take away its end of the bar", () => {
+	const [a, b, c] = layoutSegments([
+		{ value: 1, title: "" },
+		{ value: 1, title: "" },
+		{ value: 0, title: "" },
+	]);
+	expect(a).toEqual({ x: 0, width: 49.4 });
+	expect(b).toEqual({ x: 50, width: 50 });
+	expect(c).toBeUndefined();
 });
 
 function nodesOf(count: number, emptyLast = false) {
@@ -246,4 +257,50 @@ test("the segments of the nodes of a handler step down in shade with the number 
 			"integration",
 		).map((s) => s.opacity),
 	).toEqual([1, 0.88, 0.76, 0.64, 0.52, 0.4, 0.28]);
+});
+
+test("a segment of one thing has the thing's ID, and a title that ends with its first part", () => {
+	const id = "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10";
+	const [segment] = queueSegments([{ id, size: 4 }]);
+
+	expect(segment).toMatchObject({
+		title: "4 messages in queue 8b0081fd",
+		lead: "4 messages in queue",
+		id,
+	});
+});
+
+test("a segment of no one thing has no ID", () => {
+	const segments = streamSegments(
+		Array.from({ length: 8 }, (_, i) => ({
+			id: `${i}`.repeat(8),
+			size: 8 - i,
+		})),
+	);
+
+	expect(segments.at(-1)?.id).toBeUndefined();
+});
+
+test("a segment of an event stream says how much of the events it holds", () => {
+	const segments = streamSegments([
+		{ id: "aaaaaaaa-1", size: 1 },
+		{ id: "bbbbbbbb-2", size: 3 },
+	]);
+
+	expect(segments.map((s) => s.about)).toEqual([
+		{
+			thing: "event-stream",
+			id: "bbbbbbbb-2",
+			events: 3,
+			share: 0.75,
+			total: { events: 4, streams: 2 },
+		},
+		{
+			thing: "event-stream",
+			id: "aaaaaaaa-1",
+			events: 1,
+			share: 0.25,
+			total: { events: 4, streams: 2 },
+		},
+	]);
 });

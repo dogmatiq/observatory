@@ -59,6 +59,56 @@ function roundToTenth(v: number): string {
 }
 
 /**
+ * formatPercent returns a share, from 0 to 1, as a percentage that is a whole
+ * number, or has one decimal place below 10%. A share that is above 0 is never
+ * shown as 0%, and one that is below 1 is never shown as 100%, so that they say
+ * that there is something else.
+ */
+export function formatPercent(share: number): string {
+	const percent = share * 100;
+
+	if (share >= 1) {
+		return "100%";
+	}
+	if (share > 0 && percent < 1) {
+		return "<1%";
+	}
+	if (percent >= 99.5) {
+		return ">99%";
+	}
+	if (Math.round(percent * 10) / 10 < 10) {
+		return `${(Math.round(percent * 10) / 10).toFixed(1)}%`;
+	}
+	return `${Math.round(percent)}%`;
+}
+
+/** The unit of time that a rate is given per. */
+export type RatePer = "minute" | "hour" | "day";
+
+/**
+ * scaleRate returns a rate of things that can't be divided, such as events, as a
+ * whole number per minute, or, if that would be less than one, per hour, or, if
+ * that would be less than one too, per day. A rate is never a fraction of a thing:
+ * the unit of time is scaled instead. A rate of none is "0 per minute".
+ */
+export function scaleRate(perMinute: number): { amount: number; per: RatePer } {
+	const units: [RatePer, number][] = [
+		["minute", 1],
+		["hour", 60],
+		["day", 1440],
+	];
+
+	for (const [per, factor] of units) {
+		const amount = Math.round(perMinute * factor);
+		if (amount >= 1) {
+			return { amount, per };
+		}
+	}
+
+	return { amount: 0, per: "minute" };
+}
+
+/**
  * nounFor returns the singular form of a noun if n is 1, and the plural form
  * otherwise.
  */

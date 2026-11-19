@@ -1,8 +1,11 @@
+import { useRef } from "react";
 import {
 	countOf,
 	formatCompact,
 	formatNumber,
 	nounFor,
+	type RatePer,
+	scaleRate,
 } from "../lib/format.ts";
 import { heartbeatLevel } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
@@ -13,11 +16,14 @@ import {
 } from "../lib/segments.ts";
 import type { OverviewData } from "../model.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-import { Figure } from "./Figure.tsx";
+import { Figure, useKept } from "./Figure.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
+import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
+import { Ramped } from "./Ramped.tsx";
+import { RateCard } from "./RateCard.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 
@@ -89,7 +95,11 @@ export function Overview({
 	);
 }
 
-function EventsTile({
+/**
+ * EventsTile is the events tile, whose headline is the events per minute, or the
+ * number of events if no node reports the rate.
+ */
+export function EventsTile({
 	data,
 	href,
 }: {
@@ -98,6 +108,32 @@ function EventsTile({
 }) {
 	const { rate, streams } = data;
 	const total = streams?.reduce((sum, s) => sum + s.size, 0) ?? 0;
+
+	// A rate is a whole number of events per minute, or per hour or per day if it
+	// is less than one per minute, and is lost, as the figure shows it, for a
+	// minute at most. When it has been lost for that long, its zero is in the unit
+	// that it was in, so that the figure can ramp down to it.
+	const kept = useKept(rate?.perMinute);
+	const scaled =
+		rate?.perMinute === undefined ? undefined : scaleRate(rate.perMinute);
+	const lastPer = useRef<RatePer>("minute");
+	if (kept.value !== undefined) {
+		lastPer.current = scaleRate(kept.value).per;
+	}
+	const per = lastPer.current;
+
+	// The number and the words beside it both have the card of the rate.
+	const rateCard = (
+		<RateCard
+			subsystem="streams"
+			icon="event"
+			kind="Event rate"
+			description="The rate at which the application is recording new events"
+			state={
+				kept.value === undefined ? "unavailable" : kept.lost ? "lost" : "known"
+			}
+		/>
+	);
 
 	// The tile shows what the nodes can tell it. Its headline is the events per
 	// minute, or, if no node supports that, how many events there are.
@@ -109,20 +145,36 @@ function EventsTile({
 			href={href}
 			value={
 				rate ? (
-					<Figure text={perMinute(rate.perMinute)} />
+					<Popover card content={rateCard}>
+						<span>
+							<Figure
+								number={scaled?.amount}
+								format={formatCompact}
+								unit={per}
+							/>
+						</span>
+					</Popover>
 				) : (
-					formatCompact(total)
+					<Ramped value={total} format={formatCompact} />
 				)
 			}
 			valueTitle={rate ? undefined : formatNumber(total)}
 			detail={
 				rate ? (
 					<>
-						<Noun>events per minute</Noun>
+						<Popover card content={rateCard}>
+							<span>
+								<Noun>{`events per ${per}`}</Noun>
+							</span>
+						</Popover>
 						{streams && (
 							<>
 								{", "}
-								<span title={formatNumber(total)}>{formatCompact(total)}</span>
+								<Popover content={formatNumber(total)}>
+									<span>
+										<Ramped value={total} format={formatCompact} />
+									</span>
+								</Popover>
 								{` ${nounFor(total, "event", "events")} in ${countOf(streams.length, "stream", "streams")}`}
 							</>
 						)}
@@ -146,16 +198,8 @@ function EventsTile({
 	);
 }
 
-/**
- * perMinute returns a rate as it is shown, which is rounded, or undefined if the
- * Observatory doesn't have the rate yet.
- */
-function perMinute(rate: number | undefined): string | undefined {
-	return rate === undefined ? undefined : formatCompact(Math.round(rate));
-}
-
-/** The tooltip of the number of messages removed per minute. */
-const removedPerMinuteTitle =
+/** What the popover of the number of messages removed per minute says. */
+const removedPerMinuteText =
 	"Messages removed from the queues per minute: those delivered, and deadlines removed when their process instance ended.";
 
 function QueuesTile({
@@ -174,6 +218,12 @@ function QueuesTile({
 	// per minute.
 	const healthy = Math.max(0, messages - data.failing);
 
+	// The rate of removal is a whole number.
+	const removedRate =
+		removed?.perMinute === undefined
+			? undefined
+			: Math.round(removed.perMinute);
+
 	return (
 		<MetricTile
 			subsystem="queues"
@@ -183,13 +233,15 @@ function QueuesTile({
 			value={
 				queues ? (
 					<>
-						{formatCompact(healthy)}
+						<Ramped value={healthy} format={formatCompact} />
 						<Failing count={data.failing} size="headline" />
 					</>
 				) : (
-					<span title={removedPerMinuteTitle}>
-						<Figure text={perMinute(removed?.perMinute)} />
-					</span>
+					<Popover content={removedPerMinuteText}>
+						<span>
+							<Figure number={removedRate} format={formatCompact} />
+						</span>
+					</Popover>
 				)
 			}
 			valueTitle={queues ? formatNumber(healthy) : undefined}
@@ -201,9 +253,11 @@ function QueuesTile({
 						{removed && (
 							<>
 								{", "}
-								<span title={removedPerMinuteTitle}>
-									<Figure text={perMinute(removed.perMinute)} />
-								</span>
+								<Popover content={removedPerMinuteText}>
+									<span>
+										<Figure number={removedRate} format={formatCompact} />
+									</span>
+								</Popover>
 								/min
 							</>
 						)}
@@ -250,7 +304,7 @@ function ClusterTile({
 			label="Cluster"
 			icon="cluster"
 			href={href}
-			value={String(data.nodes.length)}
+			value={<Ramped value={data.nodes.length} format={String} />}
 			detail={
 				data.nodes.length > 0 ? (
 					<>

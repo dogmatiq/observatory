@@ -15,6 +15,7 @@ import {
 	FakeEventSource,
 	stubBrowser,
 	stubEventSource,
+	tipOf,
 } from "./test-support.ts";
 
 beforeEach(() => {
@@ -59,6 +60,21 @@ function connect(source = FakeEventSource.live[0]) {
 	});
 }
 
+test("the states page shows each state of an element, including the ones that are errors", () => {
+	render(<App path="/states" />);
+
+	for (const state of [
+		"Known",
+		"Lost",
+		"Never known",
+		"Not supported",
+		"Unavailable",
+		"One stream",
+	]) {
+		expect(screen.getAllByText(state).length).toBeGreaterThan(0);
+	}
+});
+
 test("the fixture is the prototype's overview, with the Observatory's name as the page's heading", () => {
 	render(<App path="/fixture" />);
 
@@ -85,10 +101,10 @@ test("the brand links to the first page", () => {
 	).toBe("/");
 });
 
-test("the title bar says which application the page is about, and its key", () => {
+test("the title bar says which application the page is about, and its key", async () => {
 	render(<App path="/fixture" />);
 
-	expect(screen.getByText("statements").getAttribute("title")).toBe(
+	expect(await tipOf(screen.getByText("statements"))).toBe(
 		"Application statements, key d0137119-2660-4bc2-ab4c-bc156e08521c",
 	);
 });

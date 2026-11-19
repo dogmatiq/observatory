@@ -1,6 +1,7 @@
 import { cn } from "../lib/cn.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import { Logo } from "./Logo.tsx";
+import { Popover } from "./Popover.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 
 /**
@@ -50,12 +51,13 @@ export function TitleBar({
 					<span>Observatory</span>
 				</a>
 				{application && (
-					<span
-						className="font-medium whitespace-nowrap text-muted"
-						title={`Application ${application.name}, key ${application.key}`}
+					<Popover
+						content={`Application ${application.name}, key ${application.key}`}
 					>
-						{application.name}
-					</span>
+						<span className="font-medium whitespace-nowrap text-muted">
+							{application.name}
+						</span>
+					</Popover>
 				)}
 				{nav.length > 0 && (
 					<nav className="flex gap-0.5 overflow-x-auto [scrollbar-width:none] max-narrow:order-3 max-narrow:w-full max-narrow:flex-wrap">

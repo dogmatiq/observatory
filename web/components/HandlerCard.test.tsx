@@ -1,6 +1,7 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, expect, test, vi } from "vitest";
 import type { HandlerData, HandlerSummary } from "../model.ts";
+import { tipOf } from "../test-support.ts";
 import { HandlerCard } from "./HandlerCard.tsx";
 
 afterEach(cleanup);
@@ -75,14 +76,14 @@ test("an aggregate with one instance says so in the singular", () => {
 	expect(stats(container)).toHaveProperty("instance", "1");
 });
 
-test("an aggregate shows its active instances only when it is given them", () => {
+test("an aggregate shows its active instances only when it is given them", async () => {
 	const { container } = card("aggregate", {
 		instances: 5,
 		activeInstances: { count: 2, title: "Recently active" },
 	});
 
 	expect(stats(container)).toHaveProperty("active", "2");
-	expect(screen.getByTitle("Recently active")).toBeDefined();
+	expect(await tipOf(screen.getByText("active"))).toBe("Recently active");
 });
 
 test("a process shows the instances in progress, its events and its deadlines", () => {
@@ -103,15 +104,15 @@ test("a process shows the instances in progress, its events and its deadlines", 
 	});
 });
 
-test("a message kind on its own is the ones that are pending, and its tooltip says so", () => {
+test("a message kind on its own is the ones that are pending, and its popover says so", async () => {
 	card("process", {
 		schedulesDeadlines: true,
 		unhandledEvents: 1,
 		queuedMessages: 2,
 	});
 
-	expect(screen.getByTitle("events pending")).toBeDefined();
-	expect(screen.getByTitle("deadlines pending")).toBeDefined();
+	expect(await tipOf(screen.getByText("events"))).toBe("events pending");
+	expect(await tipOf(screen.getByText("deadlines"))).toBe("deadlines pending");
 });
 
 test("a process that schedules no deadlines has no deadlines or bar", () => {
@@ -169,6 +170,43 @@ test("when all that waits is failing, the number that doesn't is zero and recede
 	).toContain("0");
 });
 
+test("a number that falls to zero recedes once it has got there, and not while it ramps down", () => {
+	vi.useFakeTimers();
+	const handler = (instances: number): HandlerData => ({
+		key: "k",
+		name: "the-handler",
+		kind: "process",
+		summary: {
+			...quiet,
+			bindings: [{ id: "aaaaaaaa", instances }],
+		},
+	});
+	const { container, rerender } = render(<HandlerCard handler={handler(30)} />);
+	const faint = () => container.querySelector("span.text-faint");
+
+	// Nothing of the stats is faint but the other numbers that are zero.
+	expect(container.textContent).toContain("30");
+
+	rerender(<HandlerCard handler={handler(0)} />);
+	act(() => {
+		vi.advanceTimersByTime(80);
+	});
+	expect(container.textContent).not.toContain("30");
+	expect(container.textContent).toMatch(/\d+in progress/);
+	const progress = [...container.querySelectorAll("span.text-xs")].find(
+		(e) => e.textContent === "in progress",
+	)?.previousElementSibling;
+	expect(progress?.className).not.toContain("text-faint");
+
+	act(() => {
+		vi.advanceTimersByTime(1000);
+	});
+	expect(progress?.textContent).toBe("0");
+	expect(progress?.className).toContain("text-faint");
+	expect(faint()).not.toBeNull();
+	vi.useRealTimers();
+});
+
 test("a card with no failing messages does not say so", () => {
 	card("integration");
 
@@ -181,10 +219,13 @@ test("the handler's kind and whether it is disabled are shown", () => {
 	expect(screen.getByText("projection, disabled")).toBeDefined();
 });
 
-test("a handler that minimizes concurrency says so in a tooltip", () => {
+test("a handler that minimizes concurrency says so in a popover", async () => {
 	card("integration", {}, { minimizesConcurrency: true });
 
-	expect(screen.getByTitle(/^Minimize concurrency:/)).toBeDefined();
+	const icon = screen.getByText("integration").querySelector("svg");
+	expect(await tipOf(icon?.parentElement as Element)).toMatch(
+		/^Minimize concurrency:/,
+	);
 });
 
 test("a card is not a link unless it is given one", () => {
@@ -361,7 +402,7 @@ test("a chart has the color of the messages that it counts", () => {
 	);
 });
 
-test("the punctuation of a handler's name is muted, and the words are not", () => {
+test("the punctuation of a handler's name is muted, and the words are not, and a popover has the whole name", async () => {
 	render(
 		<HandlerCard
 			handler={{
@@ -373,8 +414,12 @@ test("the punctuation of a handler's name is muted, and the words are not", () =
 		/>,
 	);
 
-	const name = screen.getByTitle("statement-schedule.v2");
+	const card = screen.getByRole("article", { name: "statement-schedule.v2" });
+	const name = document.getElementById(
+		card.getAttribute("aria-labelledby") as string,
+	) as HTMLElement;
 	expect(name.textContent).toBe("statement-schedule.v2");
+	expect(await tipOf(name)).toBe("statement-schedule.v2");
 
 	const muted = [...name.querySelectorAll(".text-faint")].map(
 		(e) => e.textContent,
