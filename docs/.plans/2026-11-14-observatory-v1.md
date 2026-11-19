@@ -538,11 +538,29 @@ parts. An item that says "Done" is built.
   rate would be volatile, so the shares would be smoothed with an exponentially weighted average. It says who did the
   work, not who owns it. For a handler that minimizes concurrency, one node doing all the work is the healthy bar, which
   reverses what an even bar means.
-- Easter eggs for a sparkline with nothing to draw. Each would need to look unlike data, take no room, stay still under
-  a request for reduced motion, and appear only when a chart really is empty, never in place of the sign that a figure is
-  stale or unknown. A night sky of twinkling stars in the dark color mode was tried, with a shooting star, and parked: the
-  stars did not read well enough, and the shooting star was too obvious to be an easter egg. The idea stays. An easter egg
-  has to be subtle enough to be found by chance. It is in the history, at `3a30728`.
+- A tile or card with no chart has a sky in the room of the chart (`Sky`), and the tile or card keeps that room, so that the
+  bars of a row sit in one place. Of the options that were tried for the blank room (a short tile, the bar at the foot,
+  the bar as the chart, constellations, an orrery, an aurora, an observatory, an Earth-rise, radio dishes, a sundial and
+  an armillary sphere) the user chose these. In the dark color mode it is the night: stars that drift sideways very slowly
+  and twinkle, over opaque hills that drift a little faster. In the light mode it is the day: a pale wash of the tile's
+  color, thin cloud, and the same hills. In one sky of the page, the one that has been without a chart longest, there is
+  the moon in its real phase, with seas and craters that are only just there. It rises from behind the hills over eighteen
+  seconds when it comes to a sky, and passes to the next when its sky goes. In the day the cloud is in front of it. Its
+  popover is a card (`MoonCard`): its heading is the author's own word for the moon, with "the moon" after it in a lighter
+  style on the same line if the word is foreign, or just "Moon" for an English quote; then the phase of the moon; then
+  a quote about the moon, in a block quote, with the author and a link to the text, and, if the quote is not in English,
+  its translation in a block quote with the translator under it; then a status that says there is no chart because
+  nothing is reporting what it counts. A different quote opens each time. Only quotes that were checked against the text
+  they link to are in `moon-lore.ts`, and a translation is only ever a published one: a quote that has none is left out,
+  and a test says so. The quotes are in scripts that the bundled typefaces have letters for (a test says so too), which
+  is why there is no polytonic Greek, Chinese, Arabic or Hindi. The quotes still wanted are those for the countries that
+  have none (the user asked for one each); the researchers found no published public-domain translation for the
+  Spanish, Portuguese, Romanian, Czech, Hungarian, Lithuanian, Latvian, Albanian, Vietnamese, Indonesian, Welsh,
+  Ukrainian, Turkish, Maltese, Dutch, Swedish, Icelandic, Finnish and Estonian ones. Nothing
+  moves for a viewer who asks for less motion, and everything drifts very slowly: the stars take half an hour to cross a
+  tile. The earlier idea, a night sky for a chart that is only empty, with a tumbleweed, is at `3a30728`, and is not used.
+  - Handler cards say what their chart counts in the moon's popover, by kind, in `chartedWords` of `HandlerCard`. Those
+    words reach users, so they are the user's to change.
 - Use the spec's words on the page: commands pending, events pending and deadlines pending for what the cards call
   backlogs, messages pending in the queues tile, and instances in progress, which is also the spec's word. The health
   rule that is called Backlog is about due messages, so it takes the spec's word "due" when the rules come back.

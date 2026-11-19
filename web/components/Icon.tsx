@@ -10,6 +10,7 @@ import type { ReactNode, SVGProps } from "react";
 export type IconName =
 	| "aggregate"
 	| "application"
+	| "chart"
 	| "check"
 	| "cluster"
 	| "command"
@@ -20,6 +21,7 @@ export type IconName =
 	| "integration"
 	| "message"
 	| "minimize-concurrency"
+	| "moon"
 	| "process"
 	| "projection"
 	| "queue"
@@ -37,6 +39,15 @@ const shapes: Record<IconName, ReactNode> = {
 		</>
 	),
 	check: <path d="M20 6 9 17l-5-5" />,
+	chart: (
+		<>
+			<path d="M3 3v16a2 2 0 0 0 2 2h16" />
+			<path d="m19 9-5 5-4-4-3 3" />
+		</>
+	),
+	moon: (
+		<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+	),
 	spinner: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
 	copy: (
 		<>

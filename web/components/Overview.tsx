@@ -23,6 +23,7 @@ import { describedClasses, Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
 import { RateCard, type RateWords } from "./RateCard.tsx";
+import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import { useRate } from "./useRate.ts";
@@ -212,7 +213,7 @@ export function EventsTile({
 				)
 			}
 			chart={
-				data.history && (
+				data.history ? (
 					<Sparkline
 						chart={data.history}
 						className="h-12"
@@ -221,6 +222,8 @@ export function EventsTile({
 							unit: `events${shortPer[per]}`,
 						})}
 					/>
+				) : (
+					<Sky missing="the rate of events" />
 				)
 			}
 		/>
@@ -383,7 +386,7 @@ export function QueuesTile({
 				)
 			}
 			chart={
-				data.history && (
+				data.history ? (
 					<Sparkline
 						chart={data.history}
 						className="h-12"
@@ -392,6 +395,8 @@ export function QueuesTile({
 							unit: `${wording.unit}${shortPer[per]}`,
 						})}
 					/>
+				) : (
+					<Sky missing="the rate at which messages get through the queues" />
 				)
 			}
 		/>

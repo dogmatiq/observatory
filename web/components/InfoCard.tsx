@@ -54,7 +54,7 @@ export function InfoCard({
 	iconColor?: string;
 
 	/** The kind of thing that the card is about, such as "Event stream". */
-	kind: string;
+	kind: ReactNode;
 
 	/** Where the thing is, or what it is of, shown under its kind. */
 	scope?: Scope;

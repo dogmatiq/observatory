@@ -1,9 +1,11 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { application, overview } from "../fixtures/overview.ts";
 import { formatCompact } from "../lib/format.ts";
+import { moonPhase } from "../lib/moon.ts";
+import { moonQuotes } from "../lib/moon-lore.ts";
 import type { SegmentAbout } from "../lib/segments.ts";
 import { chartWindowMs, heightOf, valueAt } from "../lib/sparkline.ts";
-import type { Counted, OverviewData } from "../model.ts";
+import type { Counted, HandlerData, OverviewData } from "../model.ts";
 import { Figure, glitchTime, keepTime } from "./Figure.tsx";
 import { Glitch } from "./Glitch.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
@@ -12,6 +14,7 @@ import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Failing } from "./MetricTile.tsx";
+import { MoonCard } from "./MoonCard.tsx";
 import {
 	countedWords,
 	EventsTile,
@@ -57,6 +60,58 @@ export function StatesPage() {
 				</button>
 			</div>
 			<div key={run} className="grid gap-12">
+				<Section
+					title="Tiles and cards with no chart"
+					note="What fills the room of a chart when no node reports what it is made from: the night in the dark color mode, and the day in the light one. The one on the page that has been without a chart longest has the moon, in its real phase. Its popover says what phase that is, and why there is no chart."
+				>
+					<State label="Events tile" note="No node reports the rate of events.">
+						<EventsTile
+							application={application}
+							data={eventsTile(undefined)}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Queues tile"
+						note="No node reports anything that the rate is made from."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile(undefined)}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Handler card"
+						note="No node reports the events that the handler handles."
+					>
+						<HandlerCard
+							application={application}
+							handler={{
+								...(overview.handlers[0] as HandlerData),
+								history: undefined,
+							}}
+						/>
+					</State>
+				</Section>
+
+				<Section
+					title="The moon's popover: every quote"
+					note="The card of the moon, for each quote. The popover shows one of them, and another each time that it opens."
+				>
+					{moonQuotes.map((quote) => (
+						<State key={quote.text} label={`${quote.by}, in ${quote.language}`}>
+							<Panel>
+								<MoonCard
+									phase={moonPhase(new Date())}
+									missing="the rate of events"
+									quote={quote}
+								/>
+							</Panel>
+						</State>
+					))}
+				</Section>
+
 				<Section
 					title="Events tile: the rate"
 					note="The headline, and the words beside it, are the events per minute."

@@ -388,3 +388,35 @@
 		font-size: 12.5px;
 	}
 }
+
+/*
+ * The sky that fills the room of a chart that isn't there: a layer scrolls
+ * sideways by the width of one of its two copies, a star twinkles, and the moon
+ * rises from behind the hills.
+ */
+@keyframes scroll {
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@keyframes twinkle {
+	0%,
+	100% {
+		opacity: 0.1;
+	}
+
+	50% {
+		opacity: 0.85;
+	}
+}
+
+@keyframes moonrise {
+	from {
+		transform: translateY(48px);
+	}
+
+	to {
+		transform: translateY(0);
+	}
+}

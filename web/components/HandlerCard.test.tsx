@@ -323,33 +323,35 @@ test("failing messages don't add a line, so that they don't change the height of
 	expect(container.querySelector(".mt-auto")).toBeNull();
 });
 
-test("a card with a bar of nodes and no chart keeps the room for a chart, so its bar sits where the others do", () => {
-	const withBar = card("integration", {}, { nodes }).container;
-	expect(withBar.firstElementChild?.className).toContain("pb-15");
-
-	cleanup();
-
-	const without = card("integration").container;
-	expect(without.firstElementChild?.className).not.toContain("pb-15");
+test("every card keeps the room along the bottom, whether it has a bar or not, so that the bars of the cards in a row sit in one place", () => {
+	const cases: [HandlerData["kind"], Partial<HandlerSummary>][] = [
+		["integration", {}],
+		["aggregate", { bindings: [] }],
+		["process", { schedulesDeadlines: true, bindings: [] }],
+		["aggregate", { bindings: undefined }],
+	];
+	for (const [kind, summary] of cases) {
+		const { container } = card(kind, summary);
+		expect(container.firstElementChild?.className).toContain("pb-15");
+		cleanup();
+	}
 });
 
-test("a card with a bar and no chart keeps the room for a chart, whatever the kind of the bar", () => {
-	const aggregate = card("aggregate", { bindings: [] }).container;
-	expect(aggregate.firstElementChild?.className).toContain("pb-15");
+test("a card with no chart has a sky in its place, which has the moon if no sky of the page has been drawn longer", () => {
+	const { container } = card("integration");
 
-	cleanup();
+	expect(container.querySelector("[data-moon]")).not.toBeNull();
+});
 
-	const process = card("process", {
-		schedulesDeadlines: true,
-		bindings: [],
-	}).container;
-	expect(process.firstElementChild?.className).toContain("pb-15");
+test("a card with a chart has no sky", () => {
+	const chart = { end: 0, points: [{ at: 0, value: 1 }] };
+	const { container } = card(
+		"integration",
+		{},
+		{ history: chart, charted: "commands" },
+	);
 
-	cleanup();
-
-	// Nothing supports the bindings, so there is no bar and no room for one.
-	const bare = card("aggregate", { bindings: undefined }).container;
-	expect(bare.firstElementChild?.className).not.toContain("pb-15");
+	expect(container.querySelector("[data-moon]")).toBeNull();
 });
 
 test("an integration or a projection whose nodes say nothing has no bar", () => {

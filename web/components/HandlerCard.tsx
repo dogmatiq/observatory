@@ -14,6 +14,7 @@ import {
 } from "./MetricTile.tsx";
 import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
+import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
@@ -24,6 +25,17 @@ import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
  */
 const minimizesConcurrencyText =
 	"Minimize concurrency: this handler's configuration instructs the engine to attempt to process messages one at a time, minimizing conflicts and/or contention.";
+
+/**
+ * What the chart of a handler's card counts, by the kind of handler, for the
+ * words of the sky that is there if no node reports it.
+ */
+const chartedWords: Record<HandlerData["kind"], string> = {
+	aggregate: "the events that this handler records",
+	process: "the events that this handler handles",
+	integration: "the messages that this handler handles",
+	projection: "the events that this handler handles",
+};
 
 /**
  * HandlerCard is the card of one handler, on the cluster view. It shows the
@@ -57,12 +69,10 @@ export function HandlerCard({
 		failing
 			? "[box-shadow:inset_0_3px_0_var(--color-failing),var(--shadow-raised)]"
 			: raisedClasses,
-		// A card with a chart has room for it along the bottom. So does a card with
-		// a bar and no chart, such as one whose nodes don't report the events that
-		// the chart counts, so that its bar sits where the bars of the other cards
-		// in its row do.
-		"transition-[padding-bottom] duration-400 motion-reduce:transition-none",
-		(history || hasBar(handler)) && "pb-15",
+		// A card has room along the bottom for its chart, or, if no node reports what
+		// the chart counts, for the sky that is there instead, so that the bars of
+		// the cards in a row are where they are.
+		"pb-15",
 		href !== undefined && !failing && linkedCardClasses,
 		href !== undefined && failing && "no-underline hover:no-underline",
 	);
@@ -120,7 +130,7 @@ export function HandlerCard({
 			</div>
 			<Summary handler={handler} summary={summary} />
 			<Presence shape="fade" className="absolute inset-x-0 bottom-0">
-				{history && (
+				{history ? (
 					<Sparkline
 						chart={history}
 						// The chart has the color of the messages that it counts.
@@ -131,6 +141,8 @@ export function HandlerCard({
 							],
 						)}
 					/>
+				) : (
+					<Sky missing={chartedWords[handler.kind]} height={60} />
 				)}
 			</Presence>
 		</>
@@ -149,27 +161,6 @@ export function HandlerCard({
 			{content}
 		</article>
 	);
-}
-
-/**
- * hasBar returns whether a handler's card draws a bar of how its work is spread:
- * an aggregate's instances over the event streams, a process's over the queues of
- * its deadlines, or an integration's or a projection's work over the nodes. It
- * does if the nodes report what the bar is made from.
- */
-function hasBar(handler: HandlerData): boolean {
-	switch (handler.kind) {
-		case "aggregate":
-			return handler.summary.bindings !== undefined;
-		case "process":
-			return (
-				handler.summary.schedulesDeadlines === true &&
-				handler.summary.bindings !== undefined
-			);
-		case "integration":
-		case "projection":
-			return handler.nodes !== undefined;
-	}
 }
 
 /**
