@@ -8,6 +8,10 @@ import { Popover } from "./Popover.tsx";
  * ClustersPage is the page at the Observatory's first address. It lists the
  * clusters that the Observatory knows, each linking to its own page.
  *
+ * The clusters are listed by the name of their application, with the numbers in
+ * names in order ("Queues: 2" before "Queues: 10"), and, if two have the same
+ * name, by their ID.
+ *
  * It is a stopgap until the pages for the universe and for each site exist.
  */
 export function ClustersPage({
@@ -27,7 +31,7 @@ export function ClustersPage({
 				<p className="text-muted">No cluster has connected yet.</p>
 			) : (
 				<ul className="grid gap-2">
-					{clusters.map((cluster) => (
+					{byName(clusters).map((cluster) => (
 						<li key={cluster.id}>
 							<Popover content={`Cluster ${cluster.id}`}>
 								<a href={clusterPath(cluster.id)}>{cluster.application.name}</a>
@@ -41,5 +45,16 @@ export function ClustersPage({
 				</ul>
 			)}
 		</Page>
+	);
+}
+
+/** byName returns the clusters sorted by the name of their application, then by ID. */
+function byName(clusters: ClusterSummary[]): ClusterSummary[] {
+	return clusters.toSorted(
+		(a, b) =>
+			a.application.name.localeCompare(b.application.name, undefined, {
+				numeric: true,
+				sensitivity: "base",
+			}) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
 	);
 }
