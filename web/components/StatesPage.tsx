@@ -3,7 +3,7 @@ import { application, overview } from "../fixtures/overview.ts";
 import { formatCompact } from "../lib/format.ts";
 import type { SegmentAbout } from "../lib/segments.ts";
 import { chartWindowMs, heightOf, valueAt } from "../lib/sparkline.ts";
-import type { OverviewData } from "../model.ts";
+import type { Counted, OverviewData } from "../model.ts";
 import { Figure, glitchTime, keepTime } from "./Figure.tsx";
 import { Glitch } from "./Glitch.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
@@ -13,6 +13,7 @@ import { InfoCard } from "./InfoCard.tsx";
 import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Failing } from "./MetricTile.tsx";
 import {
+	countedWords,
 	EventsTile,
 	eventsAbout,
 	QueuesTile,
@@ -364,12 +365,22 @@ export function StatesPage() {
 						/>
 					</State>
 					<State
-						label="Partly handled"
-						note="Only the commands, or only the deadlines, that handlers handle are reported, and not the removals, so the rate is of part of the messages."
+						label="Only the commands handled"
+						note="Handlers' commands are reported, and not their deadlines, or the removals, so the rate is of part of the messages, and the card says so."
 					>
 						<QueuesTile
 							application={application}
-							data={queuesTile({ perMinute: 442, of: "partly handled" })}
+							data={queuesTile({ perMinute: 442, of: "commands handled" })}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Only the deadlines handled"
+						note="Likewise, for the deadlines."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 442, of: "deadlines handled" })}
 							href={undefined}
 						/>
 					</State>
@@ -418,36 +429,22 @@ export function StatesPage() {
 							</Panel>
 						</State>
 					))}
-					<State
-						label="Partly handled"
-						note="When only the commands, or only the deadlines, that handlers handle are reported, and the removals are not."
-					>
-						<Panel>
-							<RateCard
-								subsystem="queues"
-								icon="message"
-								kind="Message handling rate"
-								description="The rate at which handlers are handling messages"
-								note="It counts only some of the messages that handlers have handled, because only some kinds of them are reported."
-								state="known"
-							/>
-						</Panel>
-					</State>
-					<State
-						label="Handled"
-						note="What the card says when handled messages are counted."
-					>
-						<Panel>
-							<RateCard
-								subsystem="queues"
-								icon="message"
-								kind="Message handling rate"
-								description="The rate at which handlers are handling messages"
-								note="It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled."
-								state="known"
-							/>
-						</Panel>
-					</State>
+					{(["handled", "commands handled", "deadlines handled"] as const).map(
+						(counted) => (
+							<State key={counted} label={countedWords[counted].kind}>
+								<Panel>
+									<RateCard
+										subsystem="queues"
+										icon="message"
+										kind={countedWords[counted].kind}
+										description={countedWords[counted].description}
+										note={countedWords[counted].note}
+										state="known"
+									/>
+								</Panel>
+							</State>
+						),
+					)}
 				</Section>
 
 				<Section
@@ -597,9 +594,7 @@ function Lost({ backAfter }: { backAfter?: number }) {
  * failing messages.
  */
 function queuesTile(
-	throughput:
-		| { perMinute?: number; of: "handled" | "removed" | "partly handled" }
-		| undefined,
+	throughput: { perMinute?: number; of: Counted } | undefined,
 	options: { queues?: boolean; failing?: number } = {},
 ): NonNullable<OverviewData["queues"]> {
 	const { queues, history } = overview.queues ?? {};

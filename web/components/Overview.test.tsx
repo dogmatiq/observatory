@@ -308,6 +308,40 @@ test("a rate that is built from the messages that handlers handle says so, in it
 	);
 });
 
+test("a rate of only the commands that handlers handle, or only their deadlines, says which, in its words and its card", async () => {
+	for (const [of, words, kind] of [
+		[
+			"commands handled",
+			"commands handled per minute",
+			"Command handling rate",
+		],
+		[
+			"deadlines handled",
+			"deadlines handled per minute",
+			"Deadline handling rate",
+		],
+	] as const) {
+		const { unmount } = render(
+			<Overview
+				application={application}
+				data={{
+					...overview,
+					queues: {
+						failing: 0,
+						throughput: { perMinute: 442, of },
+						history: overview.queues?.history,
+					},
+				}}
+			/>,
+		);
+
+		const tip = await tipOf(screen.getByText(words));
+		expect(tip).toContain(kind);
+		expect(tip).toContain("it is only a part of the messages");
+		unmount();
+	}
+});
+
 test("no popover of the events tile gives the exact number of events", () => {
 	vi.useFakeTimers();
 	render(<Overview application={application} data={overview} />);

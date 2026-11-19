@@ -3,6 +3,7 @@ import type {
 	Binding,
 	Chart,
 	ClusterData,
+	Counted,
 	HandlerData,
 	HandlerKind,
 	HandlerNode,
@@ -398,8 +399,12 @@ function attempt<T>(read: () => T): T | undefined {
 }
 
 /** Returns what the throughput counts, which is the messages removed if it isn't said. */
-function throughputOf(v: unknown): "handled" | "removed" | "partly handled" {
-	return v === "handled" || v === "partly handled" ? v : "removed";
+function throughputOf(v: unknown): Counted {
+	return v === "handled" ||
+		v === "commands handled" ||
+		v === "deadlines handled"
+		? v
+		: "removed";
 }
 
 /** Returns a field that must be a number. */

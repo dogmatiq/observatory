@@ -393,9 +393,11 @@ parts. An item that says "Done" is built.
   it is complete, and it is what the handlers' cards add up to; otherwise, if they report the removal of messages from
   the queues, it is those, which are complete too, but include messages that are removed without being handled, such as
   the deadlines of a process that has ended; otherwise, if they report one kind of handled message, it is that, which is
-  only a part. The Observatory says which in `counted`, and the page says it too: the words beside the headline say
-  "handled" or "removed", the card is "Message handling rate" or "Message removal rate", and says what it counts, or
-  that it counts only some of the messages, and the chart's readout is "handled/min" or "removals/min". When nodes
+  only a part, and the tile says which, "commands" or "deadlines", in its words and its card. The Observatory says which in `counted`, and the page says it too: the words beside the headline say
+  "handled", "removed", "commands handled" or "deadlines handled", the card is "Message handling rate", "Message removal
+  rate", "Command handling rate" or "Deadline handling rate", and says what it counts and, for a kind of message, that
+  it is only a part, and the chart's readout is "handled/min", "removals/min", "commands handled/min" or "deadlines
+  handled/min". When nodes
   report none of them, the chart is left out. `go run ./cmd/demo -combinations` also serves a cluster of one node for
   each of the sixteen combinations of what the queues tile is made from, named by what they report, so that the tile
   can be seen for each. The number of messages waiting stays the
@@ -608,6 +610,7 @@ but isn't shown, and decide towards the end which of them to show and where.
 | A handler's and an application's Go type, and the messages that a handler uses | `configpb` | Only a handler's name, type and key are used. |
 | A handler's failing messages split into commands and deadlines | `HandlerCommandsFailing`, `HandlerDeadlinesFailing` | The card shows one total. |
 | Which nodes handled a handler's messages, and how many each | the per-node samples that `Combine` adds up | Only the sums are used. |
+| The signals that the queues tile's rate doesn't use, when nodes report several of the removed messages, the handled commands and the handled deadlines | `QueueCommandsRemoved`, `QueueDeadlinesRemoved`, `HandlerCommandsHandled`, `HandlerDeadlinesHandled` | The tile shows one, by a rule, and the others are not shown anywhere, because there is no deeper view yet. Revisit when there is, for example to show the removals that are not handled, which are the cancelled deadlines. |
 | A handler's concurrency preference when it is not minimize | `ConcurrencyPreference` | Only minimize has an icon. |
 
 ## Delivery order

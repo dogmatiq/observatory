@@ -12,7 +12,7 @@ import {
 	queueSegments,
 	streamSegments,
 } from "../lib/segments.ts";
-import type { Application, OverviewData } from "../model.ts";
+import type { Application, Counted, OverviewData } from "../model.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Figure } from "./Figure.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
@@ -223,6 +223,49 @@ export function EventsTile({
 }
 
 /**
+ * How the queues tile says what its rate counts, in the card of the rate, in the
+ * words beside the headline and in the readout of its chart.
+ */
+export const countedWords: Record<
+	Counted,
+	{
+		kind: string;
+		description: string;
+		note?: string;
+		counted: string;
+		unit: string;
+	}
+> = {
+	removed: {
+		kind: "Message removal rate",
+		description: "The rate at which messages are being removed from the queues",
+		counted: "messages removed",
+		unit: "removals",
+	},
+	handled: {
+		kind: "Message handling rate",
+		description: "The rate at which handlers are handling messages",
+		note: "It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled.",
+		counted: "messages handled",
+		unit: "handled",
+	},
+	"commands handled": {
+		kind: "Command handling rate",
+		description: "The rate at which handlers are handling commands",
+		note: "It counts only commands. No node reports the deadlines that handlers have handled, or the removal of messages from the queues, so it is only a part of the messages that the queues get through.",
+		counted: "commands handled",
+		unit: "commands handled",
+	},
+	"deadlines handled": {
+		kind: "Deadline handling rate",
+		description: "The rate at which handlers are handling deadlines",
+		note: "It counts only deadlines. No node reports the commands that handlers have handled, or the removal of messages from the queues, so it is only a part of the messages that the queues get through.",
+		counted: "deadlines handled",
+		unit: "deadlines handled",
+	},
+};
+
+/**
  * queuesAbout returns what the card of the queues tile says, which is what the
  * part of the page is about, as [eventsAbout] does.
  */
@@ -238,9 +281,9 @@ export function queuesAbout(application: Application) {
 
 /**
  * QueuesTile is the queues tile, whose headline is the messages that wait in the
- * queues, or the messages removed per minute if no node reports how many wait. The
- * messages that handlers have handled stand in for those that are removed, if no
- * node reports them.
+ * queues, or the rate at which they get through the queues, if no node reports how
+ * many wait, which is the messages that handlers have handled, or those that are
+ * removed, or only some kinds of the first. See [countedWords].
  */
 export function QueuesTile({
 	application,
@@ -265,28 +308,20 @@ export function QueuesTile({
 	const { scaled, per, state } = useRate(throughput?.perMinute);
 
 	// What the rate counts, which is the messages that handlers have handled, or
-	// those that are removed from the queues, or only some kinds of the first. The
-	// card says which, because it is built from the statistics of the nodes.
-	const handled = throughput !== undefined && throughput.of !== "removed";
+	// those that are removed from the queues, or only the commands, or only the
+	// deadlines, that handlers have handled. The card says which, because it is
+	// built from the statistics of the nodes.
+	const counted = throughput?.of ?? "removed";
+	const wording = countedWords[counted];
 
 	// The number and the words beside it both have the card of the rate.
 	const rateCard = (
 		<RateCard
 			subsystem="queues"
 			icon="message"
-			kind={handled ? "Message handling rate" : "Message removal rate"}
-			description={
-				handled
-					? "The rate at which handlers are handling messages"
-					: "The rate at which messages are being removed from the queues"
-			}
-			note={
-				throughput?.of === "handled"
-					? "It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled."
-					: throughput?.of === "partly handled"
-						? "It counts only some of the messages that handlers have handled, because only some kinds of them are reported."
-						: undefined
-			}
+			kind={wording.kind}
+			description={wording.description}
+			note={wording.note}
 			state={state}
 		/>
 	);
@@ -336,7 +371,7 @@ export function QueuesTile({
 				) : (
 					<Popover card content={rateCard}>
 						<span className={describedClasses}>
-							<Noun>{`messages ${handled ? "handled" : "removed"} per ${per}`}</Noun>
+							<Noun>{`${wording.counted} per ${per}`}</Noun>
 						</span>
 					</Popover>
 				)
@@ -353,7 +388,7 @@ export function QueuesTile({
 						className="h-12"
 						describe={(value) => ({
 							figure: formatCompact(inUnit(value, per)),
-							unit: `${handled ? "handled" : "removals"}${shortPer[per]}`,
+							unit: `${wording.unit}${shortPer[per]}`,
 						})}
 					/>
 				)

@@ -513,7 +513,7 @@ func TestOverview(t *testing.T) {
 				})
 			})
 
-			t.Run("it counts the one kind of message that handlers handle, as a part, if nothing else is reported", func(t *testing.T) {
+			t.Run("it counts the one kind of message that handlers handle, and says which, if nothing else is reported", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
 					o, r := NewObserver(), NewRecorder()
@@ -528,7 +528,7 @@ func TestOverview(t *testing.T) {
 					n.sample(t, 0, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 20}.Build())
 
 					tile := viewOf(t, r, o, c).Overview.Queues
-					if tile == nil || tile.Counted != "partly handled" {
+					if tile == nil || tile.Counted != "deadlines handled" {
 						t.Fatalf("unexpected queues tile: %+v", tile)
 					}
 					expectFloat(t, tile.Throughput.PerSecond, 20.0/10)

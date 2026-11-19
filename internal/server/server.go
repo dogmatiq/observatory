@@ -48,8 +48,9 @@
 //     nodes support and that isn't known yet is {}, which has no "rate". The
 //     throughput also has "of", which is what it counts: "handled", for the
 //     commands and deadlines that handlers have handled, "removed", for the
-//     messages that are removed from the queues, or "partly handled", for only the
-//     commands or only the deadlines that handlers have handled.
+//     messages that are removed from the queues, "commands handled", for only the
+//     commands that handlers have handled, or "deadlines handled", for only the
+//     deadlines.
 //   - "handlers": each handler, {"name", "kind", "disabled",
 //     "minimizesConcurrency", "failing", "instances", "queued",
 //     "unhandledEvents", "schedulesDeadlines", "charted", "bindings"}. A fact

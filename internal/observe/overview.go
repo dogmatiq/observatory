@@ -184,12 +184,12 @@ type QueuesTile struct {
 	// complete too, but include those that are removed without being handled, such
 	// as the deadlines of a process that has ended. If nodes report neither of
 	// those, it is the commands or the deadlines that handlers have handled, if
-	// nodes report one of them, which is only a part of the messages. It is nil if
-	// nodes report none of them.
+	// nodes report one of them, which is only a part of the messages, and
+	// Counted says which. It is nil if nodes report none of them.
 	Throughput *Rate `json:"throughput,omitempty"`
 
-	// Counted is what Throughput counts, which is "handled", "removed" or "partly
-	// handled". It is empty if Throughput is nil.
+	// Counted is what Throughput counts, which is "handled", "removed", "commands
+	// handled" or "deadlines handled". It is empty if Throughput is nil.
 	Counted string `json:"counted,omitempty"`
 
 	// History is how Throughput changed over the last minute. It is nil if
@@ -544,9 +544,12 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		case removed:
 			o.Queues.Throughput = &Rate{f.removed.rate()}
 			o.Queues.Counted = "removed"
-		case handledCommands || handledDeadlines:
+		case handledCommands:
 			o.Queues.Throughput = &Rate{f.handled.rate()}
-			o.Queues.Counted = "partly handled"
+			o.Queues.Counted = "commands handled"
+		case handledDeadlines:
+			o.Queues.Throughput = &Rate{f.handled.rate()}
+			o.Queues.Counted = "deadlines handled"
 		}
 		if o.Queues.Throughput != nil {
 			o.Queues.History = &Chart{Points: []ChartPoint{}}

@@ -99,6 +99,15 @@ export interface LiveNode {
 }
 
 /**
+ * Counted is what the throughput of the queues tile counts.
+ */
+export type Counted =
+	| "handled"
+	| "removed"
+	| "commands handled"
+	| "deadlines handled";
+
+/**
  * OverviewData is everything that the cluster view's three tiles and handler
  * cards show.
  */
@@ -145,10 +154,10 @@ export interface OverviewData {
 
 			/**
 			 * What it counts: the messages that handlers have handled, those that are
-			 * removed from the queues, or only some kinds of those that handlers have
-			 * handled.
+			 * removed from the queues, or only the commands, or only the deadlines,
+			 * that handlers have handled.
 			 */
-			of: "handled" | "removed" | "partly handled";
+			of: Counted;
 		};
 
 		/** The history of the messages removed per minute, which goes with `throughput`. */
