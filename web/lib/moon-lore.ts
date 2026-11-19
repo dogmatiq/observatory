@@ -207,13 +207,6 @@ export const moonQuotes: readonly MoonQuote[] = [
 		url: "https://de.wikisource.org/wiki/Abendlied_(Matthias_Claudius)",
 	},
 	{
-		text: "Ye fetch circumquaques to make me beleeve,\nOr thinke, that the moone is made of a greene cheese.",
-		language: "English",
-		by: "John Heywood",
-		work: "Proverbs, 1546, in the 1874 edition, page 145",
-		url: "https://archive.org/details/proverbsofjohnhe00heywrich/page/n200",
-	},
-	{
 		text: "Сквозь волнистые туманы\nПробирается луна,\nНа печальные поляны\nЛьет печально свет она.",
 		language: "Russian",
 		moon: "Луна",
