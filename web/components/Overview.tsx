@@ -244,28 +244,31 @@ export const countedWords: Record<
 > = {
 	removed: {
 		kind: "Message removal rate",
-		description: "The rate at which messages are being removed from the queues",
+		description:
+			"The rate at which commands and deadlines are being removed from the queues",
+		note: "It includes messages that were removed from the queue without being handled.",
 		counted: "messages removed",
 		unit: "removals",
 	},
 	handled: {
 		kind: "Message handling rate",
-		description: "The rate at which handlers are handling messages",
-		note: "It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled.",
+		description:
+			"The rate at which the application is handling commands and deadlines",
+		note: "It does not include messages that were removed from the queue without being handled.",
 		counted: "messages handled",
 		unit: "handled",
 	},
 	"commands handled": {
 		kind: "Command handling rate",
-		description: "The rate at which handlers are handling commands",
-		note: "It counts only commands. No node reports the deadlines that handlers have handled, or the removal of messages from the queues, so it is only a part of the messages that the queues get through.",
+		description: "The rate at which the application is handling commands",
+		note: "It does not include deadlines, or messages that were removed from the queue without being handled.",
 		counted: "commands handled",
 		unit: "commands",
 	},
 	"deadlines handled": {
 		kind: "Deadline handling rate",
-		description: "The rate at which handlers are handling deadlines",
-		note: "It counts only deadlines. No node reports the commands that handlers have handled, or the removal of messages from the queues, so it is only a part of the messages that the queues get through.",
+		description: "The rate at which the application is handling deadlines",
+		note: "It does not include commands, or messages that were removed from the queue without being handled.",
 		counted: "deadlines handled",
 		unit: "deadlines",
 	},

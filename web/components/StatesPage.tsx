@@ -423,8 +423,9 @@ export function StatesPage() {
 								<RateCard
 									subsystem="queues"
 									icon="message"
-									kind="Message removal rate"
-									description="The rate at which messages are being removed from the queues"
+									kind={countedWords.removed.kind}
+									description={countedWords.removed.description}
+									note={countedWords.removed.note}
 									state={state}
 								/>
 							</Panel>

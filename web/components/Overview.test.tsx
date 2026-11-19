@@ -304,7 +304,7 @@ test("a rate that is built from the messages that handlers handle says so, in it
 	const tip = await tipOf(words);
 	expect(tip).toContain("Message handling rate");
 	expect(tip).toContain(
-		"It counts the messages that handlers have handled, which leaves out those that were removed from the queues without being handled.",
+		"It does not include messages that were removed from the queue without being handled.",
 	);
 });
 
@@ -337,7 +337,9 @@ test("a rate of only the commands that handlers handle, or only their deadlines,
 
 		const tip = await tipOf(screen.getByText(words));
 		expect(tip).toContain(kind);
-		expect(tip).toContain("it is only a part of the messages");
+		expect(tip).toContain(
+			"messages that were removed from the queue without being handled.",
+		);
 		unmount();
 	}
 });
@@ -386,7 +388,7 @@ test("the icon of the queues tile has a card that says what it is about, and the
 	const tip = await tipOf(rate);
 	expect(tip).toContain("Message removal rate");
 	expect(tip).toContain(
-		"The rate at which messages are being removed from the queues, averaged over the last minute.",
+		"The rate at which commands and deadlines are being removed from the queues, averaged over the last minute.",
 	);
 	expect(tip).not.toContain("442");
 });
