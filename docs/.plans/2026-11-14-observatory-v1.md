@@ -396,8 +396,7 @@ parts. An item that says "Done" is built.
   only a part, and the tile says which, "commands" or "deadlines", in its words and its card. The Observatory says which in `counted`, and the page says it too: the words beside the headline say
   "handled", "removed", "commands handled" or "deadlines handled", the card is "Message handling rate", "Message removal
   rate", "Command handling rate" or "Deadline handling rate", and says what it counts and, for a kind of message, that
-  it is only a part, and the chart's readout is "handled/min", "removals/min", "commands handled/min" or "deadlines
-  handled/min". When nodes
+  it is only a part, and the chart's readout is "handled/min", "removals/min", "commands/min" or "deadlines/min". When nodes
   report none of them, the chart is left out. `go run ./cmd/demo -combinations` also serves a cluster of one node for
   each of the sixteen combinations of what the queues tile is made from, named by what they report, so that the tile
   can be seen for each. The number of messages waiting stays the

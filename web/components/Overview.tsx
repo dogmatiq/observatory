@@ -254,14 +254,14 @@ export const countedWords: Record<
 		description: "The rate at which handlers are handling commands",
 		note: "It counts only commands. No node reports the deadlines that handlers have handled, or the removal of messages from the queues, so it is only a part of the messages that the queues get through.",
 		counted: "commands handled",
-		unit: "commands handled",
+		unit: "commands",
 	},
 	"deadlines handled": {
 		kind: "Deadline handling rate",
 		description: "The rate at which handlers are handling deadlines",
 		note: "It counts only deadlines. No node reports the commands that handlers have handled, or the removal of messages from the queues, so it is only a part of the messages that the queues get through.",
 		counted: "deadlines handled",
-		unit: "deadlines handled",
+		unit: "deadlines",
 	},
 };
 
