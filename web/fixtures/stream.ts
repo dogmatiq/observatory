@@ -50,10 +50,13 @@ function documentOf(
 			);
 		}
 		document.failing = queues.failing;
-		if (queues.removed) {
+		if (queues.throughput) {
 			document.rates = {
 				...document.rates,
-				removed: rateOf(queues.removed.perMinute),
+				throughput: {
+					...rateOf(queues.throughput.perMinute),
+					of: queues.throughput.of,
+				},
 			};
 		}
 	}
@@ -123,7 +126,7 @@ export function streamOf(
 
 	// The events are sent as a rate per second, and the page shows them per minute.
 	recorded("events", overview.events?.history, 60);
-	recorded("removed", overview.queues?.history, 60);
+	recorded("throughput", overview.queues?.history, 60);
 	for (const h of overview.handlers) {
 		recorded(`handlers/${h.key}`, h.history);
 	}

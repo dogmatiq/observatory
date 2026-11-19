@@ -17,6 +17,7 @@ export function RateCard({
 	icon,
 	kind,
 	description,
+	note,
 	state,
 }: {
 	subsystem: Subsystem;
@@ -30,6 +31,12 @@ export function RateCard({
 	 * which the application is recording new events".
 	 */
 	description: string;
+
+	/**
+	 * A sentence that says more, if the rate needs it, such as that it is built from
+	 * other statistics.
+	 */
+	note?: string;
 
 	state: "known" | "lost" | "unavailable";
 }) {
@@ -52,6 +59,7 @@ export function RateCard({
 			}
 		>
 			<p>{description}, averaged over the last minute.</p>
+			{note && <p>{note}</p>}
 		</InfoCard>
 	);
 }

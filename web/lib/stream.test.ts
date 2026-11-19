@@ -366,7 +366,10 @@ function full(): Snapshot {
 				eventStreams: { s1: { length: 5 }, s2: { length: 9 } },
 				queues: { q2: { messages: 1 }, q1: { messages: 3 } },
 				failing: 1,
-				rates: { events: { rate: 2 }, removed: { rate: 0.5 } },
+				rates: {
+					events: { rate: 2 },
+					throughput: { rate: 0.5, of: "removed" },
+				},
 				handlers: {
 					a: {
 						name: "alpha",
@@ -400,7 +403,7 @@ function full(): Snapshot {
 			},
 			10_000,
 		],
-		[{ kind: "recorded", series: "removed", points: [[0, 0.5]] }, 10_000],
+		[{ kind: "recorded", series: "throughput", points: [[0, 0.5]] }, 10_000],
 		[{ kind: "recorded", series: "handlers/a", points: [[500, 7]] }, 10_000],
 		[{ kind: "heartbeat", node: "n1", msBefore: 2000 }, 10_000],
 		[{ kind: "heartbeat", node: "n1", msBefore: 500 }, 10_000],
@@ -436,7 +439,7 @@ test("the cluster view is selected from a snapshot, with times measured from the
 			{ id: "q2", size: 1 },
 		],
 		failing: 1,
-		removed: { perMinute: 30 },
+		throughput: { perMinute: 30, of: "removed" },
 		// The history is of messages per minute, like the rate, and is sent per second.
 		history: { end: 0, points: [{ at: 0, value: 30 }] },
 	});

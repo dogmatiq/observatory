@@ -260,7 +260,7 @@ func chartsOf(view observe.ClusterView, series observe.Series) map[string][]obse
 		charts["events"] = series.Events
 	}
 	if q := view.Overview.Queues; q != nil && q.History != nil {
-		charts["removed"] = series.Removed
+		charts["throughput"] = series.Throughput
 	}
 	for _, card := range view.Overview.Handlers {
 		if card.History != nil {
@@ -323,8 +323,10 @@ func documentOf(view observe.ClusterView) map[string]any {
 		}
 		doc["failing"] = q.Failing
 
-		if q.Removed != nil {
-			rates["removed"] = rateOf(q.Removed)
+		if q.Throughput != nil {
+			throughput := rateOf(q.Throughput)
+			throughput["of"] = q.Counted
+			rates["throughput"] = throughput
 		}
 	}
 

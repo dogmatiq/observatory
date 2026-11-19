@@ -467,7 +467,7 @@ func TestStream(t *testing.T) {
 				for _, e := range named(events, "recorded") {
 					series = append(series, e.Data["series"].(string))
 				}
-				wantSeries := []string{"events", "handlers/" + handlerKey(0).AsString(), "removed"}
+				wantSeries := []string{"events", "handlers/" + handlerKey(0).AsString(), "throughput"}
 				for i := range wantSeries {
 					if series[i] != wantSeries[i] {
 						t.Fatalf("unexpected time series: got %v, want %v", series, wantSeries)
@@ -500,10 +500,15 @@ func TestStream(t *testing.T) {
 						t.Fatalf("unexpected %q in %v", absent, doc)
 					}
 				}
-				for _, name := range []string{"events", "removed"} {
+				// A rate that isn't known yet has no "rate", and the throughput says what it
+				// counts, which is the messages removed, because the nodes support that.
+				for name, want := range map[string]string{
+					"events":     "{}",
+					"throughput": `{"of":"removed"}`,
+				} {
 					b, _ := json.Marshal(at(t, doc, "rates", name))
-					if string(b) != "{}" {
-						t.Fatalf("unexpected rate %q: %s", name, b)
+					if string(b) != want {
+						t.Fatalf("unexpected rate %q: got %s, want %s", name, b, want)
 					}
 				}
 
@@ -730,7 +735,7 @@ func TestStream(t *testing.T) {
 			synctest.Wait()
 
 			recorded := named(since(w.events(t), "synced"), "recorded")
-			if len(recorded) != 1 || recorded[0].Data["series"] != "removed" {
+			if len(recorded) != 1 || recorded[0].Data["series"] != "throughput" {
 				t.Fatalf("unexpected events: %v", recorded)
 			}
 			got := recorded[0].Data["points"].([]any)

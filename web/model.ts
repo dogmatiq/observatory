@@ -140,9 +140,9 @@ export interface OverviewData {
 		 * supports it. Its `perMinute` is absent while the Observatory can't give
 		 * it yet.
 		 */
-		removed?: { perMinute?: number };
+		throughput?: { perMinute?: number; of: "removed" | "handled" };
 
-		/** The history of the messages removed per minute, which goes with `removed`. */
+		/** The history of the messages removed per minute, which goes with `throughput`. */
 		history?: Chart;
 	};
 
@@ -311,8 +311,11 @@ export interface ClusterDocument {
 		 */
 		events?: { rate?: number };
 
-		/** The messages removed from the queues per second, likewise. */
-		removed?: { rate?: number };
+		/**
+		 * The messages removed from the queues per second, likewise, or, when `of`
+		 * is "handled", the messages that handlers handle, which stand in for them.
+		 */
+		throughput?: { rate?: number; of?: string };
 	};
 
 	/** The cluster's handlers, by key. */

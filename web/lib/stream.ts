@@ -606,15 +606,21 @@ export function selectCluster(
 		});
 	}
 
-	if (doc.queues !== undefined || rates.removed !== undefined) {
+	if (doc.queues !== undefined || rates.throughput !== undefined) {
 		overview.queues = attempt(() => {
 			const queues: NonNullable<OverviewData["queues"]> = {
 				failing: maybeNumber(doc.failing, "failing") ?? 0,
 			};
 
-			if (rates.removed !== undefined) {
-				queues.removed = rateOf(rates.removed, "rates.removed");
-				queues.history = chartOf(snapshot.series.get("removed"), ref, 60);
+			if (rates.throughput !== undefined) {
+				queues.throughput = {
+					...rateOf(rates.throughput, "rates.throughput"),
+					of:
+						object(rates.throughput, "rates.throughput").of === "handled"
+							? "handled"
+							: "removed",
+				};
+				queues.history = chartOf(snapshot.series.get("throughput"), ref, 60);
 			}
 			if (doc.queues !== undefined) {
 				// The queues are shown in the order of their IDs.

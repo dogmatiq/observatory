@@ -262,7 +262,7 @@ func TestOverview(t *testing.T) {
 					if e := v.Overview.Events; e == nil || e.Streams == nil || e.Rate != nil || e.History != nil {
 						t.Fatalf("unexpected events tile: %+v", e)
 					}
-					if q := v.Overview.Queues; q == nil || q.Queues != nil || q.Removed == nil || q.History == nil {
+					if q := v.Overview.Queues; q == nil || q.Queues != nil || q.Throughput == nil || q.History == nil {
 						t.Fatalf("unexpected queues tile: %+v", q)
 					}
 
@@ -391,7 +391,7 @@ func TestOverview(t *testing.T) {
 					if q.Failing != 3 {
 						t.Fatalf("unexpected number of failing messages: got %d, want 3", q.Failing)
 					}
-					if q.Removed != nil {
+					if q.Throughput != nil {
 						t.Fatal("unexpected rate of removal, which the nodes don't support")
 					}
 
@@ -418,7 +418,63 @@ func TestOverview(t *testing.T) {
 					n.sample(t, 1, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
 					n.sample(t, 2, "q", 2, metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: q, Value: 10}.Build())
 
-					expectFloat(t, viewOf(t, r, o, c).Overview.Queues.Removed.PerSecond, 40.0/10)
+					expectFloat(t, viewOf(t, r, o, c).Overview.Queues.Throughput.PerSecond, 40.0/10)
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+			t.Run("it counts the commands and deadlines that handlers handle, if no node supports their removal", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					handler := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						supports(name(new(metricsgrpc.HandlerCommandsHandled)), reach),
+						supports(name(new(metricsgrpc.HandlerDeadlinesHandled)), reach),
+					)
+					n.sample(t, 0, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					n.sample(t, 1, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					time.Sleep(10 * time.Second)
+					n.sample(t, 0, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 30}.Build())
+					n.sample(t, 1, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 10}.Build())
+
+					q := viewOf(t, r, o, c).Overview.Queues
+					if q == nil || q.Queues != nil || q.Counted != "handled" || q.History == nil {
+						t.Fatalf("unexpected queues tile: %+v", q)
+					}
+					expectFloat(t, q.Throughput.PerSecond, 40.0/10)
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it prefers the removal of messages to the handling of them", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					q := uuidpb.Generate()
+					handler := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
+						supports(name(new(metricsgrpc.HandlerCommandsHandled)), reach),
+					)
+					n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+					n.sample(t, 1, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					time.Sleep(10 * time.Second)
+					n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 50}.Build())
+					n.sample(t, 1, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 30}.Build())
+
+					tile := viewOf(t, r, o, c).Overview.Queues
+					if tile == nil || tile.Counted != "removed" {
+						t.Fatalf("unexpected queues tile: %+v", tile)
+					}
+					expectFloat(t, tile.Throughput.PerSecond, 50.0/10)
 
 					cancel()
 					<-n.Engine.Done
@@ -942,20 +998,20 @@ func TestOverview(t *testing.T) {
 				r.Record(time.Now(), o.Nodes())
 
 				series := r.Series(c.AsString())
-				if len(series.Removed) != 2 {
-					t.Fatalf("unexpected points: %v", series.Removed)
+				if len(series.Throughput) != 2 {
+					t.Fatalf("unexpected points: %v", series.Throughput)
 				}
-				if p := series.Removed[0]; !p.At.Equal(start) || p.Value != 3 {
+				if p := series.Throughput[0]; !p.At.Equal(start) || p.Value != 3 {
 					t.Fatalf("unexpected first point: %+v", p)
 				}
-				if p := series.Removed[1]; !p.At.Equal(start.Add(2*time.Second)) || p.Value != 5 {
+				if p := series.Throughput[1]; !p.At.Equal(start.Add(2*time.Second)) || p.Value != 5 {
 					t.Fatalf("unexpected second point: %+v", p)
 				}
 				if len(series.Events) != 0 || len(series.Handlers) != 0 {
 					t.Fatalf("unexpected points of other charts: %+v", series)
 				}
 
-				if got := r.Series(uuidpb.Generate().AsString()); len(got.Removed) != 0 {
+				if got := r.Series(uuidpb.Generate().AsString()); len(got.Throughput) != 0 {
 					t.Fatalf("unexpected points of an unknown cluster: %+v", got)
 				}
 

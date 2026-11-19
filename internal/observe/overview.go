@@ -177,13 +177,18 @@ type QueuesTile struct {
 	// is zero if no node reports it.
 	Failing uint64 `json:"failing"`
 
-	// Removed is how many messages per second are removed from the queues,
-	// commands and deadlines together. It is nil if no node supports the metrics
-	// that it is derived from.
-	Removed *Rate `json:"removed,omitempty"`
+	// Throughput is how many messages per second are removed from the queues,
+	// commands and deadlines together, or, if no node supports the metrics of
+	// that, how many are handled successfully by the handlers, which stands in
+	// for it. It is nil if no node supports the metrics of either.
+	Throughput *Rate `json:"throughput,omitempty"`
 
-	// History is how Removed changed over the last minute. It is nil if Removed
-	// is.
+	// Counted is what Throughput counts, which is "removed" or "handled". It is
+	// empty if Throughput is nil.
+	Counted string `json:"counted,omitempty"`
+
+	// History is how Throughput changed over the last minute. It is nil if
+	// Throughput is.
 	History *Chart `json:"history,omitempty"`
 }
 
@@ -394,6 +399,7 @@ type figures struct {
 	failing        uint64
 	eventsRecorded summedRate
 	removed        summedRate
+	handled        summedRate
 	handlers       map[string]*handlerFigures
 }
 
@@ -447,6 +453,9 @@ func figuresOf(samples []ClusterSample) figures {
 			handler(m.GetHandlerKey()).failing += v
 		case *metricsgrpc.HandlerCommandsHandled:
 			handler(m.GetHandlerKey()).commandsHandled.add(s)
+			f.handled.add(s)
+		case *metricsgrpc.HandlerDeadlinesHandled:
+			f.handled.add(s)
 		case *metricsgrpc.HandlerEventsRecorded:
 			handler(m.GetHandlerKey()).eventsRecorded.add(s)
 			f.eventsRecorded.add(s)
@@ -511,16 +520,28 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		supported[metric(new(metricsgrpc.QueueDeadlinesPending))]
 	removed := supported[metric(new(metricsgrpc.QueueCommandsRemoved))] ||
 		supported[metric(new(metricsgrpc.QueueDeadlinesRemoved))]
-	if pending || removed {
+	handled := supported[metric(new(metricsgrpc.HandlerCommandsHandled))] ||
+		supported[metric(new(metricsgrpc.HandlerDeadlinesHandled))]
+	if pending || removed || handled {
 		o.Queues = &QueuesTile{Failing: f.failing}
 
 		if pending {
 			o.Queues.Queues = spreadOf(f.pendingInQueue)
 		}
-		if removed {
-			o.Queues.Removed = &Rate{f.removed.rate()}
+
+		// The messages that are removed from the queues are the throughput, and
+		// the messages that handlers handle stand in for them.
+		switch {
+		case removed:
+			o.Queues.Throughput = &Rate{f.removed.rate()}
+			o.Queues.Counted = "removed"
+		case handled:
+			o.Queues.Throughput = &Rate{f.handled.rate()}
+			o.Queues.Counted = "handled"
+		}
+		if o.Queues.Throughput != nil {
 			o.Queues.History = &Chart{Points: []ChartPoint{}}
-			r.removed = o.Queues.Removed.PerSecond
+			r.throughput = o.Queues.Throughput.PerSecond
 		}
 	}
 
@@ -536,9 +557,9 @@ type chartValues struct {
 	// events is the events per second, or nil if it is unknown.
 	events *float64
 
-	// removed is the messages per second that are removed from the queues, or nil
-	// if it is unknown.
-	removed *float64
+	// throughput is the messages per second that are removed from the queues, or
+	// handled, or nil if it is unknown.
+	throughput *float64
 
 	// handlers is the events recorded or handled per second, for each handler
 	// that has a chart, by key. It is nil for a handler whose rate is unknown.
@@ -726,9 +747,9 @@ type Recorder struct {
 
 // history is the charts of one cluster.
 type history struct {
-	events   *Trail
-	removed  *Trail
-	handlers map[string]*Trail
+	events     *Trail
+	throughput *Trail
+	handlers   map[string]*Trail
 
 	// nodeRates is the smoothed rate of each node, by the key of the handler.
 	nodeRates map[string]map[string]float64
@@ -736,9 +757,9 @@ type history struct {
 
 func newHistory() *history {
 	return &history{
-		events:   NewTrail(chartSpan),
-		removed:  NewTrail(chartSpan),
-		handlers: map[string]*Trail{},
+		events:     NewTrail(chartSpan),
+		throughput: NewTrail(chartSpan),
+		handlers:   map[string]*Trail{},
 
 		nodeRates: map[string]map[string]float64{},
 	}
@@ -777,8 +798,8 @@ func (r *Recorder) Record(now time.Time, nodes []Node) {
 		if rs.events != nil {
 			h.events.Add(now, *rs.events)
 		}
-		if rs.removed != nil {
-			h.removed.Add(now, *rs.removed)
+		if rs.throughput != nil {
+			h.throughput.Add(now, *rs.throughput)
 		}
 		for key, rate := range rs.handlers {
 			if rate == nil {
@@ -917,7 +938,7 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 		o.Events.History = &c
 	}
 	if o.Queues != nil && o.Queues.History != nil {
-		c := chartOf(now, h.removed)
+		c := chartOf(now, h.throughput)
 		o.Queues.History = &c
 	}
 	for i, card := range o.Handlers {
@@ -954,8 +975,9 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 
 // Series is what the charts of one cluster have recorded, oldest first.
 type Series struct {
-	// Events is the chart of the events tile, and Removed that of the queues tile.
-	Events, Removed []TrailPoint
+	// Events is the chart of the events tile, and Throughput that of the queues
+	// tile.
+	Events, Throughput []TrailPoint
 
 	// Handlers is the chart of each handler that has one, by the handler's key.
 	Handlers map[string][]TrailPoint
@@ -975,7 +997,7 @@ func (r *Recorder) Series(cluster string) Series {
 	}
 
 	s.Events = h.events.Points()
-	s.Removed = h.removed.Points()
+	s.Throughput = h.throughput.Points()
 	for key, t := range h.handlers {
 		s.Handlers[key] = t.Points()
 	}

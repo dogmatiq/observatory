@@ -227,7 +227,7 @@ test("a rate that the Observatory has never had is a zero in dot-matrix type, th
 			data={{
 				...overview,
 				events: { ...overview.events, rate: {} },
-				queues: { ...overview.queues, removed: {} },
+				queues: { ...overview.queues, throughput: { of: "removed" } },
 			}}
 		/>,
 	);
@@ -278,6 +278,34 @@ test("the icon of the events tile has a card that says what it is about, and not
 		"This section shows information about the events and event streams in the statements application.",
 	);
 	expect(tip).not.toContain("The bar shows");
+});
+
+test("a rate that is built from the messages that handlers handle says so, in its words and its card", async () => {
+	render(
+		<Overview
+			application={application}
+			data={{
+				...overview,
+				queues: {
+					failing: 0,
+					throughput: { perMinute: 442, of: "handled" },
+					history: overview.queues?.history,
+				},
+			}}
+		/>,
+	);
+
+	const queues = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Queues" });
+	expect(queues.textContent).toContain("messages handled per minute");
+
+	const words = screen.getByText("messages handled per minute");
+	const tip = await tipOf(words);
+	expect(tip).toContain("Message handling rate");
+	expect(tip).toContain(
+		"No node reports how fast messages are removed from the queues, so this is built from the messages that handlers have handled.",
+	);
 });
 
 test("no popover of the events tile gives the exact number of events", () => {

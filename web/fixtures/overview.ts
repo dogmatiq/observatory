@@ -136,7 +136,7 @@ export const overview: OverviewData & {
 	queues: {
 		queues: [{ id: "113cbdc3", size: 19 }],
 		failing: 0,
-		removed: { perMinute: 442 },
+		throughput: { perMinute: 442, of: "removed" },
 		history: {
 			end: 0,
 			points: [

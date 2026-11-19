@@ -41,11 +41,14 @@
 //   - "queues": each queue, {"messages"}. It is absent if no node supports the
 //     number of messages in queues.
 //   - "failing": the number of messages whose delivery is failing, present with
-//     "queues" or "rates.removed".
-//   - "rates": {"events", "removed"}, which are the events recorded and the
+//     "queues" or "rates.throughput".
+//   - "rates": {"events", "throughput"}, which are the events recorded and the
 //     messages removed from the queues, each {"rate"} in times per second. A
 //     rate that no node supports the metrics for is absent. A rate that the
-//     nodes support and that isn't known yet is {}, which has no "rate".
+//     nodes support and that isn't known yet is {}, which has no "rate". The
+//     throughput also has "of", which is "removed", or "handled" if no node
+//     supports the removal of messages, and the messages that handlers have
+//     handled stand in for them.
 //   - "handlers": each handler, {"name", "kind", "disabled",
 //     "minimizesConcurrency", "failing", "instances", "queued",
 //     "unhandledEvents", "schedulesDeadlines", "charted", "bindings"}. A fact
@@ -66,10 +69,10 @@
 // has no value yet. A part appears or goes as the nodes' support does, even
 // while a page is open.
 //
-// The time series are "events" (the events recorded per second), "removed" (the
-// messages removed from the queues per second) and "handlers/<handler key>" (the events that the
-// handler records or handles per second, or, if "charted" is "commands", the
-// commands that it handles).
+// The time series are "events" (the events recorded per second), "throughput"
+// (the messages removed from the queues per second, or handled) and
+// "handlers/<handler key>" (the events that the handler records or handles per
+// second, or, if "charted" is "commands", the commands that it handles).
 //
 // A rate is in times per second, whatever it counts, and is rounded to three
 // significant figures, so that a rate whose value only wavers is not sent

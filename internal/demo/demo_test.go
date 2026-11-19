@@ -63,7 +63,7 @@ func TestRun(t *testing.T) {
 
 			// Each node counts the messages that it removes, and the rates of all
 			// seven add up, so each running total must only ever grow.
-			if view.Overview.Queues == nil || view.Overview.Queues.Removed == nil || view.Overview.Queues.Removed.PerSecond == nil {
+			if view.Overview.Queues == nil || view.Overview.Queues.Throughput == nil || view.Overview.Queues.Throughput.PerSecond == nil {
 				t.Fatalf("unexpected queues: %+v", view.Overview.Queues)
 			}
 
@@ -96,7 +96,7 @@ func TestRun(t *testing.T) {
 
 				for _, c := range observe.Clusters(time.Now(), o.Nodes()) {
 					view, _ := r.View(time.Now(), o.Nodes(), c.ID)
-					if view.Overview.Queues == nil || view.Overview.Queues.Removed == nil || view.Overview.Queues.Removed.PerSecond == nil {
+					if view.Overview.Queues == nil || view.Overview.Queues.Throughput == nil || view.Overview.Queues.Throughput.PerSecond == nil {
 						t.Fatalf("unknown rate of removal after %d seconds", i)
 					}
 				}
@@ -267,11 +267,13 @@ func TestRun(t *testing.T) {
 					}
 
 					switch {
-					case e.Rate != nil && e.Streams != nil && q.Queues != nil && q.Removed != nil && bindings:
+					case e.Rate != nil && e.Streams != nil && q.Queues != nil && q.Throughput != nil && bindings:
 						seen["everything"] = true
-					case e.Rate != nil && e.Streams == nil && q.Queues == nil && q.Removed != nil:
+					case e.Rate != nil && e.Streams == nil && q.Queues == nil && q.Throughput != nil:
 						seen["rates only"] = true
-					case e.Rate == nil && e.Streams != nil && q.Queues != nil && q.Removed == nil:
+					// The nodes that report only the totals report no removals, so the
+					// throughput is the messages that handlers handle, if they report that.
+					case e.Rate == nil && e.Streams != nil && q.Queues != nil && q.Counted != "removed":
 						seen["totals only"] = true
 					case e.Streams != nil && !bindings:
 						seen["no instances"] = true

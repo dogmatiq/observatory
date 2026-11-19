@@ -389,9 +389,11 @@ parts. An item that says "Done" is built.
   events handled, commands handled, messages removed. The cluster tile's wave is not a sparkline. The queues tile's chart
   was the number of messages waiting, which is a level, and which sits at zero in a healthy system, so it is now the rate
   at which messages are removed from the queues, from the running totals of commands and deadlines removed. Done. When no
-  node supports those, the chart is left out. Not done, and to be settled with the queues tile's copy, because it needs
-  a verb on the page: a fallback of the messages that the handlers have handled successfully, from the running totals of
-  commands and deadlines handled, which would also back the tile's headline. The number of messages waiting stays the
+  node supports those, the messages that the handlers have handled successfully stand in for them, from the running
+  totals of commands and deadlines handled, as James decided on 2026-11-19. The Observatory says which in `counted`, and
+  the page says it too: the words beside the headline say "handled", the card is "Message handling rate" and says that it
+  is built from the messages that handlers have handled, because no node reports the removals, and the chart's readout
+  is "handled/min". When no node supports either, the chart is left out. The number of messages waiting stays the
   tile's headline and its bar. A level and a rate on one chart was considered and not done, because they are in different
   units and each is scaled to its own peak.
 - The same for a sparkline: pointing at a place on it shows the value there.

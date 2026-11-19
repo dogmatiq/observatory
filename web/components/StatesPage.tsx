@@ -306,7 +306,7 @@ export function StatesPage() {
 					<State label="Known" note="442 messages removed per minute.">
 						<QueuesTile
 							application={application}
-							data={queuesTile({ perMinute: 442 })}
+							data={queuesTile({ perMinute: 442, of: "removed" })}
 							href={undefined}
 						/>
 					</State>
@@ -316,7 +316,7 @@ export function StatesPage() {
 					>
 						<QueuesTile
 							application={application}
-							data={queuesTile({ perMinute: 0.4 })}
+							data={queuesTile({ perMinute: 0.4, of: "removed" })}
 							href={undefined}
 						/>
 					</State>
@@ -326,7 +326,7 @@ export function StatesPage() {
 					>
 						<QueuesTile
 							application={application}
-							data={queuesTile({})}
+							data={queuesTile({ of: "removed" })}
 							href={undefined}
 						/>
 					</State>
@@ -346,7 +346,33 @@ export function StatesPage() {
 					>
 						<QueuesTile
 							application={application}
-							data={queuesTile({ perMinute: 442 }, { queues: false })}
+							data={queuesTile(
+								{ perMinute: 442, of: "removed" },
+								{ queues: false },
+							)}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Handled instead of removed"
+						note="No node reports the removals, so the rate, and the chart, are of the messages that handlers have handled, and the words say so."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 442, of: "handled" })}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Handled, and no queue sizes"
+						note="The headline is the rate, and says which."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile(
+								{ perMinute: 442, of: "handled" },
+								{ queues: false },
+							)}
 							href={undefined}
 						/>
 					</State>
@@ -356,7 +382,10 @@ export function StatesPage() {
 					>
 						<QueuesTile
 							application={application}
-							data={queuesTile({ perMinute: 442 }, { failing: 3 })}
+							data={queuesTile(
+								{ perMinute: 442, of: "removed" },
+								{ failing: 3 },
+							)}
 							href={undefined}
 						/>
 					</State>
@@ -379,6 +408,21 @@ export function StatesPage() {
 							</Panel>
 						</State>
 					))}
+					<State
+						label="Built from the messages that handlers handle"
+						note="When no node reports the removals."
+					>
+						<Panel>
+							<RateCard
+								subsystem="queues"
+								icon="message"
+								kind="Message handling rate"
+								description="The rate at which handlers are handling messages"
+								note="No node reports how fast messages are removed from the queues, so this is built from the messages that handlers have handled."
+								state="known"
+							/>
+						</Panel>
+					</State>
 				</Section>
 
 				<Section
@@ -528,7 +572,7 @@ function Lost({ backAfter }: { backAfter?: number }) {
  * failing messages.
  */
 function queuesTile(
-	removed: { perMinute?: number } | undefined,
+	throughput: { perMinute?: number; of: "removed" | "handled" } | undefined,
 	options: { queues?: boolean; failing?: number } = {},
 ): NonNullable<OverviewData["queues"]> {
 	const { queues, history } = overview.queues ?? {};
@@ -536,8 +580,8 @@ function queuesTile(
 	return {
 		queues: options.queues === false ? undefined : queues,
 		failing: options.failing ?? 0,
-		removed,
-		history: removed === undefined ? undefined : history,
+		throughput,
+		history: throughput === undefined ? undefined : history,
 	};
 }
 

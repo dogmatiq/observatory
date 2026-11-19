@@ -238,7 +238,9 @@ export function queuesAbout(application: Application) {
 
 /**
  * QueuesTile is the queues tile, whose headline is the messages that wait in the
- * queues, or the messages removed per minute if no node reports how many wait.
+ * queues, or the messages removed per minute if no node reports how many wait. The
+ * messages that handlers have handled stand in for those that are removed, if no
+ * node reports them.
  */
 export function QueuesTile({
 	application,
@@ -249,7 +251,7 @@ export function QueuesTile({
 	data: NonNullable<OverviewData["queues"]>;
 	href: string | undefined;
 }) {
-	const { queues, removed } = data;
+	const { queues, throughput } = data;
 	const messages = queues?.reduce((sum, q) => sum + q.size, 0) ?? 0;
 
 	// The headline is the messages that aren't failing, and then those that are,
@@ -260,15 +262,28 @@ export function QueuesTile({
 
 	// The rate of removal is a whole number per minute, or per hour or per day if
 	// it is less than one per minute, as the rate of events is.
-	const { scaled, per, state } = useRate(removed?.perMinute);
+	const { scaled, per, state } = useRate(throughput?.perMinute);
+
+	// What the rate counts, which is the messages that are removed, or, if no node
+	// reports them, those that handlers have handled, which the card says.
+	const handled = throughput?.of === "handled";
 
 	// The number and the words beside it both have the card of the rate.
 	const rateCard = (
 		<RateCard
 			subsystem="queues"
 			icon="message"
-			kind="Message removal rate"
-			description="The rate at which messages are being removed from the queues"
+			kind={handled ? "Message handling rate" : "Message removal rate"}
+			description={
+				handled
+					? "The rate at which handlers are handling messages"
+					: "The rate at which messages are being removed from the queues"
+			}
+			note={
+				handled
+					? "No node reports how fast messages are removed from the queues, so this is built from the messages that handlers have handled."
+					: undefined
+			}
 			state={state}
 		/>
 	);
@@ -303,7 +318,7 @@ export function QueuesTile({
 					<>
 						<Noun>{nounFor(messages, "message", "messages")}</Noun>
 						{` in ${countOf(queues.length, "queue", "queues")}`}
-						{removed && (
+						{throughput && (
 							<>
 								{", "}
 								<Popover card content={rateCard}>
@@ -318,7 +333,7 @@ export function QueuesTile({
 				) : (
 					<Popover card content={rateCard}>
 						<span className={describedClasses}>
-							<Noun>{`messages removed per ${per}`}</Noun>
+							<Noun>{`messages ${handled ? "handled" : "removed"} per ${per}`}</Noun>
 						</span>
 					</Popover>
 				)
@@ -335,7 +350,7 @@ export function QueuesTile({
 						className="h-12"
 						describe={(value) => ({
 							figure: formatCompact(inUnit(value, per)),
-							unit: `removals${shortPer[per]}`,
+							unit: `${handled ? "handled" : "removals"}${shortPer[per]}`,
 						})}
 					/>
 				)
