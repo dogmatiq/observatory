@@ -1,11 +1,9 @@
-import { useRef } from "react";
 import {
 	countOf,
 	formatCompact,
-	formatNumber,
+	inUnit,
 	nounFor,
-	type RatePer,
-	scaleRate,
+	shortPer,
 } from "../lib/format.ts";
 import { heartbeatLevel } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
@@ -14,18 +12,20 @@ import {
 	queueSegments,
 	streamSegments,
 } from "../lib/segments.ts";
-import type { OverviewData } from "../model.ts";
+import type { Application, OverviewData } from "../model.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-import { Figure, useKept } from "./Figure.tsx";
+import { Figure } from "./Figure.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
+import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
-import { Popover } from "./Popover.tsx";
+import { describedClasses, Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
 import { RateCard } from "./RateCard.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
+import { useRate } from "./useRate.ts";
 
 /**
  * Where the tiles and the cards of the overview link to. A tile or a card that
@@ -48,9 +48,11 @@ export interface OverviewLinks {
  * take the others with it.
  */
 export function Overview({
+	application,
 	data,
 	links = {},
 }: {
+	application: Application;
 	data: OverviewData;
 	links?: OverviewLinks;
 }) {
@@ -63,14 +65,22 @@ export function Overview({
 				<Presence shape="fade">
 					{data.events && (
 						<ErrorBoundary>
-							<EventsTile data={data.events} href={links.events} />
+							<EventsTile
+								application={application}
+								data={data.events}
+								href={links.events}
+							/>
 						</ErrorBoundary>
 					)}
 				</Presence>
 				<Presence shape="fade">
 					{data.queues && (
 						<ErrorBoundary>
-							<QueuesTile data={data.queues} href={links.queues} />
+							<QueuesTile
+								application={application}
+								data={data.queues}
+								href={links.queues}
+							/>
 						</ErrorBoundary>
 					)}
 				</Presence>
@@ -85,6 +95,7 @@ export function Overview({
 				{data.handlers.map((handler) => (
 					<ErrorBoundary key={handler.key}>
 						<HandlerCard
+							application={application}
 							handler={handler}
 							href={links.handler?.(handler.key)}
 						/>
@@ -96,13 +107,31 @@ export function Overview({
 }
 
 /**
+ * eventsAbout returns what the card of the events tile says, which is what the
+ * part of the page is about. It says nothing of what the part shows, because
+ * that depends on what the nodes of the cluster can tell it, and each element of
+ * it has a popover of its own.
+ */
+export function eventsAbout(application: Application) {
+	return (
+		<p>
+			This section shows information about the events and event streams in the{" "}
+			<span className="font-semibold text-fg">{application.name}</span>{" "}
+			application.
+		</p>
+	);
+}
+
+/**
  * EventsTile is the events tile, whose headline is the events per minute, or the
  * number of events if no node reports the rate.
  */
 export function EventsTile({
+	application,
 	data,
 	href,
 }: {
+	application: Application;
 	data: NonNullable<OverviewData["events"]>;
 	href: string | undefined;
 }) {
@@ -111,16 +140,8 @@ export function EventsTile({
 
 	// A rate is a whole number of events per minute, or per hour or per day if it
 	// is less than one per minute, and is lost, as the figure shows it, for a
-	// minute at most. When it has been lost for that long, its zero is in the unit
-	// that it was in, so that the figure can ramp down to it.
-	const kept = useKept(rate?.perMinute);
-	const scaled =
-		rate?.perMinute === undefined ? undefined : scaleRate(rate.perMinute);
-	const lastPer = useRef<RatePer>("minute");
-	if (kept.value !== undefined) {
-		lastPer.current = scaleRate(kept.value).per;
-	}
-	const per = lastPer.current;
+	// minute at most.
+	const { scaled, per, state } = useRate(rate?.perMinute);
 
 	// The number and the words beside it both have the card of the rate.
 	const rateCard = (
@@ -129,9 +150,7 @@ export function EventsTile({
 			icon="event"
 			kind="Event rate"
 			description="The rate at which the application is recording new events"
-			state={
-				kept.value === undefined ? "unavailable" : kept.lost ? "lost" : "known"
-			}
+			state={state}
 		/>
 	);
 
@@ -142,6 +161,7 @@ export function EventsTile({
 			subsystem="streams"
 			label="Events"
 			icon="event"
+			about={eventsAbout(application)}
 			href={href}
 			value={
 				rate ? (
@@ -158,23 +178,18 @@ export function EventsTile({
 					<Ramped value={total} format={formatCompact} />
 				)
 			}
-			valueTitle={rate ? undefined : formatNumber(total)}
 			detail={
 				rate ? (
 					<>
 						<Popover card content={rateCard}>
-							<span>
+							<span className={describedClasses}>
 								<Noun>{`events per ${per}`}</Noun>
 							</span>
 						</Popover>
 						{streams && (
 							<>
 								{", "}
-								<Popover content={formatNumber(total)}>
-									<span>
-										<Ramped value={total} format={formatCompact} />
-									</span>
-								</Popover>
+								<Ramped value={total} format={formatCompact} />
 								{` ${nounFor(total, "event", "events")} in ${countOf(streams.length, "stream", "streams")}`}
 							</>
 						)}
@@ -192,20 +207,45 @@ export function EventsTile({
 				)
 			}
 			chart={
-				data.history && <Sparkline chart={data.history} className="h-12" />
+				data.history && (
+					<Sparkline
+						chart={data.history}
+						className="h-12"
+						describe={(value) => ({
+							figure: formatCompact(inUnit(value, per)),
+							unit: `events${shortPer[per]}`,
+						})}
+					/>
+				)
 			}
 		/>
 	);
 }
 
-/** What the popover of the number of messages removed per minute says. */
-const removedPerMinuteText =
-	"Messages removed from the queues per minute: those delivered, and deadlines removed when their process instance ended.";
+/**
+ * queuesAbout returns what the card of the queues tile says, which is what the
+ * part of the page is about, as [eventsAbout] does.
+ */
+export function queuesAbout(application: Application) {
+	return (
+		<p>
+			This section shows information about the messages and queues in the{" "}
+			<span className="font-semibold text-fg">{application.name}</span>{" "}
+			application.
+		</p>
+	);
+}
 
-function QueuesTile({
+/**
+ * QueuesTile is the queues tile, whose headline is the messages that wait in the
+ * queues, or the messages removed per minute if no node reports how many wait.
+ */
+export function QueuesTile({
+	application,
 	data,
 	href,
 }: {
+	application: Application;
 	data: NonNullable<OverviewData["queues"]>;
 	href: string | undefined;
 }) {
@@ -218,33 +258,46 @@ function QueuesTile({
 	// per minute.
 	const healthy = Math.max(0, messages - data.failing);
 
-	// The rate of removal is a whole number.
-	const removedRate =
-		removed?.perMinute === undefined
-			? undefined
-			: Math.round(removed.perMinute);
+	// The rate of removal is a whole number per minute, or per hour or per day if
+	// it is less than one per minute, as the rate of events is.
+	const { scaled, per, state } = useRate(removed?.perMinute);
+
+	// The number and the words beside it both have the card of the rate.
+	const rateCard = (
+		<RateCard
+			subsystem="queues"
+			icon="message"
+			kind="Message removal rate"
+			description="The rate at which messages are being removed from the queues"
+			state={state}
+		/>
+	);
+
+	const rate = (
+		<Figure number={scaled?.amount} format={formatCompact} unit={per} />
+	);
 
 	return (
 		<MetricTile
 			subsystem="queues"
 			label="Queues"
-			icon="queue"
+			icon="message"
+			about={queuesAbout(application)}
 			href={href}
 			value={
 				queues ? (
-					<>
-						<Ramped value={healthy} format={formatCompact} />
-						<Failing count={data.failing} size="headline" />
-					</>
-				) : (
-					<Popover content={removedPerMinuteText}>
+					<Popover card content={<MessagesWaitingCard />}>
 						<span>
-							<Figure number={removedRate} format={formatCompact} />
+							<Ramped value={healthy} format={formatCompact} />
+							<Failing count={data.failing} size="headline" />
 						</span>
+					</Popover>
+				) : (
+					<Popover card content={rateCard}>
+						<span>{rate}</span>
 					</Popover>
 				)
 			}
-			valueTitle={queues ? formatNumber(healthy) : undefined}
 			detail={
 				queues ? (
 					<>
@@ -253,17 +306,21 @@ function QueuesTile({
 						{removed && (
 							<>
 								{", "}
-								<Popover content={removedPerMinuteText}>
-									<span>
-										<Figure number={removedRate} format={formatCompact} />
+								<Popover card content={rateCard}>
+									<span className={describedClasses}>
+										{rate}
+										{shortPer[per]}
 									</span>
 								</Popover>
-								/min
 							</>
 						)}
 					</>
 				) : (
-					<Noun>messages removed per minute</Noun>
+					<Popover card content={rateCard}>
+						<span className={describedClasses}>
+							<Noun>{`messages removed per ${per}`}</Noun>
+						</span>
+					</Popover>
 				)
 			}
 			bar={
@@ -272,7 +329,16 @@ function QueuesTile({
 				)
 			}
 			chart={
-				data.history && <Sparkline chart={data.history} className="h-12" />
+				data.history && (
+					<Sparkline
+						chart={data.history}
+						className="h-12"
+						describe={(value) => ({
+							figure: formatCompact(inUnit(value, per)),
+							unit: `removals${shortPer[per]}`,
+						})}
+					/>
+				)
 			}
 		/>
 	);

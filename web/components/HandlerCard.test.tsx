@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
+import { application } from "../fixtures/overview.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { tipOf } from "../test-support.ts";
 import { HandlerCard } from "./HandlerCard.tsx";
@@ -20,6 +21,7 @@ function card(
 ) {
 	return render(
 		<HandlerCard
+			application={application}
 			handler={{
 				key: "k",
 				name: "the-handler",
@@ -181,13 +183,15 @@ test("a number that falls to zero recedes once it has got there, and not while i
 			bindings: [{ id: "aaaaaaaa", instances }],
 		},
 	});
-	const { container, rerender } = render(<HandlerCard handler={handler(30)} />);
+	const { container, rerender } = render(
+		<HandlerCard application={application} handler={handler(30)} />,
+	);
 	const faint = () => container.querySelector("span.text-faint");
 
 	// Nothing of the stats is faint but the other numbers that are zero.
 	expect(container.textContent).toContain("30");
 
-	rerender(<HandlerCard handler={handler(0)} />);
+	rerender(<HandlerCard application={application} handler={handler(0)} />);
 	act(() => {
 		vi.advanceTimersByTime(80);
 	});
@@ -236,6 +240,7 @@ test("a card is not a link unless it is given one", () => {
 
 	render(
 		<HandlerCard
+			application={application}
 			handler={{
 				key: "k",
 				name: "the-handler",
@@ -405,6 +410,7 @@ test("a chart has the color of the messages that it counts", () => {
 test("the punctuation of a handler's name is muted, and the words are not, and a popover has the whole name", async () => {
 	render(
 		<HandlerCard
+			application={application}
 			handler={{
 				key: "k",
 				name: "statement-schedule.v2",

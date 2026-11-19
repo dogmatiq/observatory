@@ -260,7 +260,7 @@ func chartsOf(view observe.ClusterView, series observe.Series) map[string][]obse
 		charts["events"] = series.Events
 	}
 	if q := view.Overview.Queues; q != nil && q.History != nil {
-		charts["queues"] = series.Queues
+		charts["removed"] = series.Removed
 	}
 	for _, card := range view.Overview.Handlers {
 		if card.History != nil {

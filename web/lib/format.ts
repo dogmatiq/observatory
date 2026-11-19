@@ -85,6 +85,28 @@ export function formatPercent(share: number): string {
 /** The unit of time that a rate is given per. */
 export type RatePer = "minute" | "hour" | "day";
 
+/** How many of each unit of time there are in a minute, as a factor. */
+const perMinuteIn: Record<RatePer, number> = {
+	minute: 1,
+	hour: 60,
+	day: 1440,
+};
+
+/**
+ * inUnit returns a rate of things that can't be divided, which is given per
+ * minute, as a whole number per the unit of time `per`.
+ */
+export function inUnit(perMinute: number, per: RatePer): number {
+	return Math.round(perMinute * perMinuteIn[per]);
+}
+
+/** The short form of a unit of time, as in "347/min". */
+export const shortPer: Record<RatePer, string> = {
+	minute: "/min",
+	hour: "/hr",
+	day: "/day",
+};
+
 /**
  * scaleRate returns a rate of things that can't be divided, such as events, as a
  * whole number per minute, or, if that would be less than one, per hour, or, if
@@ -92,14 +114,8 @@ export type RatePer = "minute" | "hour" | "day";
  * the unit of time is scaled instead. A rate of none is "0 per minute".
  */
 export function scaleRate(perMinute: number): { amount: number; per: RatePer } {
-	const units: [RatePer, number][] = [
-		["minute", 1],
-		["hour", 60],
-		["day", 1440],
-	];
-
-	for (const [per, factor] of units) {
-		const amount = Math.round(perMinute * factor);
+	for (const per of ["minute", "hour", "day"] as const) {
+		const amount = inUnit(perMinute, per);
 		if (amount >= 1) {
 			return { amount, per };
 		}

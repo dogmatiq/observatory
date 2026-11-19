@@ -1,14 +1,32 @@
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn.ts";
 import { Icon, type IconName } from "./Icon.tsx";
+import { Identifier } from "./Identifier.tsx";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
+
+/**
+ * Scope says where the thing that a card is about is, or what it is of: "within
+ * the Account application", "across the Dev cluster" or "on the Web 1 node".
+ */
+export interface Scope {
+	preposition: "within" | "across" | "on";
+
+	/** What the scope is a kind of, such as "application". */
+	kind: string;
+
+	name: string;
+
+	/** The ID of what the scope is of, if it has one, shown under the scope. */
+	id?: string;
+}
 
 /**
  * InfoCard is the frame of a small card of information, which is the content of
  * a popover that says more about something on the page. From the top it has:
  *
  * - a header, with an icon in the color of a subsystem, the kind of thing that
- *   the card is about, and what identifies it, if there is something;
+ *   the card is about, its scope, if it has one, such as "within the Account
+ *   application", and what identifies it, if there is something;
  * - a figure that is the card's main number, with a unit, and an aside at the
  *   right, such as a share, if the card has them;
  * - paragraphs that say what the figure is;
@@ -21,7 +39,9 @@ import { type Subsystem, subsystemColors } from "./subsystems.ts";
 export function InfoCard({
 	subsystem,
 	icon,
+	iconColor,
 	kind,
+	scope,
 	identifier,
 	figure,
 	children,
@@ -30,8 +50,14 @@ export function InfoCard({
 	subsystem: Subsystem;
 	icon: IconName;
 
+	/** The class that colors the icon, if it is not the subsystem's color. */
+	iconColor?: string;
+
 	/** The kind of thing that the card is about, such as "Event stream". */
 	kind: string;
+
+	/** Where the thing is, or what it is of, shown under its kind. */
+	scope?: Scope;
 
 	/** What identifies the thing, shown under its kind. */
 	identifier?: ReactNode;
@@ -58,13 +84,14 @@ export function InfoCard({
 			<div
 				className={cn(
 					"flex gap-3 px-3.5 py-3",
-					identifier ? "items-start" : "items-center",
+					identifier || scope ? "items-start" : "items-center",
 				)}
 			>
 				<span
 					className={cn(
-						"flex-none text-(--subsystem)",
-						identifier ? "mt-px" : "",
+						"flex-none",
+						iconColor ?? "text-(--subsystem)",
+						identifier || scope ? "mt-px" : "",
 					)}
 				>
 					<Icon name={icon} className="size-5" />
@@ -73,6 +100,14 @@ export function InfoCard({
 					<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
 						{kind}
 					</span>
+					{scope && (
+						<span className="text-fg-soft">
+							{scope.preposition} the{" "}
+							<span className="font-semibold text-fg">{scope.name}</span>{" "}
+							{scope.kind}
+						</span>
+					)}
+					{scope?.id !== undefined && <Identifier id={scope.id} named />}
 					{identifier}
 				</div>
 			</div>

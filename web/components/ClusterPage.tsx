@@ -32,7 +32,7 @@ export function ClusterPage({
 			notice={notice}
 		>
 			<ErrorBoundary>
-				<Overview data={data} links={links} />
+				<Overview application={application} data={data} links={links} />
 			</ErrorBoundary>
 		</Page>
 	);

@@ -45,6 +45,16 @@ let closeOpen: (() => void) | undefined;
 export const panelClasses =
 	"rounded-control border border-line-strong bg-panel text-xs text-fg";
 
+/**
+ * What a part of a sentence that has a popover looks like when it is pointed at:
+ * a faint ground appears behind it, so that it is clear which words the popover
+ * is about. It is not an underline, which says that the words are a link. Its
+ * padding is taken back by a negative margin, so that it doesn't move the words
+ * around it.
+ */
+export const describedClasses =
+	"-mx-1 rounded-control px-1 transition-colors duration-150 hover:bg-sunk motion-reduce:transition-none";
+
 /** The room that a popover leaves between itself and the edges of the window. */
 const margin = 8;
 

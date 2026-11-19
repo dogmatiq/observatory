@@ -104,3 +104,51 @@ export function sparklineGeometry(chart: Chart): SparklineGeometry | undefined {
 		leadIn: hasLeadIn ? { from: startX, to: firstX } : undefined,
 	};
 }
+
+/**
+ * valueAt returns the value of a chart at a time, on the same scale as its
+ * points, as the line between its points has it. It is undefined before the
+ * first point, where the chart has no value, and it is the last value after the
+ * last point.
+ */
+export function valueAt(chart: Chart, at: number): number | undefined {
+	const { points } = chart;
+
+	const first = points[0];
+	const last = points[points.length - 1];
+	if (first === undefined || last === undefined || at < first.at) {
+		return undefined;
+	}
+	if (at >= last.at) {
+		return last.value;
+	}
+
+	for (let i = 1; i < points.length; i++) {
+		const next = points[i] as Chart["points"][number];
+		if (at <= next.at) {
+			const prev = points[i - 1] as Chart["points"][number];
+			if (next.at === prev.at) {
+				return next.value;
+			}
+			return (
+				prev.value +
+				((next.value - prev.value) * (at - prev.at)) / (next.at - prev.at)
+			);
+		}
+	}
+
+	return last.value;
+}
+
+/**
+ * heightOf returns how far up a chart a value is drawn, from 0, at the bottom,
+ * to 1, at the top, where the largest value of the chart is, as
+ * {@link sparklineGeometry} scales it.
+ */
+export function heightOf(chart: Chart, value: number): number {
+	const peak = Math.max(0, ...chart.points.map((p) => p.value)) || 1;
+	return (
+		(sparklineHeight - pad - (1 - value / peak) * (sparklineHeight - 2 * pad)) /
+		sparklineHeight
+	);
+}

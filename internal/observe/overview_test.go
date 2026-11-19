@@ -262,7 +262,7 @@ func TestOverview(t *testing.T) {
 					if e := v.Overview.Events; e == nil || e.Streams == nil || e.Rate != nil || e.History != nil {
 						t.Fatalf("unexpected events tile: %+v", e)
 					}
-					if q := v.Overview.Queues; q == nil || q.Queues != nil || q.Removed == nil || q.History != nil {
+					if q := v.Overview.Queues; q == nil || q.Queues != nil || q.Removed == nil || q.History == nil {
 						t.Fatalf("unexpected queues tile: %+v", q)
 					}
 
@@ -887,14 +887,17 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsPending)), reach),
+					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
 				)
 
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q, Value: 3}.Build())
+				// The rate is known once the totals have been seen for long enough.
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+				time.Sleep(10 * time.Second)
+				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				time.Sleep(2 * time.Second)
-				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsPending_builder{QueueId: q, Value: 8}.Build())
+				n.sample(t, 0, "q", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 60}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				time.Sleep(time.Second)
@@ -909,7 +912,7 @@ func TestOverview(t *testing.T) {
 				if p := chart.Points[0]; p.At != -3000 || p.Value != 3 {
 					t.Fatalf("unexpected first point: %+v", p)
 				}
-				if p := chart.Points[1]; p.At != -1000 || p.Value != 8 {
+				if p := chart.Points[1]; p.At != -1000 || p.Value != 5 {
 					t.Fatalf("unexpected second point: %+v", p)
 				}
 
@@ -926,31 +929,33 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsPending)), reach),
+					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
 				)
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q, Value: 3}.Build())
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+				time.Sleep(10 * time.Second)
+				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
 
 				start := time.Now()
 				r.Record(start, o.Nodes())
 				time.Sleep(2 * time.Second)
-				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsPending_builder{QueueId: q, Value: 8}.Build())
+				n.sample(t, 0, "q", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 60}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				series := r.Series(c.AsString())
-				if len(series.Queues) != 2 {
-					t.Fatalf("unexpected points: %v", series.Queues)
+				if len(series.Removed) != 2 {
+					t.Fatalf("unexpected points: %v", series.Removed)
 				}
-				if p := series.Queues[0]; !p.At.Equal(start) || p.Value != 3 {
+				if p := series.Removed[0]; !p.At.Equal(start) || p.Value != 3 {
 					t.Fatalf("unexpected first point: %+v", p)
 				}
-				if p := series.Queues[1]; !p.At.Equal(start.Add(2*time.Second)) || p.Value != 8 {
+				if p := series.Removed[1]; !p.At.Equal(start.Add(2*time.Second)) || p.Value != 5 {
 					t.Fatalf("unexpected second point: %+v", p)
 				}
 				if len(series.Events) != 0 || len(series.Handlers) != 0 {
 					t.Fatalf("unexpected points of other charts: %+v", series)
 				}
 
-				if got := r.Series(uuidpb.Generate().AsString()); len(got.Queues) != 0 {
+				if got := r.Series(uuidpb.Generate().AsString()); len(got.Removed) != 0 {
 					t.Fatalf("unexpected points of an unknown cluster: %+v", got)
 				}
 
@@ -967,13 +972,15 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsPending)), reach),
+					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
 				)
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q, Value: 3}.Build())
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
 
-				for range 200 {
-					r.Record(time.Now(), o.Nodes())
+				// A total that keeps rising has a rate that keeps being known.
+				for i := range 200 {
 					time.Sleep(time.Second)
+					n.sample(t, 0, "q", byte(i+2), metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: uint64(3 * (i + 1))}.Build())
+					r.Record(time.Now(), o.Nodes())
 				}
 
 				chart := viewOf(t, r, o, c).Overview.Queues.History
@@ -997,9 +1004,11 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsPending)), reach),
+					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
 				)
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q, Value: 3}.Build())
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+				time.Sleep(10 * time.Second)
+				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				// The Recorder keeps no history for the cluster once the nodes are

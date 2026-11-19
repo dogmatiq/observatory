@@ -142,7 +142,7 @@ export interface OverviewData {
 		 */
 		removed?: { perMinute?: number };
 
-		/** The history of the number of messages in the queues. */
+		/** The history of the messages removed per minute, which goes with `removed`. */
 		history?: Chart;
 	};
 

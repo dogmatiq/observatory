@@ -238,9 +238,9 @@ test("the popover of a segment that has a card about it is the card", async () =
 					about: {
 						thing: "event-stream",
 						id,
-						events: 3,
+						amount: 3,
 						share: 0.75,
-						total: { events: 4, streams: 2 },
+						total: { amount: 4, things: 2 },
 					},
 				},
 			]}

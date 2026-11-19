@@ -9,6 +9,7 @@ import type { ReactNode, SVGProps } from "react";
  */
 export type IconName =
 	| "aggregate"
+	| "application"
 	| "check"
 	| "cluster"
 	| "command"
@@ -17,6 +18,7 @@ export type IconName =
 	| "event"
 	| "event-stream"
 	| "integration"
+	| "message"
 	| "minimize-concurrency"
 	| "process"
 	| "projection"
@@ -28,12 +30,24 @@ export type IconName =
  * under the ISC license.
  */
 const shapes: Record<IconName, ReactNode> = {
+	application: (
+		<>
+			<rect width="7" height="7" x="14" y="3" rx="1" />
+			<path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3" />
+		</>
+	),
 	check: <path d="M20 6 9 17l-5-5" />,
 	spinner: <path d="M21 12a9 9 0 1 1-6.219-8.56" />,
 	copy: (
 		<>
 			<rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
 			<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+		</>
+	),
+	message: (
+		<>
+			<rect width="20" height="16" x="2" y="4" rx="2" />
+			<path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
 		</>
 	),
 	cluster: (

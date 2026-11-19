@@ -346,11 +346,37 @@ parts. An item that says "Done" is built.
     the top of the page plays the animations again.
   - What each popover says, and the hover state of its element, are being settled one element at a time, by using them,
     and the hover state of an element follows from its content. Done: the bar segments, whose popovers show the thing
-    that a segment is of with its identifier (below). The stats have a chip behind them when pointed at, because a stat
-    is a group of elements to read as a whole, and the chip is not for a single element, such as a name. To do, in this
-    order: the kind icon, which would define the kind of handler, not repeat the kind; every stat, including "instances"
-    and "in progress", which have a chip and no popover now, with the failing count in it; the tile figures, which would
-    give the exact value, and the window of a rate, and the tile icon, whose popover would go; the handler name, whose
+    that a segment is of with its identifier (below); and the events tile's detail line and icon. A number that is abbreviated
+    has no popover with its exact value, because the exact value is not wanted. The icon of a tile has a card that says
+    what the tile is about in general, and not what it shows, because that depends on what the nodes can tell it, and
+    each part has a popover of its own. A help card says its scope under its kind, such as "across the … cluster" or "on the … node", only
+    if the thing is narrower than the page, because a scope of the application would repeat the title bar. The events
+    tile's card has none. The icon of an application is Lucide's `blocks`, which is not in use yet. The icon of a tile, and the kind icon of a handler card, grow a
+    little, to 115%, when pointed at, because an icon is a compact target and a chip behind it was tried and not liked. The
+    pointer stays the standard one. The queues tile, done as the events tile is: no popover with the exact number of messages;
+    a help card that says "This section shows information about the messages and queues in the … application"; a rate
+    card for the messages removed per minute, on the figure and the words beside it, which scales to per hour as the
+    events' does; the card of a queue for a segment of the bar, which is the card of a stream with messages and queues
+    for events and streams, and says that when messages are waiting an even distribution is better; and the sparkline
+    of the removal rate. The number of messages that wait and the count of those that fail after it are one headline, with
+    one card, "Messages waiting", which says that, if there are any failing ones, they are shown separately, and leaves how to the example, which has a
+    plus sign and smaller type, and does not rely on color, and that lower is
+    better, because if the number keeps rising, messages arrive faster than they are handled, and shows an example,
+    "24 +1", in grays and a dashed box, with numbers of its own and, drawn over it as if by hand, an arrow and a short label under each of its two numbers, in a bundled handwriting face, Gaegu, with its letters a little closer, chosen from Caveat, Gochi Hand and others; pointing at a number, or at its arrow or its label, shows the number, its arrow and its label in the number's real color, so that the relationship is seen and not only described,
+    and it is not taken for the real figure.
+    A failing count of a handler's card has none yet, because its stat has a popover of its own. The words and the figures in a
+    sentence that have a popover get a faint ground behind them when pointed at, so that it is clear which words the
+    popover is about; it is not an underline, which says that they are a link. The icon of a card is the icon of the entity that the card is about, and, for a tile, the entity of its vital
+    signal: the events tile's is events, and the queues tile's is messages, so the queues tile's icon and its cards' are an
+    envelope, and only a card about a queue has the tray. If the chart and the rate are ever built from the messages that the handlers
+    handle, because the queues don't report their removals, the card says so, and says which verb it counts. All of its
+    states are at `/states`. The stats have a chip behind them when pointed at, because a stat
+    is a group of elements to read as a whole, and the chip is not for a single element, such as a name. Done: the kind icon, whose card, in the color of the kind, says in the way of the events tile's card, "This section shows information
+    about the … aggregate in the … application", so that it is clear when the handler's name is not, such as a handler
+    named "aggregate", and then reminds the reader what that kind of handler does. It assumes that the reader knows the
+    terms. To do, in this
+    order: every stat, including "instances"
+    and "in progress", which have a chip and no popover now, with the failing count in it; the tile figures; the handler name, whose
     popover would show its key as an identifier; the application name and the link of a cluster, whose popovers would
     show their identifiers; the concurrency icon, whose question-mark pointer would go.
 - A hovered bar segment rises out of the bar, by a pixel above and below, and goes to full opacity, so its shade is
@@ -358,9 +384,29 @@ parts. An item that says "Done" is built.
   below the segment were tried first, and neither fit the page's style. A rising segment is outside its bar, so the
   segments are boxes, and the two at the ends of the bar have its rounded corners, and a part of the page that holds a
   bar doesn't clip once it has grown in.
+- Every sparkline on the cluster view is a message rate, so that they all have the same basic axis: events, commands and
+  deadlines are all messages, and each chart counts one kind of them per minute. The verb differs: events recorded,
+  events handled, commands handled, messages removed. The cluster tile's wave is not a sparkline. The queues tile's chart
+  was the number of messages waiting, which is a level, and which sits at zero in a healthy system, so it is now the rate
+  at which messages are removed from the queues, from the running totals of commands and deadlines removed. Done. When no
+  node supports those, the chart is left out. Not done, and to be settled with the queues tile's copy, because it needs
+  a verb on the page: a fallback of the messages that the handlers have handled successfully, from the running totals of
+  commands and deadlines handled, which would also back the tile's headline. The number of messages waiting stays the
+  tile's headline and its bar. A level and a rate on one chart was considered and not done, because they are in different
+  units and each is scaled to its own peak.
 - The same for a sparkline: pointing at a place on it shows the value there.
-  - A sparkline scrolls, so the point under the pointer moves. Until a click, the readout is whatever is under the
-    pointer. A click anchors it to that time, and the cursor then moves with the graph.
+  - Done for the sparklines of the events and queues tiles: a cursor line, which fades out upward and downward, so that it ends in the chart's area, and has a round dot of five pixels
+    where it meets the chart's line, of which only the center pixel has the full color of the text, and the rest is fainter
+    toward the edge (three, four, six and seven pixels were tried, and a cross hair of lines sideways from the dot, which
+    was not liked), and a readout beside the tile's icon, which expands from the icon, with the value and how
+    long ago it was. There is no anchor: a click that held the cursor to a moment was built and removed, because the chart moves slowly
+    enough to read under the pointer, and one held moment could not be compared with anything. The readout is of medium length, as in
+    "347 events/min". A rate has three lengths: "347 events per minute" in the words beside a headline, "347 events/min"
+    in a readout, and "347/min" where the thing is named next to it. The cards' sparklines and the heartbeat chart are not done. The chart and the rate beside it are in the same unit, per minute,
+    which the data layer converts once, and the readout is in the unit that the headline has, so a slow rate is per hour
+    in both.
+  - A sparkline scrolls, so the point under the pointer moves, and the readout is whatever is under the pointer. The
+    mouse pointer stays shown: hiding it while the chart's cursor was shown was tried and not kept.
   - The cursor line fades out before it reaches the bar above, or flows into the readout in some way. Where it meets the
     chart's own line, not the shaded area, the line is more intense. It is not made to connect when it can't.
   - On the heartbeat chart, the hovered node's share has no border. Its line and its shade are more intense instead.
@@ -373,12 +419,14 @@ parts. An item that says "Done" is built.
   which is an external system, and green for a projection, which is a read model. Done, as the visible differences say.
   There must not be many colors, and the projection's green and the process's lilac come close to the healthy green that
   the site view will use and to the event streams' indigo, to be judged when they are side by side on a page.
-- The color mark that an identifier gets (below) comes from a palette that we control and that is reasonably large, so
-  that two identifiers rarely share one.
-  Done for the bar segments: an identifier is a color mark, its first eight characters in monospace type, and a button
-  that copies the whole ID. The 48 colors are 24 hues in two lightnesses, chosen by a hash of the ID.
 - Identifiers. A UUID is inevitable on the page and it irks. It needs a special treatment, so that a person can tell
-  one from another and knows what it is, without the 36 characters.
+  one from another and knows what it is, without the 36 characters. Done, without color. A color for an ID was tried as a
+  square, as an icon of the kind of thing and as the color of the text, and dropped, because there are only 48 colors,
+  so two IDs often share one, light colors can't be read as text, and the page puts too much meaning on color already.
+  The conventions: an ID is shown only in a popover, never in the body of the page or in a sentence; it is its first
+  eight characters in monospace type, which is the page's own, JetBrains Mono, at 10 px, with a button that copies the whole ID; the ID of a thing that has no name, such
+  as an event stream or a queue, is its identity, and is in the color of the text; the ID of a thing that has a name,
+  such as an application or a handler, is in the color of muted text, because the name is the identity.
 - A handler card's chart is events recorded or handled, so the card of an integration that records no events, such as the
   mailer, has no chart and looks idle while it is busy handling commands. Decided: the chart shows what the handler's
   routes say that it works with. An aggregate charts events recorded, because it produces the business changes, and a
@@ -398,6 +446,11 @@ parts. An item that says "Done" is built.
   it is not met is the question of the health rules' own test.
 - The icons on a handler card, which are the handler's kind, the little icons before its numbers, and the concurrency
   icon, feel as though they should do something when pointed at or chosen. What, is not settled.
+- For later, a concept: a ratio, or some measure, of how well balanced a thing is across the nodes, or across the
+  partitions that a bar shows, to go along with the cards' "an even distribution is better". It would turn the cue
+  above into a figure that can be compared and followed over time, and not only a bar that is judged by eye. What it is
+  measured on, such as workloads, instances or the rate at which a stream grows, and how it is calculated, are not
+  settled.
 - A bar shows how something is spread over the engine's partitions, and it is healthiest, for scalability, when the
   segments are close to even. A uniform bar means no hot partition. The page could say so: a faint mark where an even
   share would end, or a cue on a segment that is far larger than its even share. It is a cue and not an Issue, because an
@@ -441,6 +494,16 @@ parts. An item that says "Done" is built.
   failing count that falls to zero ramps to "+0", stays for a second, and then shrinks away, so that a count that
   goes up and down doesn't come and go. A stream's card keeps the explanation of the bar when there is one event, and says that there is only 1
   event, so the segment is the whole bar.
+- A metric that only some of the nodes report, undecided. Today a part of a tile is shown if any node supports its metrics,
+  and a metric whose reach is the node is combined over the nodes that report it, so a rate that some nodes don't
+  report is shown as if it were the whole cluster's. The cases are all of the nodes, some of them, and none. The
+  suggestion is to show the figure from the nodes that report it, and to say in its card, as a status, that only some of
+  the nodes report it, with how many, and to use the fallback headline only when none does. A metric whose reach is the
+  cluster doesn't have the problem, because one node describes the whole cluster.
+  The section's help card is where it is explained, as a status under the general copy, which is there only while the
+  section is degraded, and says which nodes are missing, or why the headline is the fallback. It is behind a hover, so
+  the icon would also show that the section is degraded, with a brief glitch when it becomes so. A figure's own card
+  says what it means for that figure.
 - A lost rate, undecided. A node joins or reconnects often in some clusters, and the rate pauses for a few seconds each
   time, because it is the sum over the nodes and a node's rate needs a few seconds of readings. The suggestion is to sum
   the nodes that have enough readings, so that the rate never pauses for a joined node, and dips by that node's share

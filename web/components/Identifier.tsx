@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from "react";
+import { cn } from "../lib/cn.ts";
 import { shortId } from "../lib/format.ts";
-import { markOf } from "../lib/mark.ts";
 import { Icon } from "./Icon.tsx";
 
 /** How long the copy button shows that it has copied, in milliseconds. */
 const copiedTime = 1500;
 
 /**
- * Identifier shows an ID, which is a UUID, in a way that lets a person tell it
- * from others and see that it is an ID, without its 36 characters: a small
- * square of a color that the ID picks, its first eight characters in monospace
- * type, and a button that copies the whole ID.
+ * Identifier shows an ID, which is a UUID, as its first eight characters in
+ * monospace type, with a button that copies the whole ID.
+ *
+ * An ID is the identity of a thing that has no name, so it is in the color of
+ * the text. If the thing has a name, which the page shows beside it, the name is
+ * its identity, and the ID is in the color of muted text, `named`.
  *
  * It is made to be inside a popover that can be pointed at.
  */
-export function Identifier({ id }: { id: string }) {
-	const { hue, light } = markOf(id);
+export function Identifier({ id, named }: { id: string; named?: boolean }) {
 	const [copied, setCopied] = useState(false);
 	const timer = useRef<number | undefined>(undefined);
 
@@ -37,14 +38,14 @@ export function Identifier({ id }: { id: string }) {
 
 	return (
 		<span className="inline-flex items-center gap-1.5 align-baseline">
-			<span
-				className="size-2 flex-none rounded-[2px]"
-				style={{
-					backgroundColor: `hsl(${hue} 70% var(${light ? "--mark-lightness-b" : "--mark-lightness-a"}))`,
-				}}
-				aria-hidden="true"
-			/>
-			<code className="text-2xs">{shortId(id)}</code>
+			<code
+				className={cn(
+					"text-[0.625rem]/[1.5]",
+					named ? "text-muted" : "text-fg",
+				)}
+			>
+				{shortId(id)}
+			</code>
 			<button
 				type="button"
 				className="-m-1 inline-flex cursor-pointer rounded-control p-1 text-muted transition-colors duration-150 hover:bg-sunk hover:text-fg motion-reduce:transition-none"

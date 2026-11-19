@@ -369,12 +369,14 @@ func TestStream(t *testing.T) {
 		queueIndex    = 0 // QueueCommandsPending
 		recordedIndex = 1 // HandlerEventsRecorded
 		lengthIndex   = 2 // EventStreamLength
+		removedIndex  = 3 // QueueCommandsRemoved
 	)
 
 	supported := []proto.Message{
 		new(metricsgrpc.QueueCommandsPending),
 		new(metricsgrpc.HandlerEventsRecorded),
 		new(metricsgrpc.EventStreamLength),
+		new(metricsgrpc.QueueCommandsRemoved),
 	}
 
 	// withStream connects a node of a cluster that runs an application with two
@@ -420,6 +422,7 @@ func TestStream(t *testing.T) {
 				// The tiles need the metrics of what they show, and a handler has a
 				// chart when the node reports the events that it records.
 				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: uuidpb.Generate(), Value: 1}.Build())
+				n.sample(t, removedIndex, "r", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: uuidpb.Generate(), Value: 1}.Build())
 				n.sample(t, lengthIndex, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Value: 1}.Build())
 				n.sample(t, recordedIndex, "a", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), Value: 1}.Build())
 				n.heartbeat(t)
@@ -464,7 +467,7 @@ func TestStream(t *testing.T) {
 				for _, e := range named(events, "recorded") {
 					series = append(series, e.Data["series"].(string))
 				}
-				wantSeries := []string{"events", "handlers/" + handlerKey(0).AsString(), "queues"}
+				wantSeries := []string{"events", "handlers/" + handlerKey(0).AsString(), "removed"}
 				for i := range wantSeries {
 					if series[i] != wantSeries[i] {
 						t.Fatalf("unexpected time series: got %v, want %v", series, wantSeries)
@@ -714,24 +717,28 @@ func TestStream(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			queue := uuidpb.Generate()
-			n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, Value: 7}.Build())
+			n.sample(t, removedIndex, "r", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, Value: 0}.Build())
 
-			// The first tick after the sample is when the page learns that there is a
-			// queues tile, and so a time series. It has the point that was recorded.
+			// The rate is known once the total has been seen for long enough.
+			time.Sleep(10 * time.Second)
+			n.sample(t, removedIndex, "r", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, Value: 30}.Build())
+
+			// The first tick after the sample is when the page learns the rate. It has
+			// the point that was recorded.
 			r.Record(time.Now(), o.Nodes())
 			time.Sleep(time.Second)
 			synctest.Wait()
 
 			recorded := named(since(w.events(t), "synced"), "recorded")
-			if len(recorded) != 1 || recorded[0].Data["series"] != "queues" {
+			if len(recorded) != 1 || recorded[0].Data["series"] != "removed" {
 				t.Fatalf("unexpected events: %v", recorded)
 			}
 			got := recorded[0].Data["points"].([]any)
-			if len(got) != 1 || got[0].([]any)[0] != 500.0 || got[0].([]any)[1] != 7.0 {
+			if len(got) != 1 || got[0].([]any)[0] != 500.0 || got[0].([]any)[1] != 3.0 {
 				t.Fatalf("unexpected points: %v", got)
 			}
 
-			n.sample(t, queueIndex, "q", 2, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, Value: 9}.Build())
+			n.sample(t, removedIndex, "r", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, Value: 60}.Build())
 			time.Sleep(time.Second)
 			r.Record(time.Now(), o.Nodes())
 			time.Sleep(time.Second)
@@ -742,7 +749,7 @@ func TestStream(t *testing.T) {
 				t.Fatalf("unexpected events: %v", recorded)
 			}
 			got = recorded[1].Data["points"].([]any)
-			if len(got) != 1 || got[0].([]any)[0] != 500.0 || got[0].([]any)[1] != 9.0 {
+			if len(got) != 1 || got[0].([]any)[0] != 500.0 || got[0].([]any)[1] != 5.0 {
 				t.Fatalf("unexpected points: %v", got)
 			}
 		})

@@ -1,6 +1,13 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { overview } from "../fixtures/overview.ts";
+import { application, overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
 import { stubBrowser, tipOf } from "../test-support.ts";
 import { Overview } from "./Overview.tsx";
@@ -14,7 +21,7 @@ afterEach(() => {
 });
 
 test("the totals are the prototype's", () => {
-	render(<Overview data={overview} />);
+	render(<Overview application={application} data={overview} />);
 
 	const totals = within(screen.getByRole("region", { name: "Totals" }));
 	const events = totals.getByRole("article", { name: "Events" });
@@ -29,7 +36,7 @@ test("the totals are the prototype's", () => {
 });
 
 test("the handlers are the prototype's", () => {
-	render(<Overview data={overview} />);
+	render(<Overview application={application} data={overview} />);
 
 	const handlers = within(screen.getByRole("region", { name: "Handlers" }));
 
@@ -42,7 +49,7 @@ test("the handlers are the prototype's", () => {
 });
 
 test("the bars say what they are made of", () => {
-	render(<Overview data={overview} />);
+	render(<Overview application={application} data={overview} />);
 
 	expect(
 		screen.getByRole("img", {
@@ -58,7 +65,7 @@ test("the bars say what they are made of", () => {
 });
 
 test("nothing is a link unless it is given somewhere to link to", () => {
-	render(<Overview data={overview} />);
+	render(<Overview application={application} data={overview} />);
 
 	expect(screen.queryAllByRole("link")).toEqual([]);
 });
@@ -66,6 +73,7 @@ test("nothing is a link unless it is given somewhere to link to", () => {
 test("the tiles and the cards are links to where they are given", () => {
 	render(
 		<Overview
+			application={application}
 			data={overview}
 			links={{
 				events: "/streams",
@@ -88,6 +96,7 @@ test("the tiles and the cards are links to where they are given", () => {
 test("failing messages are shown in the queues tile, and the plural is exact", () => {
 	render(
 		<Overview
+			application={application}
 			data={{
 				...overview,
 				queues: { ...overview.queues, failing: 1234 },
@@ -105,6 +114,7 @@ test("failing messages are shown in the queues tile, and the plural is exact", (
 test("a cluster with no live nodes says so", () => {
 	render(
 		<Overview
+			application={application}
 			data={{
 				...overview,
 				cluster: { nodes: [] },
@@ -120,6 +130,7 @@ test("a cluster with no live nodes says so", () => {
 test("one node and one workload are in the singular", () => {
 	render(
 		<Overview
+			application={application}
 			data={{
 				...overview,
 				cluster: {
@@ -153,7 +164,7 @@ test("a tile that fails does not take the page with it", () => {
 		},
 	} satisfies OverviewData;
 
-	render(<Overview data={broken} />);
+	render(<Overview application={application} data={broken} />);
 
 	// The tile that failed says so, in its place.
 	expect(screen.getByRole("alert").textContent).toBe(
@@ -184,7 +195,7 @@ test("a card that fails does not take the other cards with it", () => {
 		],
 	} as OverviewData;
 
-	render(<Overview data={broken} />);
+	render(<Overview application={application} data={broken} />);
 
 	expect(screen.getAllByRole("alert")).toHaveLength(1);
 	expect(screen.getAllByRole("article")).toHaveLength(6);
@@ -197,14 +208,14 @@ test("a tile whose metrics the engine doesn't report is hidden", () => {
 	expect(events).toBeDefined();
 	expect(queues).toBeDefined();
 
-	render(<Overview data={withoutEvents} />);
+	render(<Overview application={application} data={withoutEvents} />);
 	expect(screen.queryByRole("article", { name: "Events" })).toBeNull();
 	expect(screen.getByRole("article", { name: "Queues" })).toBeDefined();
 	expect(screen.getByRole("article", { name: "Cluster" })).toBeDefined();
 
 	cleanup();
 
-	render(<Overview data={withoutQueues} />);
+	render(<Overview application={application} data={withoutQueues} />);
 	expect(screen.queryByRole("article", { name: "Queues" })).toBeNull();
 	expect(screen.getByRole("article", { name: "Events" })).toBeDefined();
 });
@@ -212,6 +223,7 @@ test("a tile whose metrics the engine doesn't report is hidden", () => {
 test("a rate that the Observatory has never had is a zero in dot-matrix type, that is described as not available", () => {
 	render(
 		<Overview
+			application={application}
 			data={{
 				...overview,
 				events: { ...overview.events, rate: {} },
@@ -232,7 +244,7 @@ test("a rate that the Observatory has never had is a zero in dot-matrix type, th
 });
 
 test("the number of events per minute and the words beside it both have the card of the rate", async () => {
-	render(<Overview data={overview} />);
+	render(<Overview application={application} data={overview} />);
 
 	const events = within(
 		screen.getByRole("region", { name: "Totals" }),
@@ -251,12 +263,101 @@ test("the number of events per minute and the words beside it both have the card
 	}
 });
 
+test("the icon of the events tile has a card that says what it is about, and not what it shows", async () => {
+	render(<Overview application={application} data={overview} />);
+
+	const events = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Events" });
+	const icon = events.querySelector("svg")?.parentElement as Element;
+
+	const tip = await tipOf(icon);
+
+	expect(tip).toContain("Events");
+	expect(tip).toContain(
+		"This section shows information about the events and event streams in the statements application.",
+	);
+	expect(tip).not.toContain("The bar shows");
+});
+
+test("no popover of the events tile gives the exact number of events", () => {
+	vi.useFakeTimers();
+	render(<Overview application={application} data={overview} />);
+
+	const events = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Events" });
+
+	const tips: (string | null | undefined)[] = [];
+	for (const element of events.querySelectorAll("span, svg")) {
+		fireEvent.pointerEnter(element);
+		act(() => {
+			vi.advanceTimersByTime(600);
+		});
+		tips.push(screen.queryByRole("tooltip")?.textContent);
+		fireEvent.pointerLeave(element);
+		act(() => {
+			vi.advanceTimersByTime(300);
+		});
+	}
+
+	expect(tips.filter(Boolean).length).toBeGreaterThan(0);
+	expect(tips.filter((t) => /\d,\d{3}/.test(t ?? ""))).toEqual([]);
+	vi.useRealTimers();
+});
+
+test("the icon of the queues tile has a card that says what it is about, and the figure of removals has the card of the rate", async () => {
+	render(<Overview application={application} data={overview} />);
+
+	const queues = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Queues" });
+	const icon = queues.querySelector("svg")?.parentElement as Element;
+
+	expect(await tipOf(icon)).toContain(
+		"This section shows information about the messages and queues in the statements application.",
+	);
+
+	const rate = [...queues.querySelectorAll("span")].find(
+		(e) => e.textContent === "442/min",
+	) as Element;
+	const tip = await tipOf(rate);
+	expect(tip).toContain("Message removal rate");
+	expect(tip).toContain(
+		"The rate at which messages are being removed from the queues, averaged over the last minute.",
+	);
+	expect(tip).not.toContain("442");
+});
+
+test("the queues tile has no popover with the exact number of messages", () => {
+	vi.useFakeTimers();
+	render(<Overview application={application} data={overview} />);
+
+	const queues = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Queues" });
+
+	for (const element of queues.querySelectorAll("span")) {
+		fireEvent.pointerEnter(element);
+		act(() => {
+			vi.advanceTimersByTime(600);
+		});
+		const tip = screen.queryByRole("tooltip")?.textContent ?? "";
+		expect(tip).not.toMatch(/^\d[\d,]*$/);
+		fireEvent.pointerLeave(element);
+		act(() => {
+			vi.advanceTimersByTime(300);
+		});
+	}
+	vi.useRealTimers();
+});
+
 test("a rate of less than one event per minute is a whole number per hour", () => {
 	const slow = structuredClone(overview);
 	if (slow.events) {
 		slow.events.rate = { perMinute: 0.4 };
 	}
-	render(<Overview data={slow} />);
+	render(<Overview application={application} data={slow} />);
 
 	const events = within(
 		screen.getByRole("region", { name: "Totals" }),

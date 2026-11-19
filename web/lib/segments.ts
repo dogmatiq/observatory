@@ -47,17 +47,20 @@ export interface BarSegment {
  * that the segment is of.
  */
 export type SegmentAbout = {
-	thing: "event-stream";
+	thing: "event-stream" | "queue";
 	id: string;
 
-	/** The number of events on the stream. */
-	events: number;
+	/** The number of events on the stream, or messages in the queue. */
+	amount: number;
 
-	/** The share of all the events that are on this stream, from 0 to 1. */
+	/** The share of all of them that are in this thing, from 0 to 1. */
 	share: number;
 
-	/** What the bar is of: all the events, on all the streams. */
-	total: { events: number; streams: number };
+	/**
+	 * What the bar is of: all the events or messages, in all the streams or
+	 * queues.
+	 */
+	total: { amount: number; things: number };
 };
 
 /**
@@ -151,9 +154,9 @@ export function streamSegments(streams: SpreadPart[]): BarSegment[] {
 			about: {
 				thing: "event-stream",
 				id: s.id,
-				events: s.size,
+				amount: s.size,
 				share: events === 0 ? 0 : s.size / events,
-				total: { events, streams: streams.length },
+				total: { amount: events, things: streams.length },
 			},
 		})),
 		(total, count) =>
@@ -166,10 +169,19 @@ export function streamSegments(streams: SpreadPart[]): BarSegment[] {
  * queue.
  */
 export function queueSegments(queues: SpreadPart[]): BarSegment[] {
+	const messages = queues.reduce((sum, q) => sum + q.size, 0);
+
 	return limitSegments(
 		queues.map((q) => ({
 			value: q.size,
 			...ofThing(`${countOf(q.size, "message", "messages")} in queue`, q.id),
+			about: {
+				thing: "queue" as const,
+				id: q.id,
+				amount: q.size,
+				share: messages === 0 ? 0 : q.size / messages,
+				total: { amount: messages, things: queues.length },
+			},
 		})),
 		(total, count) =>
 			`${countOf(total, "message", "messages")} in ${count} other queues`,

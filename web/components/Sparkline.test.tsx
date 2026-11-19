@@ -1,7 +1,8 @@
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { overview } from "../fixtures/overview.ts";
 import { LiveData } from "../lib/live.tsx";
+import { type Readout, ReadoutContext } from "../lib/readout.tsx";
 import { sparklineWidth } from "../lib/sparkline.ts";
 import { stubBrowser } from "../test-support.ts";
 import { Sparkline } from "./Sparkline.tsx";
@@ -156,5 +157,63 @@ describe("between updates", () => {
 		act(() => frames.pop()?.(0));
 
 		expect(line(container)).toBe(before);
+	});
+});
+
+describe("pointing at a chart", () => {
+	const chart = {
+		end: 0,
+		points: [
+			{ at: -60_000, value: 10 },
+			{ at: 0, value: 70 },
+		],
+	};
+	const write = (value: number) => ({
+		figure: String(Math.round(value)),
+		unit: "things",
+	});
+
+	beforeEach(() => {
+		vi.spyOn(HTMLDivElement.prototype, "getBoundingClientRect").mockReturnValue(
+			{
+				left: 0,
+				width: 240,
+			} as DOMRect,
+		);
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	/** Renders a chart, and returns the readouts that it gives to the page. */
+	function chartWithReadouts() {
+		const readouts: (Readout | undefined)[] = [];
+		const { container } = render(
+			<ReadoutContext.Provider value={(r) => readouts.push(r)}>
+				<Sparkline chart={chart} describe={write} className="h-12" />
+			</ReadoutContext.Provider>,
+		);
+		const layer = container.querySelector("div") as HTMLElement;
+		return { layer, last: () => readouts[readouts.length - 1] };
+	}
+
+	test("gives the value at that place and how long ago it was, until the pointer leaves", () => {
+		const { layer, last } = chartWithReadouts();
+
+		fireEvent.pointerMove(layer, { clientX: 120 });
+		expect(last()).toEqual({ figure: "40", unit: "things", age: "30 s ago" });
+
+		fireEvent.pointerMove(layer, { clientX: 240 });
+		expect(last()).toEqual({ figure: "70", unit: "things", age: "now" });
+
+		fireEvent.pointerLeave(layer);
+		expect(last()).toBeUndefined();
+	});
+
+	test("there is no cursor over a chart that has no describe", () => {
+		const { container } = render(<Sparkline chart={chart} />);
+
+		expect(container.querySelector("div")).toBeNull();
 	});
 });

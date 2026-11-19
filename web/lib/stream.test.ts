@@ -400,7 +400,7 @@ function full(): Snapshot {
 			},
 			10_000,
 		],
-		[{ kind: "recorded", series: "queues", points: [[0, 3]] }, 10_000],
+		[{ kind: "recorded", series: "removed", points: [[0, 0.5]] }, 10_000],
 		[{ kind: "recorded", series: "handlers/a", points: [[500, 7]] }, 10_000],
 		[{ kind: "heartbeat", node: "n1", msBefore: 2000 }, 10_000],
 		[{ kind: "heartbeat", node: "n1", msBefore: 500 }, 10_000],
@@ -420,11 +420,12 @@ test("the cluster view is selected from a snapshot, with times measured from the
 			{ id: "s2", size: 9 },
 			{ id: "s1", size: 5 },
 		],
+		// The history is of events per minute, like the rate, and is sent per second.
 		history: {
 			end: 0,
 			points: [
-				{ at: -2000, value: 1 },
-				{ at: -1000, value: 2 },
+				{ at: -2000, value: 60 },
+				{ at: -1000, value: 120 },
 			],
 		},
 	});
@@ -436,7 +437,8 @@ test("the cluster view is selected from a snapshot, with times measured from the
 		],
 		failing: 1,
 		removed: { perMinute: 30 },
-		history: { end: 0, points: [{ at: 0, value: 3 }] },
+		// The history is of messages per minute, like the rate, and is sent per second.
+		history: { end: 0, points: [{ at: 0, value: 30 }] },
 	});
 	expect(overview?.cluster.nodes).toEqual([
 		{ id: "n1", workloads: 2, heartbeats: [2000, 500] },

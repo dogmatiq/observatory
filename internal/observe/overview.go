@@ -182,8 +182,8 @@ type QueuesTile struct {
 	// that it is derived from.
 	Removed *Rate `json:"removed,omitempty"`
 
-	// History is how the number of messages in the queues changed over the last
-	// minute. It is nil if Queues is.
+	// History is how Removed changed over the last minute. It is nil if Removed
+	// is.
 	History *Chart `json:"history,omitempty"`
 }
 
@@ -516,17 +516,11 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 
 		if pending {
 			o.Queues.Queues = spreadOf(f.pendingInQueue)
-			o.Queues.History = &Chart{Points: []ChartPoint{}}
-
-			var total uint64
-			for _, n := range f.pendingInQueue {
-				total += n
-			}
-			t := float64(total)
-			r.queued = &t
 		}
 		if removed {
 			o.Queues.Removed = &Rate{f.removed.rate()}
+			o.Queues.History = &Chart{Points: []ChartPoint{}}
+			r.removed = o.Queues.Removed.PerSecond
 		}
 	}
 
@@ -542,9 +536,9 @@ type chartValues struct {
 	// events is the events per second, or nil if it is unknown.
 	events *float64
 
-	// queued is the number of messages in the queues, or nil if the cluster
-	// doesn't support it.
-	queued *float64
+	// removed is the messages per second that are removed from the queues, or nil
+	// if it is unknown.
+	removed *float64
 
 	// handlers is the events recorded or handled per second, for each handler
 	// that has a chart, by key. It is nil for a handler whose rate is unknown.
@@ -733,7 +727,7 @@ type Recorder struct {
 // history is the charts of one cluster.
 type history struct {
 	events   *Trail
-	queued   *Trail
+	removed  *Trail
 	handlers map[string]*Trail
 
 	// nodeRates is the smoothed rate of each node, by the key of the handler.
@@ -743,7 +737,7 @@ type history struct {
 func newHistory() *history {
 	return &history{
 		events:   NewTrail(chartSpan),
-		queued:   NewTrail(chartSpan),
+		removed:  NewTrail(chartSpan),
 		handlers: map[string]*Trail{},
 
 		nodeRates: map[string]map[string]float64{},
@@ -783,8 +777,8 @@ func (r *Recorder) Record(now time.Time, nodes []Node) {
 		if rs.events != nil {
 			h.events.Add(now, *rs.events)
 		}
-		if rs.queued != nil {
-			h.queued.Add(now, *rs.queued)
+		if rs.removed != nil {
+			h.removed.Add(now, *rs.removed)
 		}
 		for key, rate := range rs.handlers {
 			if rate == nil {
@@ -923,7 +917,7 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 		o.Events.History = &c
 	}
 	if o.Queues != nil && o.Queues.History != nil {
-		c := chartOf(now, h.queued)
+		c := chartOf(now, h.removed)
 		o.Queues.History = &c
 	}
 	for i, card := range o.Handlers {
@@ -960,8 +954,8 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 
 // Series is what the charts of one cluster have recorded, oldest first.
 type Series struct {
-	// Events is the chart of the events tile, and Queues that of the queues tile.
-	Events, Queues []TrailPoint
+	// Events is the chart of the events tile, and Removed that of the queues tile.
+	Events, Removed []TrailPoint
 
 	// Handlers is the chart of each handler that has one, by the handler's key.
 	Handlers map[string][]TrailPoint
@@ -981,7 +975,7 @@ func (r *Recorder) Series(cluster string) Series {
 	}
 
 	s.Events = h.events.Points()
-	s.Queues = h.queued.Points()
+	s.Removed = h.removed.Points()
 	for key, t := range h.handlers {
 		s.Handlers[key] = t.Points()
 	}

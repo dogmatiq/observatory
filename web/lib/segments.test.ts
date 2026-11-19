@@ -291,16 +291,16 @@ test("a segment of an event stream says how much of the events it holds", () => 
 		{
 			thing: "event-stream",
 			id: "bbbbbbbb-2",
-			events: 3,
+			amount: 3,
 			share: 0.75,
-			total: { events: 4, streams: 2 },
+			total: { amount: 4, things: 2 },
 		},
 		{
 			thing: "event-stream",
 			id: "aaaaaaaa-1",
-			events: 1,
+			amount: 1,
 			share: 0.25,
-			total: { events: 4, streams: 2 },
+			total: { amount: 4, things: 2 },
 		},
 	]);
 });

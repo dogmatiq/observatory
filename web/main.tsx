@@ -1,3 +1,4 @@
+import "@fontsource/gaegu/latin-400.css";
 import "@fontsource-variable/ibm-plex-sans";
 import "@fontsource-variable/jetbrains-mono";
 import { StrictMode } from "react";

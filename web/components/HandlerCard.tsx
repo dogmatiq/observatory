@@ -3,7 +3,8 @@ import { cn } from "../lib/cn.ts";
 import { formatCompact, nounFor } from "../lib/format.ts";
 import { useRamped } from "../lib/ramped.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
-import type { HandlerData, HandlerSummary } from "../model.ts";
+import type { Application, HandlerData, HandlerSummary } from "../model.ts";
+import { HandlerKindCard } from "./HandlerKindCard.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
 	cardClasses,
@@ -36,9 +37,11 @@ const minimizesConcurrencyText =
  * handler's name, and nothing happens when it is pointed at.
  */
 export function HandlerCard({
+	application,
 	handler,
 	href,
 }: {
+	application: Application;
 	handler: HandlerData;
 	href?: string;
 }) {
@@ -92,10 +95,19 @@ export function HandlerCard({
 						</span>
 					</span>
 				</span>
-				<Popover content={`${handler.kind} handler`}>
+				<Popover
+					card
+					content={
+						<HandlerKindCard
+							application={application}
+							name={handler.name}
+							kind={handler.kind}
+						/>
+					}
+				>
 					<span
 						className={cn(
-							"ml-auto flex-none self-start",
+							"ml-auto flex-none self-start transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none",
 							kindColors[handler.kind],
 						)}
 					>

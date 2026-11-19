@@ -370,12 +370,21 @@ function degrade(state: WatchState): WatchState {
 
 /**
  * chartOf returns the chart of a series of points, with its time measured from
- * `ref`, which is a time on the page's clock.
+ * `ref`, which is a time on the page's clock, and each value multiplied by
+ * `factor`, such as 60 for a series of rates per second that the chart shows per
+ * minute, as the rate beside it is.
  */
-function chartOf(points: readonly RatePoint[] | undefined, ref: number): Chart {
+function chartOf(
+	points: readonly RatePoint[] | undefined,
+	ref: number,
+	factor = 1,
+): Chart {
 	return {
 		end: 0,
-		points: (points ?? []).map((p) => ({ at: p.at - ref, value: p.value })),
+		points: (points ?? []).map((p) => ({
+			at: p.at - ref,
+			value: p.value * factor,
+		})),
 	};
 }
 
@@ -579,7 +588,7 @@ export function selectCluster(
 
 			if (rates.events !== undefined) {
 				events.rate = rateOf(rates.events, "rates.events");
-				events.history = chartOf(snapshot.series.get("events"), ref);
+				events.history = chartOf(snapshot.series.get("events"), ref, 60);
 			}
 			if (doc.eventStreams !== undefined) {
 				// The event streams are shown largest first.
@@ -605,6 +614,7 @@ export function selectCluster(
 
 			if (rates.removed !== undefined) {
 				queues.removed = rateOf(rates.removed, "rates.removed");
+				queues.history = chartOf(snapshot.series.get("removed"), ref, 60);
 			}
 			if (doc.queues !== undefined) {
 				// The queues are shown in the order of their IDs.
@@ -616,7 +626,6 @@ export function selectCluster(
 							size: number(q.messages, "messages"),
 						}),
 					);
-				queues.history = chartOf(snapshot.series.get("queues"), ref);
 			}
 
 			return queues;

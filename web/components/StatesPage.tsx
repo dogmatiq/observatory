@@ -1,17 +1,29 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { overview } from "../fixtures/overview.ts";
+import { application, overview } from "../fixtures/overview.ts";
 import { formatCompact } from "../lib/format.ts";
 import type { SegmentAbout } from "../lib/segments.ts";
+import { chartWindowMs, heightOf, valueAt } from "../lib/sparkline.ts";
 import type { OverviewData } from "../model.ts";
 import { Figure, glitchTime, keepTime } from "./Figure.tsx";
 import { Glitch } from "./Glitch.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
+import { HandlerKindCard } from "./HandlerKindCard.tsx";
+import { Identifier } from "./Identifier.tsx";
+import { InfoCard } from "./InfoCard.tsx";
+import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Failing } from "./MetricTile.tsx";
-import { EventsTile } from "./Overview.tsx";
+import {
+	EventsTile,
+	eventsAbout,
+	QueuesTile,
+	queuesAbout,
+} from "./Overview.tsx";
 import { Page } from "./Page.tsx";
 import { panelClasses } from "./Popover.tsx";
 import { RateCard } from "./RateCard.tsx";
 import { SegmentCard } from "./SegmentCard.tsx";
+import { CursorDot, CursorLine, CursorMark, Sparkline } from "./Sparkline.tsx";
+import { subsystemColors } from "./subsystems.ts";
 
 /**
  * StatesPage shows every state that an element of the cluster view can be in,
@@ -49,6 +61,7 @@ export function StatesPage() {
 				>
 					<State label="Known" note="347 events per minute.">
 						<EventsTile
+							application={application}
 							data={eventsTile({ perMinute: 347 })}
 							href={undefined}
 						/>
@@ -58,6 +71,7 @@ export function StatesPage() {
 						note="A whole number per hour, so 0.4 a minute is 24 per hour."
 					>
 						<EventsTile
+							application={application}
 							data={eventsTile({ perMinute: 0.4 })}
 							href={undefined}
 						/>
@@ -78,13 +92,21 @@ export function StatesPage() {
 						label="Never known"
 						note="A blurred zero in the muted colour, because the Observatory hasn't had the rate yet. It is described as not available."
 					>
-						<EventsTile data={eventsTile({})} href={undefined} />
+						<EventsTile
+							application={application}
+							data={eventsTile({})}
+							href={undefined}
+						/>
 					</State>
 					<State
 						label="Not supported"
 						note="No node reports the rate, so the headline is the number of events, with no chart."
 					>
-						<EventsTile data={eventsTile(undefined)} href={undefined} />
+						<EventsTile
+							application={application}
+							data={eventsTile(undefined)}
+							href={undefined}
+						/>
 					</State>
 				</Section>
 
@@ -167,6 +189,251 @@ export function StatesPage() {
 				</Section>
 
 				<Section
+					title="Events tile: the card of the tile"
+					note="The popover of the tile's icon, the help card. It says what the tile is about in general, and not what the tile shows, which depends on what the nodes can tell it. It names the application in its prose, and has no scope line, because that would repeat the title bar."
+				>
+					<State label="The card">
+						<Panel>
+							<InfoCard subsystem="streams" icon="event" kind="Events">
+								{eventsAbout(application)}
+							</InfoCard>
+						</Panel>
+					</State>
+				</Section>
+
+				<Section
+					title="Identifiers"
+					note="An ID is shown only in a popover, never in the body of the page or in a sentence, as its first eight characters with a button that copies it. The ID of a thing that has no name is its identity, so it is in the color of the text. The ID of a thing that has a name, which the page shows, is in the color of muted text."
+				>
+					<State
+						label="A thing with no name"
+						note="An event stream or a queue is known by its ID alone."
+					>
+						<div className="grid gap-4">
+							<Panel>
+								<InfoCard
+									subsystem="streams"
+									icon="event-stream"
+									kind="Event stream"
+									identifier={
+										<Identifier id="9f3a7c1e-5b2d-4e8a-a1c6-0d4b8e2f7a93" />
+									}
+								/>
+							</Panel>
+							<Panel>
+								<InfoCard
+									subsystem="queues"
+									icon="queue"
+									kind="Queue"
+									identifier={
+										<Identifier id="3b6d2f90-84c1-4a57-9e0b-72a5c1d8f346" />
+									}
+								/>
+							</Panel>
+						</div>
+					</State>
+					<State
+						label="A thing with a name"
+						note="An application is known by its name, which is in the scope that a card of something narrower than the page has, such as a node. Its key is there to be copied."
+					>
+						<Panel>
+							<InfoCard
+								subsystem="streams"
+								icon="event"
+								kind="Events"
+								scope={{
+									preposition: "within",
+									kind: "application",
+									name: application.name,
+									id: application.key,
+								}}
+							/>
+						</Panel>
+					</State>
+				</Section>
+
+				<Section
+					title="Handler card: the card of the kind icon"
+					note="The popover of the icon at the top right of a handler's card. It says which handler it is and of what kind, and the application, so that it is clear whatever the handler is named, and then reminds the reader what that kind of handler does."
+				>
+					{(
+						[
+							["aggregate", "account"],
+							["process", "statement-schedule"],
+							["integration", "mailer"],
+							["projection", "balances"],
+							["aggregate", "aggregate"],
+						] as const
+					).map(([kind, name]) => (
+						<State
+							key={name}
+							label={name === kind ? `${kind}, named "${name}"` : kind}
+							note={
+								name === kind
+									? "A name that says nothing, so the card has to."
+									: undefined
+							}
+						>
+							<Panel>
+								<HandlerKindCard
+									application={application}
+									name={name}
+									kind={kind}
+								/>
+							</Panel>
+						</State>
+					))}
+				</Section>
+
+				<Section
+					title="Sparkline: the cursor"
+					note="The cursor of a chart is a faint line that fades out at both ends, and a round dot where it meets the chart's line, of which only the center pixel has the full color of the text. The first is the one in use, and the others are the sizes that it was chosen from."
+				>
+					<State label="5 px" note="In use.">
+						<CursorSample />
+					</State>
+					{([3, 4, 6, 7] as const).map((size) => (
+						<State key={size} label={`${size} px`}>
+							<CursorSample size={size} />
+						</State>
+					))}
+				</Section>
+
+				<Section
+					title="Queues tile: the rate"
+					note="The words beside the headline, and the headline itself when no node says how many messages wait, are the messages removed per minute."
+				>
+					<State label="Known" note="442 messages removed per minute.">
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 442 })}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Less than one a minute"
+						note="A whole number per hour, so 0.4 a minute is 24 per hour."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 0.4 })}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Never known"
+						note="A blurred zero in the muted colour, because the Observatory hasn't had the rate yet."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile({})}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Rate not supported"
+						note="No node reports the removals, so the words beside the headline have no rate, and there is no chart."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile(undefined)}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Number of messages not supported"
+						note="No node says how many messages wait, so the headline is the rate of removal, and there is no bar."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 442 }, { queues: false })}
+							href={undefined}
+						/>
+					</State>
+					<State
+						label="Messages failing"
+						note="The failing messages are part of those that wait, and are counted after the others."
+					>
+						<QueuesTile
+							application={application}
+							data={queuesTile({ perMinute: 442 }, { failing: 3 })}
+							href={undefined}
+						/>
+					</State>
+				</Section>
+
+				<Section
+					title="Queues tile: the card of the rate"
+					note="The popover of the figure of removals, and of the words beside it."
+				>
+					{(["known", "lost", "unavailable"] as const).map((state) => (
+						<State key={state} label={state}>
+							<Panel>
+								<RateCard
+									subsystem="queues"
+									icon="message"
+									kind="Message removal rate"
+									description="The rate at which messages are being removed from the queues"
+									state={state}
+								/>
+							</Panel>
+						</State>
+					))}
+				</Section>
+
+				<Section
+					title="Queues tile: the card of the headline"
+					note="The popover of the number of messages that wait, and of the count of failing messages after it, which are one headline."
+				>
+					<State label="Messages waiting">
+						<Panel>
+							<MessagesWaitingCard />
+						</Panel>
+					</State>
+				</Section>
+
+				<Section
+					title="Queues tile: the card of the tile"
+					note="The popover of the tile's icon, which is about the tile in general, and names the application."
+				>
+					<State label="The card">
+						<Panel>
+							<InfoCard subsystem="queues" icon="message" kind="Queues">
+								{queuesAbout(application)}
+							</InfoCard>
+						</Panel>
+					</State>
+				</Section>
+
+				<Section
+					title="Queues tile: the card of a queue"
+					note="The popover of a segment of the bar."
+				>
+					{(
+						[
+							["Several queues", 12, 0.6, 3],
+							["One queue", 19, 1, 1],
+							["A small share", 2, 0.04, 5],
+							["One message", 1, 1, 1],
+						] as const
+					).map(([label, amount, share, things]) => (
+						<State key={label} label={label}>
+							<Panel>
+								<SegmentCard
+									about={{
+										thing: "queue",
+										id: "113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93",
+										amount,
+										share,
+										total: { amount: Math.round(amount / share), things },
+									}}
+								/>
+							</Panel>
+						</State>
+					))}
+				</Section>
+
+				<Section
 					title="Events tile: the card of an event stream"
 					note="The popover of a segment of the bar."
 				>
@@ -246,7 +513,32 @@ function Lost({ backAfter }: { backAfter?: number }) {
 		};
 	}, [backAfter]);
 
-	return <EventsTile data={eventsTile(rate)} href={undefined} />;
+	return (
+		<EventsTile
+			application={application}
+			data={eventsTile(rate)}
+			href={undefined}
+		/>
+	);
+}
+
+/**
+ * The data of the queues tile, with the given rate of removal, or without one,
+ * and, if it is said, without the number of messages in the queues or with
+ * failing messages.
+ */
+function queuesTile(
+	removed: { perMinute?: number } | undefined,
+	options: { queues?: boolean; failing?: number } = {},
+): NonNullable<OverviewData["queues"]> {
+	const { queues, history } = overview.queues ?? {};
+
+	return {
+		queues: options.queues === false ? undefined : queues,
+		failing: options.failing ?? 0,
+		removed,
+		history: removed === undefined ? undefined : history,
+	};
 }
 
 function stream(parts: {
@@ -257,11 +549,11 @@ function stream(parts: {
 	return {
 		thing: "event-stream",
 		id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
-		events: parts.events,
+		amount: parts.events,
 		share: parts.share,
 		total: {
-			events: Math.round(parts.events / parts.share),
-			streams: parts.streams,
+			amount: Math.round(parts.events / parts.share),
+			things: parts.streams,
 		},
 	};
 }
@@ -362,6 +654,38 @@ function FigureDemo() {
 	);
 }
 
+/**
+ * A chart with its cursor held at one place. With no `size`, it has the cursor in
+ * use. Otherwise it has the line of it and a dot of that size, so that sizes of
+ * the dot can be compared.
+ */
+function CursorSample({ size }: { size?: number }) {
+	const chart = overview.events?.history ?? { end: 0, points: [] };
+	const x = 0.55;
+	const y = heightOf(
+		chart,
+		valueAt(chart, chart.end - (1 - x) * chartWindowMs) ?? 0,
+	);
+
+	return (
+		<div
+			className={`relative h-16 w-72 overflow-hidden rounded-card bg-panel ${subsystemColors.streams}`}
+		>
+			<div className="absolute inset-x-0 bottom-0 h-12">
+				<Sparkline chart={chart} className="h-12" />
+				{size === undefined ? (
+					<CursorMark x={x} y={y} />
+				) : (
+					<>
+						<CursorLine x={x} y={y} />
+						<CursorDot x={x} y={y} size={size} />
+					</>
+				)}
+			</div>
+		</div>
+	);
+}
+
 /** A card of a process, with buttons that change the numbers on it. */
 function ProcessDemo() {
 	const [n, setN] = useState(12);
@@ -373,6 +697,7 @@ function ProcessDemo() {
 	return (
 		<div className="flex flex-col gap-4">
 			<HandlerCard
+				application={application}
 				handler={{
 					key: "demo",
 					name: "example.process",

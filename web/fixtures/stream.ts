@@ -109,20 +109,21 @@ export function streamOf(
 		["changed", documentOf(application, overview)],
 	];
 
-	const recorded = (series: string, chart: Chart | undefined) => {
+	const recorded = (series: string, chart: Chart | undefined, factor = 1) => {
 		if (chart) {
 			messages.push([
 				"recorded",
 				{
 					series,
-					points: chart.points.map((p) => [chart.end - p.at, p.value]),
+					points: chart.points.map((p) => [chart.end - p.at, p.value / factor]),
 				},
 			]);
 		}
 	};
 
-	recorded("events", overview.events?.history);
-	recorded("queues", overview.queues?.history);
+	// The events are sent as a rate per second, and the page shows them per minute.
+	recorded("events", overview.events?.history, 60);
+	recorded("removed", overview.queues?.history, 60);
 	for (const h of overview.handlers) {
 		recorded(`handlers/${h.key}`, h.history);
 	}

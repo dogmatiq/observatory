@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { overview } from "../fixtures/overview.ts";
 import { golden } from "../fixtures/prototype-golden.ts";
 import type { Chart } from "../model.ts";
-import { sparklineGeometry } from "./sparkline.ts";
+import { heightOf, sparklineGeometry, valueAt } from "./sparkline.ts";
 
 const [account, schedule, mailer, balances] = overview.handlers;
 
@@ -90,4 +90,39 @@ test("a point after the chart's end is beyond its right-hand edge", () => {
 	});
 
 	expect(geometry?.line).toBe("M0.00 2.00 L280.00 2.00 L340.00 2.00");
+});
+
+test("a chart has the value of the line between its points at a time", () => {
+	const chart: Chart = {
+		end: 0,
+		points: [
+			{ at: -40_000, value: 10 },
+			{ at: -20_000, value: 30 },
+			{ at: -10_000, value: 30 },
+		],
+	};
+
+	expect(valueAt(chart, -30_000)).toBe(20);
+	expect(valueAt(chart, -20_000)).toBe(30);
+	expect(valueAt(chart, -5_000)).toBe(30);
+});
+
+test("a chart has no value before its first point", () => {
+	const chart: Chart = { end: 0, points: [{ at: -20_000, value: 10 }] };
+
+	expect(valueAt(chart, -30_000)).toBeUndefined();
+	expect(valueAt({ end: 0, points: [] }, 0)).toBeUndefined();
+});
+
+test("the largest value of a chart is drawn at its top, and nothing at its bottom", () => {
+	const chart: Chart = {
+		end: 0,
+		points: [
+			{ at: -20_000, value: 0 },
+			{ at: -10_000, value: 50 },
+		],
+	};
+
+	expect(heightOf(chart, 50)).toBeCloseTo(46 / 48);
+	expect(heightOf(chart, 0)).toBeCloseTo(2 / 48);
 });

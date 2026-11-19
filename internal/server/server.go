@@ -66,8 +66,8 @@
 // has no value yet. A part appears or goes as the nodes' support does, even
 // while a page is open.
 //
-// The time series are "events" (the events recorded per second), "queues" (the
-// messages in the queues) and "handlers/<handler key>" (the events that the
+// The time series are "events" (the events recorded per second), "removed" (the
+// messages removed from the queues per second) and "handlers/<handler key>" (the events that the
 // handler records or handles per second, or, if "charted" is "commands", the
 // commands that it handles).
 //

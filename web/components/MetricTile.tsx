@@ -1,8 +1,10 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
+import { type Readout, ReadoutContext } from "../lib/readout.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
+import { InfoCard, type Scope } from "./InfoCard.tsx";
 import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
@@ -35,6 +37,8 @@ export function MetricTile({
 	subsystem,
 	label,
 	icon,
+	about,
+	scope,
 	value,
 	valueTitle,
 	detail,
@@ -44,10 +48,19 @@ export function MetricTile({
 }: {
 	subsystem: Subsystem;
 
-	/** The name of what the tile shows, which is the icon's popover. */
+	/** The name of what the tile shows. */
 	label: string;
 
 	icon: IconName;
+
+	/**
+	 * What the tile is about and what its parts show, as the paragraphs of a card
+	 * that is the icon's popover. Without it, the popover is the label.
+	 */
+	about?: ReactNode;
+
+	/** What the card of the icon says that the tile is within, across or on. */
+	scope?: Scope;
 
 	/** The headline number. */
 	value: ReactNode;
@@ -77,19 +90,66 @@ export function MetricTile({
 		href !== undefined && linkedCardClasses,
 	);
 
+	// What the chart says about the place on it that is pointed at, which is
+	// shown beside the icon, and is kept for the moment that it takes to go.
+	const [readout, setReadout] = useState<Readout>();
+	const lastReadout = useRef(readout);
+	if (readout) {
+		lastReadout.current = readout;
+	}
+	const shownReadout = readout ?? lastReadout.current;
+
 	const content = (
-		<>
+		<ReadoutContext.Provider value={setReadout}>
 			<div className="flex items-center justify-between gap-3">
 				<Popover content={valueTitle}>
 					<span className="self-start text-4xl leading-none font-bold tracking-[-0.02em] tabular-nums">
 						{value}
 					</span>
 				</Popover>
-				<Popover content={label}>
-					<span className="flex-none text-(--subsystem)">
-						<Icon name={icon} className="inline size-5 align-text-bottom" />
+				<div className="flex items-center gap-2.5">
+					<span
+						aria-hidden="true"
+						className={cn(
+							"grid overflow-hidden text-right text-xs leading-snug whitespace-nowrap tabular-nums transition-[max-width,opacity] duration-200 ease-out motion-reduce:transition-none",
+							readout ? "max-w-44 opacity-100" : "max-w-0 opacity-0",
+						)}
+					>
+						{shownReadout && (
+							<>
+								<span className="font-semibold text-(--subsystem)">
+									{shownReadout.figure}{" "}
+									<span className="font-normal text-muted">
+										{shownReadout.unit}
+									</span>
+								</span>
+								<span className="text-muted">{shownReadout.age}</span>
+							</>
+						)}
 					</span>
-				</Popover>
+					<Popover
+						card={about !== undefined}
+						interactive={scope?.id !== undefined}
+						content={
+							about === undefined ? (
+								label
+							) : (
+								<InfoCard
+									subsystem={subsystem}
+									icon={icon}
+									kind={label}
+									scope={scope}
+								>
+									{about}
+								</InfoCard>
+							)
+						}
+					>
+						<span className="flex-none text-(--subsystem) transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none">
+							<Icon name={icon} className="inline size-5 align-text-bottom" />
+						</span>
+					</Popover>
+				</div>
 			</div>
 			<span className="relative z-10 mt-1 min-h-[calc(2*1.5em)] text-sm text-muted">
 				{detail}
@@ -100,7 +160,7 @@ export function MetricTile({
 			<Presence shape="fade" className="absolute inset-x-0 bottom-0">
 				{chart}
 			</Presence>
-		</>
+		</ReadoutContext.Provider>
 	);
 
 	if (href !== undefined) {
@@ -158,8 +218,12 @@ export function Failing({
 		count > 0 ? "steady" : "gone",
 	);
 
+	// Whether the time that it stays at zero is up.
+	const [expired, setExpired] = useState(false);
+
 	useEffect(() => {
 		if (count > 0) {
+			setExpired(false);
 			setPhase((p) =>
 				p === "steady" || p === "in" ? p : p === "zero" ? "steady" : "in",
 			);
@@ -167,15 +231,20 @@ export function Failing({
 		}
 
 		setPhase((p) => (p === "gone" || p === "out" ? p : "zero"));
-		const timer = window.setTimeout(
-			() =>
-				setPhase((p) =>
-					p === "zero" ? (prefersReducedMotion() ? "gone" : "out") : p,
-				),
-			holdTime,
-		);
+		const timer = window.setTimeout(() => setExpired(true), holdTime);
 		return () => window.clearTimeout(timer);
 	}, [count]);
+
+	// It shrinks away once its time is up.
+	useEffect(() => {
+		if (!expired) {
+			return;
+		}
+
+		setPhase((p) =>
+			p === "zero" ? (prefersReducedMotion() ? "gone" : "out") : p,
+		);
+	}, [expired]);
 
 	if (phase === "gone") {
 		return null;
@@ -187,7 +256,7 @@ export function Failing({
 	// the font size, as a share of the count's own size. Its space is inside the
 	// box that shrinks away, because padding on that box would stay behind when it
 	// has shrunk and make the number beside it jump when the count goes.
-	const shown = (
+	const figure = (
 		<span
 			className={cn(
 				"inline-grid grid-cols-[1fr]",
@@ -217,7 +286,7 @@ export function Failing({
 		</span>
 	);
 
-	return shown;
+	return figure;
 }
 
 /**
