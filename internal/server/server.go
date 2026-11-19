@@ -106,7 +106,7 @@ func New(o *observe.Observer, r *observe.Recorder) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/clusters", func(w http.ResponseWriter, _ *http.Request) {
-		clusters := observe.Clusters(time.Now(), o.Nodes())
+		clusters := o.Clusters(time.Now())
 		if clusters == nil {
 			clusters = []observe.ClusterSummary{}
 		}
@@ -114,7 +114,7 @@ func New(o *observe.Observer, r *observe.Recorder) http.Handler {
 	})
 
 	mux.HandleFunc("GET /api/clusters/{id}", func(w http.ResponseWriter, req *http.Request) {
-		view, ok := r.View(time.Now(), o.Nodes(), req.PathValue("id"))
+		view, ok := viewOf(o, r, time.Now(), req.PathValue("id"))
 		if !ok {
 			http.NotFound(w, req)
 			return
@@ -127,6 +127,21 @@ func New(o *observe.Observer, r *observe.Recorder) http.Handler {
 	})
 
 	return mux
+}
+
+// viewOf returns the cluster view of a cluster, whether it has nodes now or only
+// has had them, in which case it is down. It returns false for a cluster that the
+// Observatory has never had a node of, which is unknown.
+func viewOf(o *observe.Observer, r *observe.Recorder, now time.Time, id string) (observe.ClusterView, bool) {
+	if view, ok := r.View(now, o.Nodes(), id); ok {
+		return view, true
+	}
+
+	if rec, ok := o.Record(id); ok {
+		return observe.DownView(rec), true
+	}
+
+	return observe.ClusterView{}, false
 }
 
 // respond writes v as the body of a response.

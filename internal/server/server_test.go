@@ -56,6 +56,22 @@ func connectNode(
 ) *node {
 	t.Helper()
 
+	return connectNodeAt(t, ctx, o, cluster, id, nil, app, supported...)
+}
+
+// connectNodeAt is like connectNode, for a node that names a site, if site isn't
+// nil.
+func connectNodeAt(
+	t *testing.T,
+	ctx context.Context,
+	o *observe.Observer,
+	cluster, id *uuidpb.UUID,
+	site *identitypb.Identity,
+	app *configpb.Application,
+	supported ...proto.Message,
+) *node {
+	t.Helper()
+
 	engines := make(chan *engineFeed, 1)
 	metrics := make(chan *metricsFeed, 1)
 
@@ -92,6 +108,7 @@ func connectNode(
 			NodeId:      id,
 			ClusterId:   cluster,
 			Application: app,
+			Site:        site,
 		}.Build(),
 	})
 
@@ -364,6 +381,122 @@ func TestServer(t *testing.T) {
 	})
 }
 
+func TestServerDown(t *testing.T) {
+	// forgotten is a cluster that the Observatory had a node of, and forgot the node
+	// after it had not reported for a long time.
+	forgotten := func(t *testing.T, test func(h http.Handler, id string)) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+
+			o, r := observe.NewObserver(), observe.NewRecorder()
+			cluster := uuidpb.Generate()
+			site := identitypb.Identity_builder{Name: "eu-west", Key: uuidpb.Generate()}.Build()
+			n := connectNodeAt(t, ctx, o, cluster, uuidpb.Generate(), site, application("statements", "account"))
+
+			cancel()
+			n.Engine.End(nil)
+			synctest.Wait()
+
+			time.Sleep(4 * 24 * time.Hour)
+			o.ForgetIdle(time.Now())
+			if got := len(o.Nodes()); got != 0 {
+				t.Fatalf("unexpected number of nodes: got %d, want 0", got)
+			}
+
+			test(New(o, r), cluster.AsString())
+		})
+	}
+
+	t.Run("it lists a cluster that it has forgotten the nodes of, as not reporting", func(t *testing.T) {
+		forgotten(t, func(h http.Handler, id string) {
+			var list []observe.ClusterSummary
+			if err := json.Unmarshal(get(h, "/api/clusters").Body.Bytes(), &list); err != nil {
+				t.Fatal(err)
+			}
+			if len(list) != 1 || list[0].ID != id || list[0].Reporting || list[0].Site != "eu-west" {
+				t.Fatalf("unexpected clusters: %+v", list)
+			}
+		})
+	})
+
+	t.Run("it gives the view of a cluster that it has forgotten the nodes of, as down, with its application and site", func(t *testing.T) {
+		forgotten(t, func(h http.Handler, id string) {
+			w := get(h, "/api/clusters/"+id)
+			if w.Code != http.StatusOK {
+				t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusOK)
+			}
+
+			var view observe.ClusterView
+			if err := json.Unmarshal(w.Body.Bytes(), &view); err != nil {
+				t.Fatal(err)
+			}
+			if view.Application.Name != "statements" || view.Site != "eu-west" || len(view.Overview.Cluster.Nodes) != 0 {
+				t.Fatalf("unexpected view: %+v", view)
+			}
+		})
+	})
+
+	t.Run("it streams a cluster that it has forgotten the nodes of, as down", func(t *testing.T) {
+		forgotten(t, func(h http.Handler, id string) {
+			// This runs in the bubble of the test, and t is not the bubble's.
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			w := startWatch(ctx, h, id)
+			synctest.Wait()
+
+			events := w.events(t)
+			if len(events) == 0 || events[0].Name != "changed" {
+				t.Fatalf("unexpected events: %+v", events)
+			}
+			doc := events[0].Data
+			if at(t, doc, "application", "name") != "statements" || at(t, doc, "application", "site") != "eu-west" {
+				t.Fatalf("unexpected application: %v", doc["application"])
+			}
+			if down, _ := doc["down"].(bool); !down {
+				t.Fatalf("expected a document that says the cluster is down: %v", doc["down"])
+			}
+
+			w.Cancel()
+			<-w.Done
+		})
+	})
+}
+
+func TestServerKeepsDown(t *testing.T) {
+	t.Run("the document says that a cluster whose nodes have stopped reporting is down, and keeps its streams", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+
+			o, r := observe.NewObserver(), observe.NewRecorder()
+			cluster := uuidpb.Generate()
+			n := connectNode(t, ctx, o, cluster, uuidpb.Generate(), application("statements", "account"), new(metricsgrpc.EventStreamLength))
+			n.sample(t, 0, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Value: 7}.Build())
+			r.Record(time.Now(), o.Nodes())
+
+			n.Engine.End(nil)
+			synctest.Wait()
+			time.Sleep(time.Second)
+			r.Record(time.Now(), o.Nodes())
+
+			w := startWatch(ctx, New(o, r), cluster.AsString())
+			synctest.Wait()
+
+			doc := w.events(t)[0].Data
+			if down, _ := doc["down"].(bool); !down {
+				t.Fatalf("expected a document that says the cluster is down: %v", doc["down"])
+			}
+			if len(doc["eventStreams"].(map[string]any)) != 1 {
+				t.Fatalf("expected the stream that it had: %v", doc["eventStreams"])
+			}
+
+			w.Cancel()
+			<-w.Done
+		})
+	})
+}
+
 func TestStream(t *testing.T) {
 	const (
 		queueIndex    = 0 // QueueCommandsPending
@@ -408,6 +541,34 @@ func TestStream(t *testing.T) {
 		}
 		return out
 	}
+
+	t.Run("the document names the site of the cluster in its application, if there is one", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+
+			o, r := observe.NewObserver(), observe.NewRecorder()
+			a, b := uuidpb.Generate(), uuidpb.Generate()
+			site := identitypb.Identity_builder{Name: "eu-west", Key: uuidpb.Generate()}.Build()
+
+			connectNodeAt(t, ctx, o, a, uuidpb.Generate(), site, application("statements", "account"), supported...)
+			connectNode(t, ctx, o, b, uuidpb.Generate(), application("billing", "invoices"), supported...)
+
+			for cluster, want := range map[string]string{a.AsString(): "eu-west", b.AsString(): ""} {
+				w := startWatch(ctx, New(o, r), cluster)
+				synctest.Wait()
+
+				doc := w.events(t)[0].Data
+				got, _ := doc["application"].(map[string]any)["site"].(string)
+				if got != want {
+					t.Fatalf("unexpected site: got %q, want %q", got, want)
+				}
+
+				w.Cancel()
+				<-w.Done
+			}
+		})
+	})
 
 	t.Run("the burst", func(t *testing.T) {
 		t.Run("it is the whole document, then the time series, then the heartbeats, then synced", func(t *testing.T) {

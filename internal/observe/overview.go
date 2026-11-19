@@ -29,6 +29,11 @@ type ClusterSummary struct {
 	// Site is the name of the site that the cluster is deployed to. It is empty
 	// if the cluster's nodes name no site.
 	Site string `json:"site,omitempty"`
+
+	// Reporting is true if any node of the cluster is reporting. A cluster that
+	// the Observatory remembers and has no node of, or none that is reporting,
+	// is down.
+	Reporting bool `json:"reporting"`
 }
 
 // Application is the application that a cluster runs.
@@ -47,7 +52,12 @@ func Clusters(now time.Time, nodes []Node) []ClusterSummary {
 	var out []ClusterSummary
 	for id, members := range clustersOf(nodes) {
 		app, _ := applicationOf(now, members)
-		out = append(out, ClusterSummary{ID: id, Application: app, Site: siteOf(members)})
+		out = append(out, ClusterSummary{
+			ID:          id,
+			Application: app,
+			Site:        siteOf(members),
+			Reporting:   slices.ContainsFunc(members, func(n Node) bool { return n.Reporting(now) }),
+		})
 	}
 
 	slices.SortFunc(out, func(a, b ClusterSummary) int {
@@ -55,6 +65,49 @@ func Clusters(now time.Time, nodes []Node) []ClusterSummary {
 	})
 
 	return out
+}
+
+// Clusters returns every cluster that the Observer has had a node of, at the time
+// now, sorted by the ID of the cluster: those that it has nodes of, as [Clusters]
+// gives them, and those that it remembers and has no node of, which are not
+// reporting.
+func (o *Observer) Clusters(now time.Time) []ClusterSummary {
+	out := Clusters(now, o.Nodes())
+
+	live := map[string]bool{}
+	for _, c := range out {
+		live[c.ID] = true
+	}
+	for _, rec := range o.Records() {
+		if !live[rec.ID] {
+			out = append(out, ClusterSummary{
+				ID:          rec.ID,
+				Application: rec.Application,
+				Site:        rec.Site,
+			})
+		}
+	}
+
+	slices.SortFunc(out, func(a, b ClusterSummary) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+
+	return out
+}
+
+// DownView returns the cluster view of a cluster that the Observatory remembers
+// and has no node of: its application and site, a cluster with no live nodes, and
+// nothing else, because nothing about it is current.
+func DownView(rec ClusterRecord) ClusterView {
+	return ClusterView{
+		Application: rec.Application,
+		Site:        rec.Site,
+		Down:        true,
+		Overview: Overview{
+			Cluster:  ClusterTile{Nodes: []Member{}},
+			Handlers: []HandlerCard{},
+		},
+	}
 }
 
 // clustersOf groups nodes by the ID of their cluster.
@@ -126,7 +179,20 @@ func siteOf(nodes []Node) string {
 // ClusterView is everything that the cluster view of one cluster shows.
 type ClusterView struct {
 	Application Application `json:"application"`
-	Overview    Overview    `json:"overview"`
+
+	// Site is the name of the site that the cluster is deployed to. It is empty
+	// if the cluster's nodes name no site. Wherever the view refers to the
+	// application, it says which site, because an application may run at several.
+	Site string `json:"site,omitempty"`
+
+	// Down is true if no node of the cluster is reporting now. If the Observer
+	// still has nodes of it, Overview is what it was when a node last reported, with
+	// every rate unknown and no live node, so that the page keeps its shape, and the
+	// numbers in it are not to be trusted. If it has none, the view has nothing but
+	// the application and the site.
+	Down bool `json:"down,omitempty"`
+
+	Overview Overview `json:"overview"`
 }
 
 // Overview is what the cluster view's three tiles and its handler cards show.
@@ -765,6 +831,14 @@ type history struct {
 
 	// nodeRates is the smoothed rate of each node, by the key of the handler.
 	nodeRates map[string]map[string]float64
+
+	// last is the overview of the latest moment at which a node of the cluster was
+	// reporting, which is what a cluster whose nodes have all stopped shows. It is
+	// nil if none has been.
+	last *Overview
+
+	// lastAt is the time at which last was recorded.
+	lastAt time.Time
 }
 
 func newHistory() *history {
@@ -805,6 +879,12 @@ func (r *Recorder) Record(now time.Time, nodes []Node) {
 		if !ok {
 			h = newHistory()
 			r.clusters[id] = h
+		}
+
+		if len(contributors(now, members)) > 0 {
+			last := o
+			h.last = &last
+			h.lastAt = now
 		}
 
 		if rs.events != nil {
@@ -945,18 +1025,31 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 		h = newHistory()
 	}
 
+	// A cluster whose nodes have all stopped reporting keeps its shape, with what
+	// it showed when a node last reported, and nothing in it current.
+	down := false
+
+	// The charts are drawn as of the time that they were recorded until, which is now
+	// unless the cluster is down. A cluster that is down has charts that stand still,
+	// as they were when a node last reported, so that they don't scroll away.
+	chartAt := now
+	if h.last != nil && len(contributors(now, members)) == 0 {
+		o, down = downOf(*h.last), true
+		chartAt = h.lastAt
+	}
+
 	if o.Events != nil && o.Events.History != nil {
-		c := chartOf(now, h.events)
+		c := chartOf(chartAt, h.events)
 		o.Events.History = &c
 	}
 	if o.Queues != nil && o.Queues.History != nil {
-		c := chartOf(now, h.throughput)
+		c := chartOf(chartAt, h.throughput)
 		o.Queues.History = &c
 	}
 	for i, card := range o.Handlers {
 		if card.History != nil {
 			if t, ok := h.handlers[card.Key]; ok {
-				c := chartOf(now, t)
+				c := chartOf(chartAt, t)
 				o.Handlers[i].History = &c
 			}
 		}
@@ -982,7 +1075,33 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 		o.Handlers[i].Nodes = rates
 	}
 
-	return ClusterView{Application: app, Overview: o}, true
+	return ClusterView{Application: app, Site: siteOf(members), Down: down, Overview: o}, true
+}
+
+// downOf returns the overview of a cluster that has no node reporting, from the
+// overview that it had when a node last reported: every rate is unknown, because
+// none can be derived any more, and no node is live. The result shares nothing
+// that the caller changes with last.
+func downOf(last Overview) Overview {
+	if last.Events != nil {
+		e := *last.Events
+		if e.Rate != nil {
+			e.Rate = &Rate{}
+		}
+		last.Events = &e
+	}
+	if last.Queues != nil {
+		q := *last.Queues
+		if q.Throughput != nil {
+			q.Throughput = &Rate{}
+		}
+		last.Queues = &q
+	}
+
+	last.Cluster = ClusterTile{Nodes: []Member{}}
+	last.Handlers = slices.Clone(last.Handlers)
+
+	return last
 }
 
 // Series is what the charts of one cluster have recorded, oldest first.

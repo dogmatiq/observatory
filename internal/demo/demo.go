@@ -77,7 +77,12 @@ const (
 //
 // It returns when ctx ends, or when a node can't be served.
 func Run(ctx context.Context, o *observe.Observer, combinations bool) error {
-	clusters := []*cluster{newCluster("statements", nodeCount, nil)}
+	// The cluster of the example application is at a site, which the page names
+	// wherever it names the application. The others are at none.
+	statements := newCluster("statements", nodeCount, nil)
+	statements.site = identity("eu-west", uuidpb.Generate())
+
+	clusters := []*cluster{statements}
 	if combinations {
 		clusters = append(clusters, combinationClusters()...)
 	}
@@ -174,6 +179,7 @@ func combinationsOf(tile string, parts []ingredient) []*cluster {
 type cluster struct {
 	id         *uuidpb.UUID
 	app        *configpb.Application
+	site       *identitypb.Identity
 	nodes      []*uuidpb.UUID
 	streams    [2]*uuidpb.UUID
 	commandsQ  *uuidpb.UUID
@@ -768,6 +774,7 @@ func (s *engineServer) WatchEngine(
 			NodeId:            c.nodes[s.node],
 			ClusterId:         c.id,
 			Application:       c.app,
+			Site:              c.site,
 			HeartbeatInterval: durationpb.New(heartbeatIntervals[s.node]),
 			HeartbeatTimeout:  durationpb.New(heartbeatTimeout),
 			Description:       "simulated node",

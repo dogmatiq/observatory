@@ -1,6 +1,7 @@
 package observe
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"io"
@@ -41,6 +42,10 @@ type Observer struct {
 	m     sync.Mutex
 	nodes map[string]*entry
 
+	// records is what the Observer remembers about each cluster that it has had a
+	// node of, by the ID of the cluster, even after it has forgotten the nodes.
+	records map[string]ClusterRecord
+
 	// calls is the number of calls to the metrics API that have begun.
 	calls uint64
 
@@ -52,6 +57,7 @@ type Observer struct {
 func NewObserver() *Observer {
 	return &Observer{
 		nodes:      map[string]*entry{},
+		records:    map[string]ClusterRecord{},
 		heartbeats: map[chan Heartbeat]struct{}{},
 	}
 }
@@ -220,8 +226,9 @@ func (o *Observer) snapshot() map[string]Node {
 // Observer forgets the cluster.
 const idleLimit = 3 * 24 * time.Hour
 
-// ForgetIdle forgets every cluster that none of whose nodes has reported for
-// three days, at the time now. See [Observer.Forget].
+// ForgetIdle forgets the nodes of every cluster that none of whose nodes has
+// reported for three days, at the time now, as [Observer.Forget] does, but keeps
+// what it remembers about the cluster itself, as a [ClusterRecord].
 func (o *Observer) ForgetIdle(now time.Time) {
 	o.m.Lock()
 	defer o.m.Unlock()
@@ -243,12 +250,76 @@ func (o *Observer) ForgetIdle(now time.Time) {
 	}
 }
 
-// Forget forgets every node of the cluster, and ends their connections. A node
-// that connects again afterward is a new node to the Observer, without the
-// history of the one that it forgot.
+// ClusterRecord is what an [Observer] remembers about a cluster that it has had
+// a node of, which it keeps after it has forgotten the nodes, so that the
+// cluster still has a page, and shows as down, until the Observer is stopped.
+type ClusterRecord struct {
+	// ID is the ID of the cluster, as a UUID.
+	ID string
+
+	Application Application
+
+	// Site is the name of the site that the cluster is deployed to. It is empty
+	// if its nodes named none.
+	Site string
+}
+
+// remember updates what the Observer remembers about the cluster of a node that
+// has sent the preamble p. The latest node to connect decides. o.m must be held.
+func (o *Observer) remember(p *enginegrpc.WatchEngineResponse_Preamble) {
+	id := p.GetClusterId().AsString()
+	rec := o.records[id]
+	rec.ID = id
+
+	if identity := p.GetApplication().GetIdentity(); identity != nil {
+		rec.Application = Application{
+			Name: identity.GetName(),
+			Key:  identity.GetKey().AsString(),
+		}
+	}
+	if site := p.GetSite().GetName(); site != "" {
+		rec.Site = site
+	}
+
+	o.records[id] = rec
+}
+
+// Record returns what the Observer remembers about the cluster with the given
+// ID, if it has ever had a node of it, whether or not it still has one.
+func (o *Observer) Record(cluster string) (ClusterRecord, bool) {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	rec, ok := o.records[cluster]
+	return rec, ok
+}
+
+// Records returns what the Observer remembers about every cluster that it has
+// had a node of, sorted by the ID of the cluster.
+func (o *Observer) Records() []ClusterRecord {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	out := make([]ClusterRecord, 0, len(o.records))
+	for _, rec := range o.records {
+		out = append(out, rec)
+	}
+	slices.SortFunc(out, func(a, b ClusterRecord) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+
+	return out
+}
+
+// Forget forgets every node of the cluster, and ends their connections, and
+// forgets the cluster itself, which then has no page until a node of it connects
+// again. A node that connects again afterward is a new node to the Observer,
+// without the history of the one that it forgot.
 func (o *Observer) Forget(cluster *uuidpb.UUID) {
 	o.m.Lock()
 	defer o.m.Unlock()
+
+	delete(o.records, cluster.AsString())
 
 	for id, e := range o.nodes {
 		if e.node.Preamble.GetClusterId().Equal(cluster) {
@@ -405,6 +476,7 @@ func (o *Observer) attach(id string, p *enginegrpc.WatchEngineResponse_Preamble,
 	// that the node sent.
 	e.conn = c
 	e.node.Preamble = p
+	o.remember(p)
 	e.node.LiveNodes = nil
 	e.node.Workloads = nil
 	e.node.Connected = true

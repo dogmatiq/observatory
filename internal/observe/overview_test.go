@@ -179,6 +179,16 @@ func TestOverview(t *testing.T) {
 						t.Fatalf("unexpected sites: %v", sites)
 					}
 
+					// The view of the cluster names it too, for the places that refer to
+					// the application.
+					r := NewRecorder()
+					if got := viewOf(t, r, o, a).Site; got != "eu-west" {
+						t.Fatalf("unexpected site in the view: got %q, want %q", got, "eu-west")
+					}
+					if got := viewOf(t, r, o, b).Site; got != "" {
+						t.Fatalf("unexpected site in the view: got %q, want none", got)
+					}
+
 					cancel()
 					<-n1.Engine.Done
 					<-n2.Engine.Done

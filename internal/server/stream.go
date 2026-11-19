@@ -29,7 +29,7 @@ func serveStream(w http.ResponseWriter, req *http.Request, o *observe.Observer, 
 	}
 
 	now := time.Now()
-	view, ok := r.View(now, o.Nodes(), id)
+	view, ok := viewOf(o, r, now, id)
 	if !ok {
 		http.NotFound(w, req)
 		return
@@ -62,9 +62,9 @@ func serveStream(w http.ResponseWriter, req *http.Request, o *observe.Observer, 
 
 		case <-ticker.C:
 			now = time.Now()
-			view, ok = r.View(now, o.Nodes(), id)
+			view, ok = viewOf(o, r, now, id)
 			if !ok {
-				// The Observatory has forgotten the cluster.
+				// The Observatory has forgotten the cluster altogether.
 				return
 			}
 			err = s.update(now, view, r.Series(id))
@@ -276,11 +276,17 @@ func chartsOf(view observe.ClusterView, series observe.Series) map[string][]obse
 func documentOf(view observe.ClusterView) map[string]any {
 	o := view.Overview
 
-	doc := map[string]any{
-		"application": map[string]any{
-			"name": view.Application.Name,
-			"key":  view.Application.Key,
-		},
+	application := map[string]any{
+		"name": view.Application.Name,
+		"key":  view.Application.Key,
+	}
+	if view.Site != "" {
+		application["site"] = view.Site
+	}
+
+	doc := map[string]any{"application": application}
+	if view.Down {
+		doc["down"] = true
 	}
 
 	nodes := map[string]any{}
