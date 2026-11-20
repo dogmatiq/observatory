@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-48 -201 220 220" role="img" aria-labelledby="title">
+	<title id="title">Dogmatiq</title>
+	<style>
+		path { fill: #161a21; }
+		@media (prefers-color-scheme: dark) { path { fill: #e4e9f2; } }
+	</style>
+	<path d="M90 -150L124 -184V-60A62 62 0 1 1 56 -121.71V-87.35A28 28 0 1 0 90 -60Z"/>
+</svg>
