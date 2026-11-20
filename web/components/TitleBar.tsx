@@ -22,6 +22,15 @@ export interface NavItem {
  * left, which links to the first page, followed by where the page is, then the
  * page's links, and the control for the color mode on the right.
  *
+ * The brand is the Dogmatiq wordmark, then a rule, then the product's name as it
+ * is written. The brand guide measures the lockup in x-heights of the wordmark:
+ * half an x-height before and after the rule, and a name whose capitals are one
+ * x-height tall. With the wordmark 80px wide an x-height is 9.27px, so the gaps
+ * are 4.6px and the name is 13.28px, on a line as tall as the wordmark so that
+ * its baseline is level with the wordmark's. The rule is a pixel wide, as that is
+ * the thinnest that can be drawn, and in the faint text color. The name is in the
+ * soft text color, a touch duller than the wordmark, so that the wordmark leads.
+ *
  * The bar stays at the top as the page scrolls. Its background spans the window,
  * and its content has the page's width and is centered, so the brand lines up
  * with the left edge of the page and the controls with its right edge.
@@ -45,11 +54,18 @@ export function TitleBar({
 		<header className="sticky top-0 z-10 border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)] [backdrop-filter:saturate(1.4)_blur(10px)]">
 			<div className="mx-auto flex h-13 max-w-page items-center gap-6 px-6 max-narrow:h-auto max-narrow:flex-wrap max-narrow:gap-x-3 max-narrow:gap-y-1.5 max-narrow:px-4 max-narrow:py-2">
 				<a
-					className="flex items-center gap-2 font-[650] whitespace-nowrap text-fg no-underline hover:no-underline"
+					className="flex items-center whitespace-nowrap text-fg no-underline hover:no-underline"
 					href="/"
+					aria-label="dogmatiq observatory"
 				>
-					<Logo className="h-auto w-6 flex-none fill-current" />
-					<span>Observatory</span>
+					<Logo className="h-auto w-20 flex-none fill-current" />
+					<span
+						className="mx-[4.6px] h-[19px] w-px flex-none bg-faint"
+						aria-hidden="true"
+					/>
+					<span className="text-[13.28px] leading-[19.46px] font-light text-fg-soft">
+						observatory
+					</span>
 				</a>
 				{application && (
 					<Popover

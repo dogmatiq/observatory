@@ -10,22 +10,14 @@ export interface Version {
 }
 
 /**
- * Footer is the bar along the bottom of every page. It credits Dogmatiq, and
- * lists the versions of the software that the page is about, if it has any.
+ * Footer is the bar along the bottom of every page. It lists the versions of
+ * the software that the page is about, if it has any, at its right.
  */
 export function Footer({ versions = [] }: { versions?: Version[] }) {
 	return (
 		<footer className="border-t border-line text-sm text-muted">
 			<div className="mx-auto flex max-w-page flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 pt-4 pb-8 max-narrow:p-4">
-				<p className="flex items-center gap-2">
-					<a
-						className="font-semibold text-fg-soft hover:underline"
-						href="https://dogmatiq.io"
-					>
-						Powered by Dogmatiq
-					</a>
-				</p>
-				<p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 tabular-nums">
+				<p className="ml-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 tabular-nums">
 					{versions.map((v, i) => (
 						<span
 							key={v.label}

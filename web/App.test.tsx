@@ -119,7 +119,9 @@ test("the brand links to the first page", () => {
 	render(<App path="/fixture" />);
 
 	expect(
-		screen.getByRole("link", { name: "Observatory" }).getAttribute("href"),
+		screen
+			.getByRole("link", { name: "dogmatiq observatory" })
+			.getAttribute("href"),
 	).toBe("/");
 });
 
@@ -129,16 +131,6 @@ test("the title bar says which application the page is about, and its key", asyn
 	expect(await tipOf(screen.getByText("statements"))).toBe(
 		"Application statements, key d0137119-2660-4bc2-ab4c-bc156e08521c",
 	);
-});
-
-test("the footer credits Dogmatiq", () => {
-	render(<App path="/fixture" />);
-
-	expect(
-		screen
-			.getByRole("link", { name: "Powered by Dogmatiq" })
-			.getAttribute("href"),
-	).toBe("https://dogmatiq.io");
 });
 
 test("the title bar's color mode control changes the page's colors", () => {
