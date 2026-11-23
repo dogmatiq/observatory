@@ -1,11 +1,14 @@
 <div align="center">
 
-# Dogma Observatory
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://dogmatiq.io/res/img/dynamic/repo/observatory/banner/dark.svg">
+  <img alt="Dogmatiq observatory" src="https://dogmatiq.io/res/img/dynamic/repo/observatory/banner/light.svg" height="44">
+</picture>
 
 See what your [Dogma] applications are doing.
 
-[![Latest Version](https://img.shields.io/github/tag/dogmatiq/observatory.svg?&style=for-the-badge&label=semver)](https://github.com/dogmatiq/observatory/releases)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/dogmatiq/observatory/ci.yml?style=for-the-badge&branch=main)](https://github.com/dogmatiq/observatory/actions/workflows/ci.yml)
+[![Latest version](https://dogmatiq.io/res/img/dynamic/repo/observatory/badge/semver.svg)](https://github.com/dogmatiq/observatory/releases)
+[![Build status](https://dogmatiq.io/res/img/dynamic/repo/observatory/badge/build.svg)](https://github.com/dogmatiq/observatory/actions/workflows/ci.yml)
 
 </div>
 
