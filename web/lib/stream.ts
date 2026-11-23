@@ -522,6 +522,9 @@ function cardOf(
 	if (h.disabled === true) {
 		card.disabled = true;
 	}
+	if (typeof h.coverage === "number") {
+		card.coverage = h.coverage;
+	}
 	if (h.minimizesConcurrency === true) {
 		card.minimizesConcurrency = true;
 	}
@@ -576,7 +579,7 @@ export function selectCluster(
 	const application = doc.application as unknown as Application;
 	const rates = isObject(doc.rates) ? doc.rates : {};
 
-	const overview: OverviewData = { cluster: { nodes: [] }, handlers: [] };
+	const overview: OverviewData = { handlers: [] };
 
 	// A part of a tile that the document doesn't have is one that no node
 	// supports, and the tile leaves it out. A rate that the document has, and that
@@ -594,8 +597,14 @@ export function selectCluster(
 
 	if (doc.eventStreams !== undefined || rates.events !== undefined) {
 		overview.events = attempt(() => {
+			// The document doesn't yet say whether the engine appends every event to
+			// one stream, which needs the spec to say so, as dogmatiq/protobuf#45
+			// proposes, so no engine is taken to.
 			const events: NonNullable<OverviewData["events"]> = {};
 
+			if (isObject(doc.coverage) && typeof doc.coverage.events === "number") {
+				events.coverage = doc.coverage.events;
+			}
 			if (rates.events !== undefined) {
 				events.rate = rateOf(rates.events, "rates.events");
 				events.history = chartOf(snapshot.series.get("events"), ref, 60);
@@ -621,6 +630,12 @@ export function selectCluster(
 			const queues: NonNullable<OverviewData["queues"]> = {
 				failing: maybeNumber(doc.failing, "failing") ?? 0,
 			};
+			if (isObject(doc.coverage) && typeof doc.coverage.queues === "number") {
+				queues.coverage = doc.coverage.queues;
+			}
+			// The document doesn't yet say whether the engine keeps every message in
+			// one queue, which needs the spec to say so, as dogmatiq/protobuf#45
+			// proposes, so no engine is taken to.
 
 			if (rates.throughput !== undefined) {
 				queues.throughput = {
@@ -645,20 +660,24 @@ export function selectCluster(
 		});
 	}
 
-	overview.cluster.nodes =
+	// The document doesn't yet tell an engine that doesn't cluster from one that
+	// does, which needs the spec to say which, as dogmatiq/protobuf#45 proposes, so
+	// every engine is one that clusters.
+	const nodes =
 		attempt(() =>
 			entries(doc.nodes, "nodes")
 				.sort(byId)
 				.map(
 					([id, n]): LiveNode => ({
 						id,
-						workloads: number(n.workloads, "workloads"),
+						workloads: maybeNumber(n.workloads, "workloads"),
 						heartbeats: (snapshot.beats.get(id) ?? []).map((t) =>
 							Math.max(0, ref - t),
 						),
 					}),
 				),
 		) ?? [];
+	overview.cluster = { nodes };
 
 	const cards = attempt(() => entries(doc.handlers, "handlers")) ?? [];
 	for (const [key, h] of cards) {

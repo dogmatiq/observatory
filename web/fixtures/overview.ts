@@ -42,8 +42,13 @@ export const application = {
  * of its tiles is there.
  */
 export const overview: OverviewData & {
-	events: Required<NonNullable<OverviewData["events"]>>;
-	queues: Required<NonNullable<OverviewData["queues"]>>;
+	events: Required<
+		Omit<NonNullable<OverviewData["events"]>, "oneStream" | "coverage">
+	>;
+	queues: Required<
+		Omit<NonNullable<OverviewData["queues"]>, "oneQueue" | "coverage">
+	>;
+	cluster: NonNullable<OverviewData["cluster"]>;
 } = {
 	events: {
 		rate: { perMinute: 347 },

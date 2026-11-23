@@ -1,11 +1,5 @@
-import { Distrusted, useCurrent } from "../lib/distrust.tsx";
-import {
-	countOf,
-	formatCompact,
-	inUnit,
-	nounFor,
-	shortPer,
-} from "../lib/format.ts";
+import { Covered, Distrusted, useCurrent } from "../lib/distrust.tsx";
+import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
 import { heartbeatLevel } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
 import {
@@ -15,6 +9,8 @@ import {
 } from "../lib/segments.ts";
 import type { Application, Counted, OverviewData } from "../model.ts";
 import { ApplicationName } from "./ApplicationName.tsx";
+import { NodesCard, WorkloadsCard } from "./ClusterCards.tsx";
+import { EngineCard } from "./EngineCard.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Figure } from "./Figure.tsx";
 import { HandlerCard } from "./HandlerCard.tsx";
@@ -24,6 +20,7 @@ import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
 import { describedClasses, Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
+import { partialStatus } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 import { RateCard, type RateWords } from "./RateCard.tsx";
 import { Sky } from "./Sky.tsx";
@@ -39,6 +36,7 @@ export interface OverviewLinks {
 	events?: string;
 	queues?: string;
 	cluster?: string;
+	engine?: string;
 
 	/** Returns where the card of the handler with the given key links to. */
 	handler?: (key: string) => string;
@@ -80,11 +78,13 @@ export function Totals({
 				{data.events && (
 					<ErrorBoundary>
 						<Distrusted value={down}>
-							<EventsTile
-								application={application}
-								data={data.events}
-								href={links.events}
-							/>
+							<Covered coverage={data.events.coverage ?? 1}>
+								<EventsTile
+									application={application}
+									data={data.events}
+									href={links.events}
+								/>
+							</Covered>
 						</Distrusted>
 					</ErrorBoundary>
 				)}
@@ -93,23 +93,36 @@ export function Totals({
 				{data.queues && (
 					<ErrorBoundary>
 						<Distrusted value={down}>
-							<QueuesTile
-								application={application}
-								data={data.queues}
-								href={links.queues}
-							/>
+							<Covered coverage={data.queues.coverage ?? 1}>
+								<QueuesTile
+									application={application}
+									data={data.queues}
+									href={links.queues}
+								/>
+							</Covered>
 						</Distrusted>
 					</ErrorBoundary>
 				)}
 			</Presence>
-			<ErrorBoundary>
-				<ClusterTile
-					application={application}
-					clusterId={clusterId}
-					data={data.cluster}
-					href={links.cluster}
-				/>
-			</ErrorBoundary>
+			{data.cluster && (
+				<ErrorBoundary>
+					<ClusterTile
+						application={application}
+						clusterId={clusterId}
+						data={data.cluster}
+						href={links.cluster}
+					/>
+				</ErrorBoundary>
+			)}
+			{data.engine && (
+				<ErrorBoundary>
+					<EngineTile
+						application={application}
+						data={data.engine}
+						href={links.engine}
+					/>
+				</ErrorBoundary>
+			)}
 		</section>
 	);
 }
@@ -151,17 +164,19 @@ export function Overview({
 				className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5"
 				aria-label="Handlers"
 			>
-				<Distrusted value={down}>
-					{data.handlers.map((handler) => (
-						<ErrorBoundary key={handler.key}>
-							<HandlerCard
-								application={application}
-								handler={handler}
-								href={links.handler?.(handler.key)}
-							/>
-						</ErrorBoundary>
-					))}
-				</Distrusted>
+				{data.handlers.map((handler) => (
+					<ErrorBoundary key={handler.key}>
+						<Distrusted value={down}>
+							<Covered coverage={handler.coverage ?? 1}>
+								<HandlerCard
+									application={application}
+									handler={handler}
+									href={links.handler?.(handler.key)}
+								/>
+							</Covered>
+						</Distrusted>
+					</ErrorBoundary>
+				))}
 			</section>
 		</div>
 	);
@@ -201,15 +216,26 @@ export function EventsTile({
 	data: NonNullable<OverviewData["events"]>;
 	href: string | undefined;
 }) {
-	const { rate, streams } = data;
+	const { rate, streams, oneStream } = data;
 	const total = streams?.reduce((sum, s) => sum + s.size, 0) ?? 0;
+
+	// An engine that appends every event to one stream has no streams to count,
+	// and no spread of events across them to show.
+	const inStreams =
+		streams === undefined || oneStream ? null : (
+			<>
+				{" in "}
+				<Ramped value={streams.length} format={String} />
+				{` ${nounFor(streams.length, "stream", "streams")}`}
+			</>
+		);
 
 	// A rate is a whole number of events per minute, or per hour or per day if it
 	// is less than one per minute, and is lost, as the figure shows it, for a
 	// minute at most.
 	const { scaled, per, state } = useRate(rate?.perMinute);
 
-	// The number and the words beside it both have the card of the rate.
+	// The number and its detail line both have the card of the rate.
 	const rateCard = (
 		<RateCard
 			subsystem="streams"
@@ -227,6 +253,7 @@ export function EventsTile({
 			label="Events"
 			icon="event"
 			about={eventsAbout(application)}
+			aboutStatus={data.coverage === undefined ? undefined : partialStatus}
 			href={href}
 			value={
 				rate ? (
@@ -255,23 +282,27 @@ export function EventsTile({
 							<>
 								{", "}
 								<Ramped value={total} format={formatCompact} />
-								{` ${nounFor(total, "event", "events")} in `}
-								<Ramped value={streams.length} format={String} />
-								{` ${nounFor(streams.length, "stream", "streams")}`}
+								{` ${nounFor(total, "event", "events")}`}
+								{inStreams}
 							</>
 						)}
 					</>
 				) : (
 					<>
 						<Noun>{nounFor(total, "event", "events")}</Noun>
-						{" in "}
-						<Ramped value={streams?.length ?? 0} format={String} />
-						{` ${nounFor(streams?.length ?? 0, "stream", "streams")}`}
+						{oneStream ? null : (
+							<>
+								{" in "}
+								<Ramped value={streams?.length ?? 0} format={String} />
+								{` ${nounFor(streams?.length ?? 0, "stream", "streams")}`}
+							</>
+						)}
 					</>
 				)
 			}
 			bar={
-				streams && (
+				streams &&
+				!oneStream && (
 					<StackedBar subsystem="streams" segments={streamSegments(streams)} />
 				)
 			}
@@ -295,7 +326,7 @@ export function EventsTile({
 
 /**
  * How the queues tile says what its rate counts, in the card of the rate, in the
- * words beside the headline and in the readout of its chart.
+ * detail line and in the readout of its chart.
  */
 export const countedWords: Record<
 	Counted,
@@ -367,7 +398,7 @@ export function QueuesTile({
 	data: NonNullable<OverviewData["queues"]>;
 	href: string | undefined;
 }) {
-	const { queues, throughput } = data;
+	const { queues, throughput, oneQueue } = data;
 	const messages = queues?.reduce((sum, q) => sum + q.size, 0) ?? 0;
 
 	// The headline is the messages that aren't failing, and then those that are,
@@ -388,7 +419,7 @@ export function QueuesTile({
 	const counted = throughput?.of ?? "removed";
 	const wording = countedWords[counted];
 
-	// The number and the words beside it both have the card of the rate.
+	// The number and its detail line both have the card of the rate.
 	const rateCard = (
 		<RateCard subsystem="queues" icon="message" words={wording} state={state} />
 	);
@@ -403,6 +434,7 @@ export function QueuesTile({
 			label="Queues"
 			icon="message"
 			about={queuesAbout(application)}
+			aboutStatus={data.coverage === undefined ? undefined : partialStatus}
 			href={href}
 			accent={failing > 0 ? "failing" : undefined}
 			value={
@@ -423,9 +455,15 @@ export function QueuesTile({
 				queues ? (
 					<>
 						<Noun>{nounFor(messages, "message", "messages")}</Noun>
-						{" in "}
-						<Ramped value={queues.length} format={String} />
-						{` ${nounFor(queues.length, "queue", "queues")}`}
+						{/* An engine that keeps every message in one queue has no queues to
+						count, and no spread of messages across them to show. */}
+						{!oneQueue && (
+							<>
+								{" in "}
+								<Ramped value={queues.length} format={String} />
+								{` ${nounFor(queues.length, "queue", "queues")}`}
+							</>
+						)}
 						{throughput && (
 							<>
 								{", "}
@@ -447,7 +485,8 @@ export function QueuesTile({
 				)
 			}
 			bar={
-				queues && (
+				queues &&
+				!oneQueue && (
 					<StackedBar subsystem="queues" segments={queueSegments(queues)} />
 				)
 			}
@@ -484,7 +523,9 @@ export function clusterAbout(application: Application) {
 
 /**
  * ClusterTile is the cluster tile, whose headline is the number of nodes that are
- * live, with the workloads that they own, and a bar of how those are shared.
+ * live, with the workloads that they own, and a bar of how those are shared. If
+ * no node's engine divides its work into workloads, the tile leaves them out, and
+ * has no bar.
  */
 export function ClusterTile({
 	application,
@@ -494,10 +535,16 @@ export function ClusterTile({
 }: {
 	application: Application;
 	clusterId?: string;
-	data: OverviewData["cluster"];
+	data: NonNullable<OverviewData["cluster"]>;
 	href: string | undefined;
 }) {
-	const workloads = data.nodes.reduce((sum, n) => sum + n.workloads, 0);
+	const divided = data.nodes.some((n) => n.workloads !== undefined);
+
+	// While a node doesn't report its workloads and others do, the number of
+	// workloads is of the nodes that do, which covers only some of the cluster.
+	const reporting = data.nodes.filter((n) => n.workloads !== undefined).length;
+	const coverage = data.nodes.length === 0 ? 1 : reporting / data.nodes.length;
+	const workloads = data.nodes.reduce((sum, n) => sum + (n.workloads ?? 0), 0);
 
 	// The levels drain between updates, so they are worked out again with each
 	// frame from the time that has passed.
@@ -509,6 +556,9 @@ export function ClusterTile({
 			elapsed,
 		),
 	}));
+
+	// The number and its detail line both have the card of the nodes.
+	const nodesCard = <NodesCard live={data.nodes.length} />;
 
 	return (
 		<MetricTile
@@ -524,23 +574,120 @@ export function ClusterTile({
 			href={href}
 			accent={data.nodes.length === 0 ? "bad" : undefined}
 			value={
-				data.nodes.length === 0 ? (
-					<Alarm>
-						<Ramped value={0} format={String} />
-					</Alarm>
-				) : (
-					<Ramped value={data.nodes.length} format={String} />
-				)
+				<Popover card content={nodesCard}>
+					<span>
+						{data.nodes.length === 0 ? (
+							<Alarm>
+								<Ramped value={0} format={String} />
+							</Alarm>
+						) : (
+							<Ramped value={data.nodes.length} format={String} />
+						)}
+					</span>
+				</Popover>
 			}
 			detail={
 				<>
-					<Noun>
-						{nounFor(data.nodes.length, "cluster node", "cluster nodes")}
-					</Noun>
-					{`, ${countOf(workloads, "workload", "workloads")}`}
+					<Popover card content={nodesCard}>
+						<span className={describedClasses}>
+							<Noun>
+								{nounFor(data.nodes.length, "cluster node", "cluster nodes")}
+							</Noun>
+						</span>
+					</Popover>
+					{divided && (
+						<>
+							{", "}
+							<Popover card content={<WorkloadsCard whole={coverage === 1} />}>
+								<span className={describedClasses}>
+									<Covered coverage={coverage}>
+										<Figure number={workloads} format={String} />
+									</Covered>{" "}
+									{nounFor(workloads, "workload", "workloads")}
+								</span>
+							</Popover>
+						</>
+					)}
 				</>
 			}
-			bar={<NodeBar segments={nodeSegments(data.nodes)} />}
+			// The bar is of how the workloads are shared, so an engine that doesn't
+			// divide its work has none. A cluster with no live node has the empty
+			// track of a bar, because its engine can't be known.
+			bar={
+				divided || data.nodes.length === 0 ? (
+					<NodeBar segments={nodeSegments(data.nodes)} />
+				) : undefined
+			}
+			chart={<HeartbeatChart sections={sections} />}
+		/>
+	);
+}
+
+/**
+ * engineAbout returns what the card of the engine tile says, which is what the
+ * part of the page is about, as [clusterAbout] does.
+ */
+export function engineAbout(application: Application) {
+	return (
+		<p>
+			This section shows information about the engine that runs the{" "}
+			<ApplicationName application={application} />.
+		</p>
+	);
+}
+
+/**
+ * EngineTile is the tile of an engine that doesn't cluster, which always runs as a
+ * single process, in place of the cluster tile. Its headline says whether the
+ * process is online, which is whether it is reporting, and its chart is the process's heartbeat. It has no bar,
+ * because there is nothing to share between processes.
+ */
+export function EngineTile({
+	application,
+	data,
+	href,
+}: {
+	application: Application;
+	data: NonNullable<OverviewData["engine"]>;
+	href: string | undefined;
+}) {
+	const { node } = data;
+
+	// The level drains between updates, so it is worked out again with each frame
+	// from the time that has passed.
+	const elapsed = useElapsed();
+	const sections =
+		node === undefined
+			? []
+			: [
+					{
+						id: node.id,
+						level: heartbeatLevel(
+							node.heartbeats.map((ago) => -ago),
+							elapsed,
+						),
+					},
+				];
+
+	const card = <EngineCard online={node !== undefined} />;
+
+	return (
+		<MetricTile
+			subsystem="cluster"
+			label="Engine"
+			icon="engine"
+			about={engineAbout(application)}
+			identifier={
+				node === undefined ? undefined : <Identifier id={node.id} of="engine" />
+			}
+			href={href}
+			accent={node === undefined ? "bad" : undefined}
+			value={
+				<Popover card content={card}>
+					<span>{node === undefined ? <Alarm>Offline</Alarm> : "Online"}</span>
+				</Popover>
+			}
+			detail={null}
 			chart={<HeartbeatChart sections={sections} />}
 		/>
 	);

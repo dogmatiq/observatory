@@ -139,7 +139,7 @@ test("the times in the data are measured from the time that it last changed", as
 
 	expect(
 		result.current.status === "ready" &&
-			result.current.data.overview.cluster.nodes[0]?.heartbeats,
+			result.current.data.overview.cluster?.nodes[0]?.heartbeats,
 	).toEqual([500, 0]);
 });
 

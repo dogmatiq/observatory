@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { application, overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
 import { stubBrowser, tipOf } from "../test-support.ts";
-import { Overview } from "./Overview.tsx";
+import { engineAbout, Overview } from "./Overview.tsx";
 
 beforeEach(stubBrowser);
 
@@ -123,7 +123,7 @@ test("a cluster with no live nodes has a red number, and the words after it stil
 	);
 
 	const tile = screen.getByRole("article", { name: "Cluster" });
-	expect(tile.textContent).toBe("0cluster nodes, 0 workloads");
+	expect(tile.textContent).toBe("0cluster nodes");
 	expect(tile.querySelector(".text-bad")?.textContent).toBe("0");
 });
 
@@ -243,7 +243,7 @@ test("a rate that the Observatory has never had is a zero in dot-matrix type, th
 	).toBeDefined();
 });
 
-test("the number of events per minute and the words beside it both have the card of the rate", async () => {
+test("the number of events per minute and its detail line both have the card of the rate", async () => {
 	render(<Overview application={application} data={overview} />);
 
 	const events = within(
@@ -263,6 +263,183 @@ test("the number of events per minute and the words beside it both have the card
 	}
 });
 
+test("the events tile of an engine that appends every event to one stream doesn't count streams, and has no bar", () => {
+	const events = overview.events;
+	render(
+		<Overview
+			application={application}
+			data={{
+				...overview,
+				events: {
+					...events,
+					streams: [{ id: "85d749b5", size: 652 }],
+					oneStream: true,
+				},
+			}}
+		/>,
+	);
+
+	const tile = within(screen.getByRole("region", { name: "Totals" })).getByRole(
+		"article",
+		{ name: "Events" },
+	);
+	expect(tile.textContent).toBe("347events per minute, 652 events");
+	expect(tile.querySelector("div.h-2")).toBeNull();
+});
+
+test("the queues tile of an engine that keeps every message in one queue doesn't count queues, and has no bar", () => {
+	render(
+		<Overview
+			application={application}
+			data={{ ...overview, queues: { ...overview.queues, oneQueue: true } }}
+		/>,
+	);
+
+	const tile = within(screen.getByRole("region", { name: "Totals" })).getByRole(
+		"article",
+		{ name: "Queues" },
+	);
+	expect(tile.textContent).toBe("19messages, 442/min");
+	expect(tile.querySelector("div.h-2")).toBeNull();
+});
+
+test("a tile that only some of the nodes report shows their numbers, blurred by how few they are, and the card of its icon says why", async () => {
+	render(
+		<Overview
+			application={application}
+			data={{ ...overview, events: { ...overview.events, coverage: 0.75 } }}
+		/>,
+	);
+
+	const tile = within(screen.getByRole("region", { name: "Totals" })).getByRole(
+		"article",
+		{ name: "Events" },
+	);
+
+	// The numbers are the nodes' own, not the zero that is not available.
+	expect(within(tile).queryAllByRole("img", { name: "not available" })).toEqual(
+		[],
+	);
+	const blurred = [...tile.querySelectorAll<HTMLElement>(".distrust-blur")];
+	expect(blurred).not.toHaveLength(0);
+	for (const n of blurred) {
+		expect(n.style.getPropertyValue("--distrust")).toBe("0.25");
+	}
+
+	const tip = await tipOf(tile.querySelector("svg")?.parentElement as Element);
+	expect(tip).toContain(
+		"Only some of the cluster's nodes report what this section shows",
+	);
+});
+
+test('the number of nodes and the words "cluster nodes" in its detail line have the card of the nodes, and the workloads have theirs', async () => {
+	render(<Overview application={application} data={overview} />);
+
+	const cluster = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Cluster" });
+	const number = cluster.querySelector("span.text-4xl span") as Element;
+
+	for (const target of [number, screen.getByText("cluster nodes")]) {
+		const tip = await tipOf(target);
+
+		expect(tip).toContain("Cluster nodes");
+		expect(tip).toContain("A node is one running process");
+		expect(tip).not.toContain("is offline");
+	}
+
+	const tip = await tipOf(screen.getByText("5 workloads"));
+	expect(tip).toContain("Workloads");
+	expect(tip).toContain("A workload is an ongoing task");
+});
+
+test("a cluster whose engine doesn't divide its work into workloads leaves them out", () => {
+	render(
+		<Overview
+			application={application}
+			data={{
+				...overview,
+				cluster: {
+					nodes: overview.cluster.nodes.map(({ workloads: _, ...n }) => n),
+				},
+			}}
+		/>,
+	);
+
+	const cluster = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Cluster" });
+	expect(cluster.textContent).toBe("3cluster nodes");
+	expect(cluster.querySelector(".h-2")).toBeNull();
+});
+
+test("an engine that doesn't cluster has an engine tile in place of the cluster tile, which says whether its process is online", async () => {
+	render(
+		<Overview
+			application={application}
+			data={{
+				...overview,
+				cluster: undefined,
+				engine: { node: overview.cluster.nodes[0] },
+			}}
+		/>,
+	);
+
+	const totals = within(screen.getByRole("region", { name: "Totals" }));
+	expect(totals.queryByRole("article", { name: "Cluster" })).toBeNull();
+
+	const engine = totals.getByRole("article", { name: "Engine" });
+	expect(engine.textContent).toBe("Online");
+
+	// An engine that doesn't cluster has no nodes, so the tile and its cards never
+	// name one.
+	expect(engine.textContent).not.toMatch(/node|cluster/i);
+	const { container: about } = render(engineAbout(application));
+	expect(about.textContent).toContain("engine");
+	expect(about.textContent).not.toMatch(/node|cluster/i);
+	expect(engine.className).not.toContain("--color-bad");
+
+	const tip = await tipOf(within(engine).getByText("Online"));
+	expect(tip).toContain(
+		"The engine is online while it is in contact, so the figures shown are current.",
+	);
+	expect(tip).not.toMatch(/node|cluster/i);
+	expect(tip).not.toContain("The engine is out of contact,");
+});
+
+test("the engine tile of an engine whose process isn't live says that it is offline, in red", async () => {
+	render(
+		<Overview
+			application={application}
+			data={{ ...overview, cluster: undefined, engine: {} }}
+		/>,
+	);
+
+	const engine = within(
+		screen.getByRole("region", { name: "Totals" }),
+	).getByRole("article", { name: "Engine" });
+	expect(engine.textContent).toBe("Offline");
+	expect(engine.className).toContain("--color-bad");
+	expect(within(engine).getByText("Offline").className).toContain("text-bad");
+
+	const tip = await tipOf(within(engine).getByText("Offline"));
+	expect(tip).toContain("The engine is out of contact,");
+	expect(tip).not.toMatch(/node|cluster/i);
+});
+
+test("the card of the nodes of a cluster with none live says that contact has been lost", async () => {
+	render(
+		<Overview
+			application={application}
+			data={{ ...overview, cluster: { nodes: [] } }}
+			down
+		/>,
+	);
+
+	const tip = await tipOf(screen.getByText("cluster nodes"));
+	expect(tip).toContain("Every node is out of contact,");
+});
+
 test("the icon of the events tile has a card that says what it is about, and not what it shows", async () => {
 	render(<Overview application={application} data={overview} />);
 
@@ -277,7 +454,7 @@ test("the icon of the events tile has a card that says what it is about, and not
 	expect(tip).toContain(
 		"This section shows information about the events and event streams in the statements application.",
 	);
-	expect(tip).not.toContain("The bar shows");
+	expect(tip).not.toContain("This bar shows");
 });
 
 test("a rate that is built from the messages that handlers handle says so, in its words and its card", async () => {

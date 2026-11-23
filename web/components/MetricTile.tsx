@@ -49,6 +49,7 @@ export function MetricTile({
 	label,
 	icon,
 	about,
+	aboutStatus,
 	identifier,
 	value,
 	valueTitle,
@@ -77,13 +78,19 @@ export function MetricTile({
 	 */
 	identifier?: ReactNode;
 
+	/**
+	 * What the card of the icon says, as a status, about the section being
+	 * degraded, if it is.
+	 */
+	aboutStatus?: { icon: IconName; text: ReactNode };
+
 	/** The headline number. */
 	value: ReactNode;
 
 	/** The headline number in full, as its popover. */
 	valueTitle?: string;
 
-	/** The words beside the number, which always take two lines of room. */
+	/** The detail line under the number, which always takes two lines of room. */
 	detail: ReactNode;
 
 	/** The bar of how the number is spread, if there is one. */
@@ -163,6 +170,7 @@ export function MetricTile({
 									icon={icon}
 									kind={label}
 									identifier={identifier}
+									status={aboutStatus}
 								>
 									{about}
 								</InfoCard>

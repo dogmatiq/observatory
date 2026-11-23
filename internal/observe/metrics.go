@@ -606,6 +606,46 @@ func Supported(now time.Time, nodes []Node) map[string]bool {
 	return supported
 }
 
+// Coverage returns the coverage of each metric whose reach is the node that only
+// some of the nodes that contribute to [Combine] support, at the time now, by its
+// full name. A metric's coverage is the share of those nodes that support it,
+// from 0 to 1. The sums that [Combine] makes of such a metric leave out the nodes
+// that don't support it, so they are too small by an amount that isn't known.
+// Nodes of one cluster that support different metrics may be partway through a
+// deploy, but nothing here relies on that.
+//
+// A metric that every contributing node supports isn't listed, because its
+// coverage is whole. Nor is a metric whose reach is the cluster, because one node
+// describes the whole cluster.
+func Coverage(now time.Time, nodes []Node) map[string]float64 {
+	readers := contributors(now, nodes)
+	coverage := map[string]float64{}
+
+	for name, d := range decide(readers) {
+		if d.reach != metricsgrpc.Reach_REACH_NODE {
+			continue
+		}
+
+		listing := 0
+		for _, n := range readers {
+			if slices.ContainsFunc(
+				n.Metrics.Preamble.GetSupportedMetrics(),
+				func(m *metricsgrpc.SupportedMetric) bool {
+					return m.GetMessageName() == name && m.GetReach() == d.reach
+				},
+			) {
+				listing++
+			}
+		}
+
+		if listing < len(readers) {
+			coverage[name] = float64(listing) / float64(len(readers))
+		}
+	}
+
+	return coverage
+}
+
 // contributors returns the nodes that [Combine] reads, in the order that their
 // current calls to the metrics API began.
 func contributors(now time.Time, nodes []Node) []Node {

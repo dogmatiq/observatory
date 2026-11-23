@@ -1,10 +1,6 @@
 import { type ReactNode, useId } from "react";
 import { cn } from "../lib/cn.ts";
-import {
-	unavailableClasses,
-	useCurrent,
-	useDistrusted,
-} from "../lib/distrust.tsx";
+import { Trusted, useCurrent } from "../lib/distrust.tsx";
 import { formatCompact, nounFor } from "../lib/format.ts";
 import { useRamped } from "../lib/ramped.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
@@ -116,6 +112,7 @@ export function HandlerCard({
 							application={application}
 							name={handler.name}
 							kind={handler.kind}
+							partial={handler.coverage !== undefined}
 						/>
 					}
 				>
@@ -379,7 +376,6 @@ function Stat({ icon, number, after, label, title, end }: StatProps) {
 	const current = useCurrent(number);
 	const shown = useRamped(current) ?? current;
 	const zero = shown === 0;
-	const distrusted = useDistrusted();
 
 	return (
 		<Popover content={title}>
@@ -408,17 +404,7 @@ function Stat({ icon, number, after, label, title, end }: StatProps) {
 							)}
 						/>
 					)}
-					{distrusted ? (
-						<span
-							role="img"
-							aria-label="not available"
-							className={unavailableClasses}
-						>
-							{formatCompact(shown)}
-						</span>
-					) : (
-						<span>{formatCompact(shown)}</span>
-					)}
+					<Trusted text={formatCompact(shown)} />
 					{after}
 				</span>
 				<span className="text-xs text-muted">{label}</span>

@@ -1,6 +1,7 @@
 import type { Application, HandlerKind } from "../model.ts";
 import { ApplicationName } from "./ApplicationName.tsx";
 import { InfoCard } from "./InfoCard.tsx";
+import { partialStatus } from "./partial.ts";
 import { handlerSubsystem, kindColors } from "./subsystems.ts";
 
 /**
@@ -30,10 +31,17 @@ export function HandlerKindCard({
 	application,
 	name,
 	kind,
+	partial = false,
 }: {
 	application: Application;
 	name: string;
 	kind: HandlerKind;
+
+	/**
+	 * True if only some of the nodes report what the card of the handler is made
+	 * from, which the card says as a status.
+	 */
+	partial?: boolean;
 }) {
 	return (
 		<InfoCard
@@ -41,6 +49,7 @@ export function HandlerKindCard({
 			icon={kind}
 			iconColor={kindColors[kind]}
 			kind={kind}
+			status={partial ? partialStatus : undefined}
 		>
 			<p>
 				This section shows information about the{" "}

@@ -14,8 +14,20 @@ facts about the prototype that this plan relies on are in [prototype-reference.m
 
 These are the terms that this plan uses. A person who is new to Dogma does not need them to use the Observatory.
 
-- **Node**: one running process of an engine.
+- **Engine**: the software that an application runs on, which its developer chooses and configures. What an engine can
+  do, such as whether it clusters, whether it divides its work into workloads and which metrics it reports, is said of
+  the engine.
+- **Node**: one running process of an engine, as a member of its cluster. What has an ID, a heartbeat, a state of being
+  online or offline, or workloads that it owns, is a node.
 - **Cluster**: the nodes that share the work of one application between them.
+- **Contact**: a node is in contact while its `WatchEngine` call is open and, if it heartbeats, while each heartbeat
+  arrives in time, as the Spec section defines it. The code calls this reporting. The page says "contact", and not
+  "reporting", which reads as sending samples, and not "heartbeats", because not every engine heartbeats. Losing contact
+  doesn't show that a node has stopped, so the page says that whether the application is working is
+  unknown, and doesn't say why.
+- The page says "node" only where there is a cluster. An engine that doesn't cluster has no nodes: its one process is
+  "the engine", with the engine's ID and heartbeat, and the engine is online or offline. The spec calls that process a
+  node, of a cluster of one, and the page doesn't.
 - **Site**: the set of applications, or the clusters that run them, that are deployed to one place. It is the same thing
   as the `site` identity in a Dogma envelope.
 - **Universe**: every site and cluster connected to one Observatory.
@@ -337,13 +349,40 @@ parts. An item that says "Done" is built.
   popover, which stays while the pointer is on it and for 0.2 s after the pointer leaves it or its element. A popover can
   hold something to click, such as the copy button of an identifier, and a keyboard can't reach that yet, because the
   bar segments that open it can't take focus.
+  - A popover does one of two things. One that explains says what something is or means, such as the card of a tile's
+    icon, a rate's card or the card of the nodes. One that drills down is about one thing, such as the card of a segment
+    of a bar or a readout of a chart, and its figures and the identity of the thing vary. Both keep to one rule, so that
+    a reader never hunts for a detail: a popover's paragraphs are fixed text, and a whole paragraph may be there only
+    when it applies, such as the advice on the card of a segment, which is there only when the bar can be spread
+    unevenly. Figures and identity have their own places, and are never inside a sentence, and an explanation is never
+    reworded from one state to another. A status is a paragraph that is there only when it applies, drawn apart from
+    the rest. The detail line, the line under a tile's headline, such as "events per minute, 1.2K events in 2 streams", is not
+    prose: it is figures with their nouns, and the rule is not about it.
+  - When a figure or a phrase in prose gets a popover: only if the reader can't get its meaning from the words alone.
+    That is when the term is not one of Dogma's, such as a cluster, a node, a workload or a site, which come from the
+    engine and the Observatory, so that a reader of Dogma has not met them there; when a common word means something
+    narrower here than the reader would assume (a node is one process of an engine, and not a machine; a workload is the
+    spec's unit of work that a node owns, and not a deployment, nor a count of handlers); when the figure is worked out,
+    or can't be given at the moment; and when the thing has an identity to show. The terms of Dogma itself, such as
+    aggregate, process, projection, integration, command, event and deadline, are assumed, and a card reminds the reader
+    of them and doesn't define them. A popover is not for repeating a figure's own value or restating its words, nor for
+    what a bar or another element beside it already says.
   - In a popover, prose about whether the figure can be given at the moment, and why, is a status, with an icon and a
     tinted ground under the rest, so it is clearly about the ability to give the figure, and not about what the figure
     means. The rate's card has one when the rate is lost or unavailable, which says that the samples are being averaged,
     with a turning icon, because the rate is being worked out.
-  - Every element that is reviewed is shown in every state that it can be in, side by side, at `/states`, because the demo
-    reaches the unusual ones only by chance. A new element gets its section there before it is presented. A button at
-    the top of the page plays the animations again.
+  - Every element that is being worked on, or that has something undecided, is shown in every state that it can be in,
+    side by side, at `/review`, because the demo reaches the unusual ones only by chance. A new element gets its section
+    there before it is presented, and an element leaves the page once it is settled, so that the page shows only what is
+    still open. A tile is shown whole, in each of its states, and then part by part, in the order of review, from the
+    least specific to the most: its icon, its headline, its detail line, its bar and its chart, each with
+    what it shows when it is pointed at. A card whose words never change, and that has a status in some states, is shown
+    once, with its status. Each tile, part and state on the page has an ID that no other has, in full, such as "CL" for a tile,
+    "CL 4" for one of its parts and "CL 4A" for a state: the code of its tile, the number of its part, 0 for the tile as a
+    whole, and a letter for its place, so that it can be named in a review. A click on an ID copies it. Each
+    part, or each state, is marked as decided or under review, and what is under review has the recommendation of what
+    to decide beside it. A button accepts a recommendation: the dev server keeps the decisions that are made on the page in
+    `artifacts/review/decisions.json`, which is not committed, for the agent that the review is with to read and act on. Where there are other wordings or designs of what a state shows, the state shows the recommended one, and the others are in a row of alternatives below the part's states, in a dashed frame named for the state and what is being chosen, which says that accepting the state or one of them is one decision, each with the state's ID and a number, such as "CL 4C1", and a button that accepts it in the state's place. A button at the top of the page plays the animations again.
     `/vitals` has the words of the popovers of the vital statistics on one page, in every combination of what they
     count and of the state of the rate, so that they can be read in one go. Its sentences can be rewritten in place: a bar says how many have changed, copies each change, as it was and as it is now, with the card that it is in, to be sent as feedback, and puts them back. The edits are kept in the browser.
   - What each popover says, and the hover state of its element, are being settled one element at a time, by using them,
@@ -353,11 +392,11 @@ parts. An item that says "Done" is built.
     what the tile is about in general, and not what it shows, because that depends on what the nodes can tell it, and
     each part has a popover of its own. A help card says its scope under its kind, such as "on the … node", only
     if the thing is narrower than the page, because a scope of the application would repeat the title bar. The events
-    tile's card has none. The icon of an application is Lucide's `blocks`, which is not in use yet. The icon of a tile, and the kind icon of a handler card, grow a
+    tile's card has none. The icon of an application is Lucide's `blocks`, which is not in use yet. An engine's is Lucide's `cpu`. A node's is the cluster's icon, Lucide's `network`, with the lower left of its three boxes filled, because a node is a member of a cluster, and its icon relates to the cluster's and not to the engine's. It is the one icon with a filled shape. An icon is as simple as those of the kinds of handler, without a badge. A workload's is Lucide's `briefcase`. A process's is Lucide's `waypoints`, which says that a process moves through its steps, and not always in a line, without drawing a tree, and looks nothing like the cluster's icon. The icon of a tile, and the kind icon of a handler card, grow a
     little, to 115%, when pointed at, because an icon is a compact target and a chip behind it was tried and not liked. The
     pointer stays the standard one. The queues tile, done as the events tile is: no popover with the exact number of messages;
     a help card that says "This section shows information about the messages and queues in the … application"; a rate
-    card for the messages removed per minute, on the figure and the words beside it, which scales to per hour as the
+    card for the messages removed per minute, on the figure and its detail line, which scales to per hour as the
     events' does; the card of a queue for a segment of the bar, which is the card of a stream with messages and queues
     for events and streams, and says that when messages are waiting an even distribution is better; and the sparkline
     of the removal rate. The number of messages that wait and the count of those that fail after it are one headline, with
@@ -368,17 +407,18 @@ parts. An item that says "Done" is built.
     and it is not taken for the real figure.
     A failing count of a handler's card has none yet, because its stat has a popover of its own. The words and the figures in a
     sentence that have a popover get a faint ground behind them when pointed at, so that it is clear which words the
-    popover is about; it is not an underline, which says that they are a link. The icon of a card is the icon of the entity that the card is about, and, for a tile, the entity of its vital
-    signal: the events tile's is events, and the queues tile's is messages, so the queues tile's icon and its cards' are an
+    popover is about; it is not an underline, which says that they are a link. The icon of a card is the icon of the entity that the card is about, and the card of a figure is about the entity that the figure counts, so the cluster tile's headline card has the node's icon, and its title names the figure. For a tile, it is the entity of its vital
+    signal, except for the cluster tile, whose card is about the cluster and gives its ID, so it has the cluster's icon: the events tile's is events, and the queues tile's is messages, so the queues tile's icon and its cards' are an
     envelope, and only a card about a queue has the tray. If the chart and the rate are ever built from the messages that the handlers
     handle, because the queues don't report their removals, the card says so, and says which verb it counts. All of its
-    states are at `/states`. The stats have a chip behind them when pointed at, because a stat
+    states are at `/review`. The stats have a chip behind them when pointed at, because a stat
     is a group of elements to read as a whole, and the chip is not for a single element, such as a name. Done: the kind icon, whose card, in the color of the kind, says in the way of the events tile's card, "This section shows information
     about the … aggregate in the … application", so that it is clear when the handler's name is not, such as a handler
     named "aggregate", and then reminds the reader what that kind of handler does. It assumes that the reader knows the
     terms. To do, in this
     order: every stat, including "instances"
-    and "in progress", which have a chip and no popover now, with the failing count in it; the tile figures; the handler name, whose
+    and "in progress", which have a chip and no popover now, with the failing count in it; the figures of the events and
+    queues tiles that have none; the handler name, whose
     popover would show its key as an identifier; the application name and the link of a cluster, whose popovers would
     show their identifiers; the concurrency icon, whose question-mark pointer would go.
 - A hovered bar segment rises out of the bar, by a pixel above and below, and goes to full opacity, so its shade is
@@ -395,7 +435,7 @@ parts. An item that says "Done" is built.
   it is complete, and it is what the handlers' cards add up to; otherwise, if they report the removal of messages from
   the queues, it is those, which are complete too, but include messages that are removed without being handled, such as
   the deadlines of a process that has ended; otherwise, if they report one kind of handled message, it is that, which is
-  only a part, and the tile says which, "commands" or "deadlines", in its words and its card. The Observatory says which in `counted`, and the page says it too: the words beside the headline say
+  only a part, and the tile says which, "commands" or "deadlines", in its words and its card. The Observatory says which in `counted`, and the page says it too: the detail line says
   "handled", "removed", "commands handled" or "deadlines handled", the card is "Message handling rate", "Message removal
   rate", "Command handling rate" or "Deadline handling rate", and says what it counts and, for a kind of message, that
   it is only a part, and the chart's readout is "handled/min", "removals/min", "commands/min" or "deadlines/min". When nodes
@@ -410,8 +450,24 @@ parts. An item that says "Done" is built.
   is for a metric that nothing reports, and this is an outage.
   Its icon has a card that says what the tile is about, with the cluster's ID under its kind, as the cards of an event
   stream and a queue have theirs, because an application may run in several clusters and nothing else on the page says
-  which one this is. A cluster has no name, only an ID, so the card has no scope line. Still to do: the card of
-  a node, for a segment of the bar ("on the … node"), and the popover and hover rule of the heartbeat wave.
+  which one this is. A cluster has no name, only an ID, so the card has no scope line. The number of nodes and the words
+  "cluster nodes" in its detail line share one card, with the node's icon because the number counts nodes, which says what a node is, and that the nodes together form the cluster, with "Contact with every node has been lost, so it's unknown whether the application is working." as a status while no node is live, and the workloads have another, which says what a workload is. Neither card
+  describes the bar: as on the other tiles, only the card of a segment of the bar does. Each card keeps to about forty words, as the others do. A segment of the bar has the card of its node, with the node's ID, the
+  workloads that it owns and its share of them. If no node's engine divides its work into workloads, the tile leaves the
+  workloads out, and has no bar, because a bar of the nodes alone would say only how many there are, which the
+  headline says (decided on `/review`, CL 0D). What one node is, and how it beats, is for the hover of the chart. The page tells four kinds of engine apart, which a node says in its preamble, as dogmatiq/protobuf#45 proposes:
+  one that doesn't cluster, which has an engine tile in place of the cluster tile, and is not drawn as a cluster of
+  one; one that clusters and doesn't divide its work into workloads; one
+  that divides its work and can't report the workloads, which is shown as the one before it, because the page can't give
+  the number; and one that reports them, as above. Until the spec says so, the Observatory takes a node that has sent its
+  workloads to be one whose engine reports them, and any other to be one that clusters and doesn't divide its work, which
+  the spec as it is doesn't promise. The engine tile's headline says whether the engine is online, which is while it is in contact:
+  "Online" or, in red with the red accent, "Offline", with no detail line, because the engine never changes from one
+  process to several. Its card says that online means in contact, with contact being lost, and so whether the application is working being unknown, as a status, both in words still to be settled at `/review`, and mentions
+  neither nodes nor clusters. A page says "offline", and not "down" or "stopped", for an engine or a cluster that isn't reporting, because it
+  can't tell a process that has stopped from one that it can't reach. The code and the state document call it `down`. Its chart is the process's
+  heartbeat, and it has no bar. Its icon has a card that says what the tile is about, with the engine's ID. The state
+  document doesn't tell the two apart until the spec does, so the engine tile is only at `/review` for now. Decided there: its place in the row of tiles (EN 0C) and the card of its icon (EN 1). Still to do: the popover and hover rule of the heartbeat wave.
 - Wherever the page names the application, it names the site as well, if the cluster has one ("the statements application at the
   eu-west site"; the title bar says "statements at eu-west"), because an application may run at several sites and a site
   may have several clusters. The site comes from the nodes' preambles, in `ClusterView.Site`, and the state document
@@ -430,7 +486,7 @@ parts. An item that says "Done" is built.
   application and site in the title bar and the cluster tile, and nothing else, because nothing about it is current. The
   page comes alive when a node connects, as the stream goes on. A cluster that it has no record of is unknown, and its page
   says so with a 404 from the API, and asks again every five seconds, so that it comes alive when the cluster becomes
-  known. The clusters page lists a cluster that is not reporting after those that are, marked "not reporting".
+  known. The clusters page lists a cluster that is not reporting after those that are, marked "out of contact".
 - The grey line of the cluster tile with no live node is quiet, then breaks into a short burst of static, and
   then a lens passes along it for ten seconds or more, to and fro at different speeds and with pauses, as of something
   searching the line for the cluster, and then gives up: it stops where it is and shrinks to nothing, slowly, as it loses
@@ -457,7 +513,7 @@ parts. An item that says "Done" is built.
     was not liked), and a readout beside the tile's icon, which expands from the icon, with the value and how
     long ago it was. There is no anchor: a click that held the cursor to a moment was built and removed, because the chart moves slowly
     enough to read under the pointer, and one held moment could not be compared with anything. The readout is of medium length, as in
-    "347 events/min". A rate has three lengths: "347 events per minute" in the words beside a headline, "347 events/min"
+    "347 events/min". A rate has three lengths: "347 events per minute" in a detail line, "347 events/min"
     in a readout, and "347/min" where the thing is named next to it. The cards' sparklines and the heartbeat chart are not done. The chart and the rate beside it are in the same unit, per minute,
     which the data layer converts once, and the readout is in the unit that the headline has, so a slow rate is per hour
     in both.
@@ -548,18 +604,18 @@ parts. An item that says "Done" is built.
   handler's card that recede at zero do the same, and get their colour back as they rise from it. Both are on the states
   page, with buttons. A
   failing count that falls to zero ramps to "+0", stays for a second, and then shrinks away, so that a count that
-  goes up and down doesn't come and go. A stream's card keeps the explanation of the bar when there is one event, and says that there is only 1
-  event, so the segment is the whole bar.
-- A metric that only some of the nodes report, undecided. Today a part of a tile is shown if any node supports its metrics,
-  and a metric whose reach is the node is combined over the nodes that report it, so a rate that some nodes don't
-  report is shown as if it were the whole cluster's. The cases are all of the nodes, some of them, and none. The
-  suggestion is to show the figure from the nodes that report it, and to say in its card, as a status, that only some of
-  the nodes report it, with how many, and to use the fallback headline only when none does. A metric whose reach is the
-  cluster doesn't have the problem, because one node describes the whole cluster.
-  The section's help card is where it is explained, as a status under the general copy, which is there only while the
-  section is degraded, and says which nodes are missing, or why the headline is the fallback. It is behind a hover, so
-  the icon would also show that the section is degraded, with a brief glitch when it becomes so. A figure's own card
-  says what it means for that figure.
+  goes up and down doesn't come and go. A stream's card keeps the explanation of the bar however few events there are, and its figures say how many
+  the stream has.
+- A metric that only some of the nodes report: decided by the rule that a cluster supports everything that any of its
+  nodes supports, and by the coverage rule. A part of a tile is shown if any node supports its metrics. A metric whose
+  reach is the node is summed over the nodes, and while only some nodes support it, the sum is of those nodes, which is
+  too small. Its coverage is the share of the nodes that support it, which `Coverage` gives, and a tile or a handler's
+  card has the lowest coverage of the metrics it is made from. A figure's trust is its freshness times its coverage: it
+  is blurrier the less it is trusted, it glitches for a moment each time its trust falls in a step, and its bars and
+  charts stay live. The card of its icon says why, as a status. A metric whose reach is the cluster doesn't have the
+  problem, because one node describes the whole cluster. The workloads follow the same rule: a node that doesn't report
+  its workloads, while others do, is a faint square, with a card that says so as a status, and the number of workloads
+  counts the nodes that report them, blurred by their coverage. Done.
 - A lost rate, undecided. A node joins or reconnects often in some clusters, and the rate pauses for a few seconds each
   time, because it is the sum over the nodes and a node's rate needs a few seconds of readings. The suggestion is to sum
   the nodes that have enough readings, so that the rate never pauses for a joined node, and dips by that node's share
@@ -639,8 +695,19 @@ with nothing left is not shown. A slot has one candidate for now. Letting a slot
     "No new samples are arriving, so this average is out of date." when it is lost.
 - A part that begins or ends while a page is open grows in or shrinks away, with some animation, and not necessarily the
   same one for every part. Stats on a card appear and go without one so far.
-- The state document says which: a part that no node supports is absent, and a rate that is supported and not yet known
-  is an empty object.
+- The page adapts to what the engine says that it supports, in three cases. What the engine declares that it doesn't
+  support, in its preamble, its supported metrics or its features, may change the layout: a part is absent, a tile is
+  another tile, a chart is a sky. It has no status, because nothing is wrong. What is supported and isn't working at the
+  moment, such as a rate that isn't known yet or has stopped arriving, or an engine or a cluster that is offline, keeps
+  the layout that it has when it works: its figures are blurry or are the zero of a figure that is not available, and its
+  card has a status. That is the only case that has one. What is supported, works, and is quiet at the moment, such as an
+  engine that uses several streams and has one so far, a node that owns no workloads or a queue with no messages, keeps
+  the layout too, and its figures say so, with no status. The state document says which: a part that no node supports
+  is absent, and a rate that is supported and not yet known is an empty object.
+- A cluster supports everything that any of its nodes supports. Nodes of one cluster that support different things may
+  be partway through a deploy, which the page doesn't say, because it can't know and "deploy" reads as something the engine does: a card says that some nodes, or this node, may be running a different version of the engine, and a node that doesn't support what another node of its
+  cluster does is supported, and not working, for that thing: its part of a figure is not available, and the figure's
+  card says so, as a status.
 
 ### Changes asked for after the cluster view was built
 
@@ -783,6 +850,28 @@ Tick each item when it is done, and write the pull request or commit that did it
   it.
 
 ## Open
+- Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
+  same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
+  Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
+  against its published text, with a link to where it can be read, and a quote in another language has a published
+  translation, with its translator.
+- Whether an engine can spread its events over more than one event stream. Nothing in the spec promises that a node
+  reports every stream, or by when, so the events tile's bar is of the streams that the nodes have reported, and a
+  stream that is the only one reported may not be the only one. dogmatiq/protobuf#45 now proposes that a node also says
+  whether its engine uses more than one stream. The events tile of an engine that appends every event to one stream
+  doesn't count streams, and has no bar, as the cluster tile leaves out the workloads of an engine that doesn't divide its
+  work: "347 events per minute, 1.2K events". The state document doesn't say it until the spec does, so only `/review`
+  shows it for now. Decided on `/review` (EV 0B), to build once the spec says so.
+- Whether an engine uses queues, and whether it can spread its messages over more than one queue, for the same reason:
+  nothing promises that a node reports every queue. dogmatiq/protobuf#45 proposes that a node says both. An engine that
+  doesn't use queues has the queues tile that it has when no node supports the messages in queues, whose headline is the
+  rate. The queues tile of an engine that keeps every message in one queue doesn't count queues, and has no bar: "19
+  messages, 442/min". As for event streams, only `/review` shows it until the spec says so. Decided on `/review` (QU 0B).
+- Later, once a node says which engine and version it runs, and which version of the application
+  (dogmatiq/protobuf#46): tighten the statuses that say "may be running a different version of the engine", on the
+  card of a node that doesn't report its workloads and on a section that only some nodes report. With the versions
+  known, a card can say which nodes run which version, or that the versions are the same, and so whether a version is
+  the likely cause at all. The design assumes that the versions will be known.
 - A node that joins, or comes back, makes the cluster-wide rate of anything that nodes count unknown for five seconds,
   because a rate that any contributor can't give yet is none, so a `?` shows for that long. The demo does this now, because
   its nodes go down and come back. It belongs to the rule for what an unknown figure does, which is parked.

@@ -246,9 +246,38 @@ test("a heartbeat that the clocks put after the reference has an age of nothing"
 		[{ kind: "heartbeat", node: "n", msBefore: -50 }, 1000],
 	);
 
-	expect(selectCluster(s, 1000)?.overview.cluster.nodes[0]?.heartbeats).toEqual(
-		[0],
-	);
+	expect(
+		selectCluster(s, 1000)?.overview.cluster?.nodes[0]?.heartbeats,
+	).toEqual([0]);
+});
+
+test("a node with no workloads in the document is one whose engine doesn't divide its work into them", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			nodes: { n: {} },
+		}),
+		0,
+	]);
+
+	expect(selectCluster(s, 0)?.overview.cluster?.nodes).toEqual([
+		{ id: "n", workloads: undefined, heartbeats: [] },
+	]);
+});
+
+test("a tile or a card that only some of the nodes report has their coverage", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			eventStreams: {},
+			rates: { events: {} },
+			coverage: { events: 0.5 },
+			handlers: {},
+		}),
+		0,
+	]);
+
+	expect(selectCluster(s, 0)?.overview.events?.coverage).toBe(0.5);
 });
 
 test("apply doesn't change the snapshot that it is given", () => {
@@ -453,7 +482,7 @@ test("the cluster view is selected from a snapshot, with times measured from the
 		// The history is of messages per minute, like the rate, and is sent per second.
 		history: { end: 0, points: [{ at: 0, value: 30 }] },
 	});
-	expect(overview?.cluster.nodes).toEqual([
+	expect(overview?.cluster?.nodes).toEqual([
 		{ id: "n1", workloads: 2, heartbeats: [2000, 500] },
 		{ id: "n2", workloads: 1, heartbeats: [] },
 	]);
@@ -533,7 +562,7 @@ test("a rate that is absent gives no figure, and an absent collection gives no t
 	const { overview } = selectCluster(s, 0) ?? {};
 	expect(overview?.events?.rate).toBeUndefined();
 	expect(overview?.queues).toBeUndefined();
-	expect(overview?.cluster.nodes).toEqual([]);
+	expect(overview?.cluster?.nodes).toEqual([]);
 	expect(overview?.handlers).toEqual([]);
 });
 

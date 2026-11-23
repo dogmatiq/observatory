@@ -585,16 +585,37 @@ func TestOverview(t *testing.T) {
 					}
 
 					seen := byID[n.ID.AsString()]
-					if seen.Workloads != 2 {
-						t.Fatalf("unexpected workloads: got %d, want 2", seen.Workloads)
+					if seen.Workloads == nil || *seen.Workloads != 2 {
+						t.Fatalf("unexpected workloads: got %v, want 2", seen.Workloads)
 					}
 					if len(seen.Heartbeats) != 2 || seen.Heartbeats[0] != 4000 || seen.Heartbeats[1] != 1000 {
 						t.Fatalf("unexpected heartbeats: %v", seen.Heartbeats)
 					}
 
 					absent := byID[gone.AsString()]
-					if absent.Workloads != 0 || len(absent.Heartbeats) != 0 {
+					if absent.Workloads != nil || len(absent.Heartbeats) != 0 {
 						t.Fatalf("unexpected facts about a node that hasn't connected: %+v", absent)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it gives no workloads for a node whose engine doesn't divide its work into them", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()))
+					send(t, n.Engine, liveNodes(n.ID))
+					send(t, n.Engine, heartbeat(0))
+					time.Sleep(time.Second)
+
+					nodes := viewOf(t, r, o, c).Overview.Cluster.Nodes
+					if len(nodes) != 1 || nodes[0].Workloads != nil {
+						t.Fatalf("unexpected nodes: %+v", nodes)
 					}
 
 					cancel()

@@ -2,7 +2,7 @@ import { ClusterPage } from "./components/ClusterPage.tsx";
 import { ClustersPage } from "./components/ClustersPage.tsx";
 import { Message } from "./components/Message.tsx";
 import { Page } from "./components/Page.tsx";
-import { StatesPage } from "./components/StatesPage.tsx";
+import { ReviewPage } from "./components/ReviewPage.tsx";
 import { VitalsPage } from "./components/VitalsPage.tsx";
 import { application, overview } from "./fixtures/overview.ts";
 import { fetchClusters } from "./lib/api.ts";
@@ -37,8 +37,8 @@ export function App({ path = window.location.pathname }: { path?: string }) {
 			// cluster view is compared with the prototype.
 			return <ClusterPage application={application} data={overview} />;
 
-		case "states":
-			return <StatesPage />;
+		case "review":
+			return <ReviewPage />;
 
 		case "vitals":
 			return <VitalsPage />;

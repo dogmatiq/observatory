@@ -105,8 +105,11 @@ export interface SpreadPart {
 export interface LiveNode {
 	id: string;
 
-	/** The number of workloads that the node owns. */
-	workloads: number;
+	/**
+	 * The number of workloads that the node owns. Absent for a node whose engine
+	 * doesn't divide its work into workloads, and for one that isn't connected.
+	 */
+	workloads?: number;
 
 	/**
 	 * The times at which the node's recent heartbeats arrived at the
@@ -147,6 +150,20 @@ export interface OverviewData {
 		/** The length of each of the cluster's event streams, in events. */
 		streams?: SpreadPart[];
 
+		/**
+		 * True if the engine appends every event to one event stream, as it says
+		 * it does, so that the one stream in `streams` is the only one there is.
+		 */
+		oneStream?: boolean;
+
+		/**
+		 * The share of the cluster's nodes, from 0 to 1, that report what the tile
+		 * is made from, if only some of them do, such as while a deploy is under
+		 * way. Its numbers are then the sums of the nodes that do. Absent if every
+		 * node reports all of it.
+		 */
+		coverage?: number;
+
 		/** The history of events recorded per minute, which goes with `rate`. */
 		history?: Chart;
 	};
@@ -157,8 +174,17 @@ export interface OverviewData {
 	 * that it is made from, and the tile leaves it out.
 	 */
 	queues?: {
+		/** The share of the nodes that report what the tile is made from. */
+		coverage?: number;
+
 		/** The number of messages in each of the cluster's queues. */
 		queues?: SpreadPart[];
+
+		/**
+		 * True if the engine keeps every message in one queue, as it says it does,
+		 * so that the one queue in `queues` is the only one there is.
+		 */
+		oneQueue?: boolean;
 
 		/** The number of messages whose delivery is failing. */
 		failing: number;
@@ -183,9 +209,22 @@ export interface OverviewData {
 		history?: Chart;
 	};
 
-	cluster: {
+	/**
+	 * The nodes of an engine that clusters. Absent for an engine that doesn't,
+	 * which has `engine` instead.
+	 */
+	cluster?: {
 		/** The nodes that are live, with the workloads that each owns. */
 		nodes: LiveNode[];
+	};
+
+	/**
+	 * The process of an engine that doesn't cluster, which always runs as a single
+	 * process. Absent for an engine that clusters, which has `cluster` instead.
+	 */
+	engine?: {
+		/** The engine's process, if it is live. */
+		node?: LiveNode;
 	};
 
 	handlers: HandlerData[];
@@ -209,6 +248,12 @@ export interface HandlerData {
 
 	/** True if the handler is disabled. */
 	disabled?: boolean;
+
+	/**
+	 * The share of the cluster's nodes that report what the card is made from, if
+	 * only some of them do, as it is for the events tile.
+	 */
+	coverage?: number;
 
 	/** True if the handler asks the engine to minimize concurrency. */
 	minimizesConcurrency?: boolean;
@@ -326,7 +371,7 @@ export interface ClusterDocument {
 	application: Application;
 
 	/** The cluster's members, by node ID. */
-	nodes: Record<string, { workloads: number }>;
+	nodes: Record<string, { workloads?: number }>;
 
 	/**
 	 * The length of each event stream, by ID. Absent if no node supports it.

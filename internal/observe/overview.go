@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"math"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -220,6 +221,12 @@ type Overview struct {
 
 // EventsTile is the events tile.
 type EventsTile struct {
+	// Coverage is the lowest coverage of the metrics that the tile is made from,
+	// as [Coverage] gives it, if only some of the nodes support one of them. Its
+	// figures are then the sums of the nodes that do, which are too small. It is
+	// nil if every node supports every metric of the tile.
+	Coverage *float64 `json:"coverage,omitempty"`
+
 	// Rate is how many events per second the cluster records. It is nil if no
 	// node supports the metrics that it is derived from.
 	Rate *Rate `json:"rate,omitempty"`
@@ -234,6 +241,10 @@ type EventsTile struct {
 
 // QueuesTile is the queues tile.
 type QueuesTile struct {
+	// Coverage is the lowest coverage of the metrics that the tile is made from,
+	// as it is for [EventsTile].
+	Coverage *float64 `json:"coverage,omitempty"`
+
 	// Queues is the number of messages that wait in each of the cluster's queues,
 	// commands and deadlines together. It is nil if no node supports the number
 	// of messages in queues.
@@ -291,9 +302,10 @@ type Member struct {
 	// ID is the ID of the node, as a UUID.
 	ID string `json:"id"`
 
-	// Workloads is the number of workloads that the node says it owns. It is zero
-	// for a node that has not reported them.
-	Workloads int `json:"workloads"`
+	// Workloads is the number of workloads that the node says it owns. It is nil
+	// for a node whose engine doesn't divide its work into workloads, and for a
+	// node that the Observatory isn't connected to.
+	Workloads *int `json:"workloads,omitempty"`
 
 	// Heartbeats is when the node's heartbeats arrived in the last ten minutes,
 	// in milliseconds before the moment that the view was made, oldest first. It
@@ -331,6 +343,10 @@ type HandlerCard struct {
 	Kind string `json:"kind"`
 
 	Disabled bool `json:"disabled,omitempty"`
+
+	// Coverage is the lowest coverage of the metrics of handlers, as it is for
+	// [EventsTile].
+	Coverage *float64 `json:"coverage,omitempty"`
 
 	// MinimizesConcurrency is true if the handler asks the engine to minimize
 	// concurrency.
@@ -565,7 +581,20 @@ var kinds = map[configpb.HandlerType]string{
 func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues) {
 	app, config := applicationOf(now, nodes)
 	supported := Supported(now, nodes)
+	coverage := Coverage(now, nodes)
 	f := figuresOf(Combine(now, nodes))
+
+	// coverageOf returns the lowest coverage of the metrics, or nil if every node
+	// supports all of them.
+	coverageOf := func(metrics ...proto.Message) *float64 {
+		var lowest *float64
+		for _, m := range metrics {
+			if c, ok := coverage[metric(m)]; ok && (lowest == nil || c < *lowest) {
+				lowest = &c
+			}
+		}
+		return lowest
+	}
 
 	var (
 		o Overview
@@ -583,6 +612,13 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		if recorded {
 			o.Events.Rate = &Rate{f.eventsRecorded.rate()}
 			o.Events.History = &Chart{Points: []ChartPoint{}}
+		}
+
+		o.Events.Coverage = coverageOf(
+			new(metricsgrpc.HandlerEventsRecorded),
+			new(metricsgrpc.EventStreamLength),
+		)
+		if o.Events.Rate != nil {
 			r.events = o.Events.Rate.PerSecond
 		}
 	}
@@ -617,6 +653,16 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 			o.Queues.Throughput = &Rate{f.handled.rate()}
 			o.Queues.Counted = "deadlines handled"
 		}
+		o.Queues.Coverage = coverageOf(
+			new(metricsgrpc.QueueCommandsPending),
+			new(metricsgrpc.QueueDeadlinesPending),
+			new(metricsgrpc.QueueCommandsRemoved),
+			new(metricsgrpc.QueueDeadlinesRemoved),
+			new(metricsgrpc.QueueCommandsFailing),
+			new(metricsgrpc.QueueDeadlinesFailing),
+			new(metricsgrpc.HandlerCommandsHandled),
+			new(metricsgrpc.HandlerDeadlinesHandled),
+		)
 		if o.Queues.Throughput != nil {
 			o.Queues.History = &Chart{Points: []ChartPoint{}}
 			r.throughput = o.Queues.Throughput.PerSecond
@@ -625,6 +671,21 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 
 	o.Cluster.Nodes = membersOf(now, nodes)
 	o.Handlers = handlerCards(config, supported, f, r.handlers)
+
+	// A metric of handlers that only some of the nodes support lowers the coverage
+	// of every card, because the nodes that don't support it leave it out of the
+	// sums of every handler.
+	var handlers *float64
+	for name, c := range coverage {
+		if !strings.HasPrefix(name, "dogma.metrics.v1alpha1.Queue") &&
+			name != metric(new(metricsgrpc.EventStreamLength)) &&
+			(handlers == nil || c < *handlers) {
+			handlers = &c
+		}
+	}
+	for i := range o.Handlers {
+		o.Handlers[i].Coverage = handlers
+	}
 
 	return app, o, r
 }
@@ -667,7 +728,10 @@ func membersOf(now time.Time, nodes []Node) []Member {
 		live := Member{ID: key, Heartbeats: []float64{}}
 
 		if n, ok := byID[key]; ok {
-			live.Workloads = len(n.Workloads.GetWorkloads())
+			if dividesWork(n) {
+				owned := len(n.Workloads.GetWorkloads())
+				live.Workloads = &owned
+			}
 			if n.Connected {
 				for _, at := range n.Heartbeats {
 					live.Heartbeats = append(live.Heartbeats, millisecondsBefore(now, at))
@@ -680,6 +744,17 @@ func membersOf(now time.Time, nodes []Node) []Member {
 
 	slices.SortFunc(out, func(a, b Member) int { return cmp.Compare(a.ID, b.ID) })
 	return out
+}
+
+// dividesWork returns true if the engine of a node divides its work into
+// workloads, which the node reports.
+//
+// The node's preamble doesn't say so yet, and dogmatiq/protobuf#45 proposes a
+// field that does, with which only a node whose engine divides its work sends
+// its workloads. Until there is one, an engine divides its work if its node has
+// sent its workloads.
+func dividesWork(n Node) bool {
+	return n.Workloads != nil
 }
 
 // millisecondsBefore returns how long before now the time at was, in

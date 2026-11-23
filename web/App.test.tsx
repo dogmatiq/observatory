@@ -60,17 +60,10 @@ function connect(source = FakeEventSource.live[0]) {
 	});
 }
 
-test("the states page shows each state of an element, including the ones that are errors", () => {
-	render(<App path="/states" />);
+test("the review page shows each state of the elements that are being worked on, including the ones that are errors", () => {
+	render(<App path="/review" />);
 
-	for (const state of [
-		"Known",
-		"Lost",
-		"Never known",
-		"Not supported",
-		"Unavailable",
-		"One stream",
-	]) {
+	for (const state of ["Several nodes", "No live nodes", "Online", "Offline"]) {
 		expect(screen.getAllByText(state).length).toBeGreaterThan(0);
 	}
 });

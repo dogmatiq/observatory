@@ -20,7 +20,10 @@ function documentOf(
 	const document: ClusterDocument = {
 		application,
 		nodes: Object.fromEntries(
-			overview.cluster.nodes.map((n) => [n.id, { workloads: n.workloads }]),
+			(overview.cluster?.nodes ?? []).map((n) => [
+				n.id,
+				{ workloads: n.workloads },
+			]),
 		),
 		handlers: Object.fromEntries(
 			overview.handlers.map((h) => [h.key, handlerOf(h)]),
@@ -131,7 +134,7 @@ export function streamOf(
 		recorded(`handlers/${h.key}`, h.history);
 	}
 
-	for (const n of overview.cluster.nodes) {
+	for (const n of overview.cluster?.nodes ?? []) {
 		for (const msBefore of n.heartbeats) {
 			messages.push(["heartbeat", { node: n.id, msBefore }]);
 		}

@@ -79,6 +79,43 @@ test("the nodes' bar has the prototype's widths and titles", () => {
 	]);
 });
 
+test("each segment of the nodes' bar is about its node, with its share of the workloads", () => {
+	const segments = nodeSegments(overview.cluster.nodes);
+
+	expect(segments.map((s) => s.about)).toEqual(
+		overview.cluster.nodes.map((n) => ({
+			thing: "node",
+			id: n.id,
+			amount: n.workloads,
+			share: (n.workloads ?? 0) / 5,
+			total: { amount: 5, things: 3 },
+		})),
+	);
+});
+
+test("a node that owns no workload has no share of the bar, even when none owns any", () => {
+	const [segment] = nodeSegments([
+		{ id: "aaaaaaaa", workloads: 0, heartbeats: [] },
+	]);
+
+	expect(segment?.about).toMatchObject({ share: 0 });
+});
+
+test("a node that doesn't report its workloads, while others do, has a share that isn't known, and is a faint square", () => {
+	const segments = nodeSegments([
+		{ id: "aaaaaaaa", workloads: 2, heartbeats: [] },
+		{ id: "bbbbbbbb", heartbeats: [] },
+	]);
+
+	expect(segments.map((s) => s.percent)).toEqual([100, undefined]);
+	expect(segments[1]?.faint).toBe(true);
+	expect(segments[1]?.about).toEqual({
+		thing: "node",
+		id: "bbbbbbbb",
+		unreported: true,
+	});
+});
+
 test("streams are shown largest first", () => {
 	const segments = streamSegments([
 		{ id: "aaaaaaaa", size: 1 },

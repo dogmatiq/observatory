@@ -86,7 +86,7 @@ test("a cluster that is not reporting is marked, and listed after those that are
 	const items = screen.getAllByRole("listitem").map((i) => i.textContent);
 	expect(items).toEqual([
 		"omega" + "22222222",
-		"alpha" + "11111111" + "not reporting",
-		"beta" + "33333333" + "not reporting",
+		"alpha" + "11111111" + "out of contact",
+		"beta" + "33333333" + "out of contact",
 	]);
 });

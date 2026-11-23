@@ -43,7 +43,7 @@ export function ClustersPage({
 								{cluster.site ?? shortId(cluster.id)}
 							</span>
 							{!cluster.reporting && (
-								<span className="ml-2 text-muted">not reporting</span>
+								<span className="ml-2 text-muted">out of contact</span>
 							)}
 						</li>
 					))}

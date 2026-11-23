@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useDistrusted } from "../lib/distrust.tsx";
+import {
+	dropTime,
+	Trusted,
+	useCoverage,
+	useDistrusted,
+	useTrustDropped,
+} from "../lib/distrust.tsx";
 import { prefersReducedMotion, useRamped } from "../lib/ramped.ts";
 import { Glitch } from "./Glitch.tsx";
 
@@ -119,6 +125,12 @@ export function Figure({
 	const value = down ? undefined : kept.value;
 	const lost = down ? false : kept.lost;
 
+	// A figure that covers only some of the nodes starts from as little trust as
+	// its coverage gives it, and glitches for a moment each time it loses trust in
+	// a step, such as when the cluster goes out of contact.
+	const coverage = useCoverage();
+	const dropped = useTrustDropped();
+
 	// A figure with no number is a zero, which a lost figure ramps down to.
 	const ramped = useRamped(value ?? 0, unit) ?? 0;
 	const text = format(ramped);
@@ -166,7 +178,7 @@ export function Figure({
 				aria-label="not available"
 				className={`inline-block transition-colors duration-500 [--distrust:1] ${untrusted} ${ramped === 0 ? "text-muted" : ""}`}
 			>
-				{text}
+				{dropped ? <Glitch text={text} distrust={1} burst={dropTime} /> : text}
 			</span>
 		);
 	}
@@ -186,7 +198,10 @@ export function Figure({
 		return (
 			<span
 				className={`inline-block motion-safe:animate-[distrust_linear_forwards] ${untrusted}`}
-				style={{ animationDuration: `${keep}ms` }}
+				style={{
+					animationDuration: `${keep}ms`,
+					["--distrust-from" as string]: 1 - coverage,
+				}}
 			>
 				{text}
 			</span>
@@ -198,7 +213,7 @@ export function Figure({
 			<span
 				className={`inline-block ${untrusted}`}
 				style={{
-					["--distrust" as string]: 0,
+					["--distrust" as string]: 1 - coverage,
 					transition: `--distrust ${settleTime}ms ease-out`,
 				}}
 			>
@@ -207,5 +222,5 @@ export function Figure({
 		);
 	}
 
-	return <>{text}</>;
+	return <Trusted text={text} />;
 }

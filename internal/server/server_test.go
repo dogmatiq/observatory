@@ -742,7 +742,7 @@ func TestStream(t *testing.T) {
 					t.Fatalf("unexpected patches: %v", got)
 				}
 
-				want := `{"nodes":{"` + other.AsString() + `":{"workloads":0}}}`
+				want := `{"nodes":{"` + other.AsString() + `":{}}}`
 				b, _ := json.Marshal(got[0])
 				if string(b) != want {
 					t.Fatalf("unexpected patch: got %s, want %s", b, want)

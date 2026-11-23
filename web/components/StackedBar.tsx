@@ -235,7 +235,8 @@ export function NodeBar({ segments }: { segments: NodeSegment[] }) {
 					>
 						<div
 							className={cn(
-								"min-w-0 bg-cluster",
+								"min-w-0",
+								s?.faint ? "bg-faint" : "bg-cluster",
 								s === undefined || s.percent !== undefined
 									? "flex-initial"
 									: "flex-none",

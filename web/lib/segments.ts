@@ -47,21 +47,47 @@ export interface BarSegment {
 
 /**
  * SegmentAbout is what a card in the popover of a segment says about the thing
- * that the segment is of.
+ * that the segment is of. A node that doesn't report its workloads, while others
+ * do, has nothing to say but which node it is, and why.
  */
-export type SegmentAbout = {
-	thing: "event-stream" | "queue";
+export type SegmentAbout =
+	| SpreadAbout
+	| {
+			thing: "node";
+			id: string;
+
+			/**
+			 * A node that doesn't report its workloads while other nodes of its
+			 * cluster do, which it may do while partway through a deploy.
+			 */
+			unreported: true;
+
+			amount?: never;
+			share?: never;
+			total?: never;
+	  };
+
+/**
+ * SpreadAbout is what a card says about a thing that has a share of what a bar
+ * spreads: the events on a stream, the messages in a queue, or the workloads that
+ * a node owns.
+ */
+export type SpreadAbout = {
+	thing: "event-stream" | "queue" | "node";
 	id: string;
 
-	/** The number of events on the stream, or messages in the queue. */
+	/**
+	 * The number of events on the stream, or messages in the queue, or workloads
+	 * that the node owns.
+	 */
 	amount: number;
 
 	/** The share of all of them that are in this thing, from 0 to 1. */
 	share: number;
 
 	/**
-	 * What the bar is of: all the events or messages, in all the streams or
-	 * queues.
+	 * What the bar is of: all the events, messages or workloads, in all the streams,
+	 * queues or nodes.
 	 */
 	total: { amount: number; things: number };
 };
@@ -258,6 +284,12 @@ export interface NodeSegment {
 	 * that owns no workloads, whose segment is a small square.
 	 */
 	percent: number | undefined;
+
+	/**
+	 * True for a node whose share isn't known, because it doesn't report it while
+	 * others do, whose segment is a faint square.
+	 */
+	faint?: boolean;
 }
 
 /**
@@ -280,20 +312,46 @@ function nodeOpacity(index: number, count: number): number {
 
 /**
  * nodeSegments returns the segments of a bar with one segment for each live
- * node, whose width is the node's share of the workloads.
+ * node, whose width is the node's share of the workloads. It is for an engine
+ * that divides its work into workloads: the bar of one that doesn't would show
+ * only how many nodes there are, which the tile's headline says.
+ *
+ * A node that doesn't report its workloads while other nodes do is supported and
+ * not working: what it owns isn't known, and its segment is a faint square.
  */
 export function nodeSegments(nodes: LiveNode[]): NodeSegment[] {
-	const total = nodes.reduce((sum, n) => sum + n.workloads, 0);
+	const total = nodes.reduce((sum, n) => sum + (n.workloads ?? 0), 0);
 
-	return nodes.map((n, i) => ({
-		...ofThing(
-			`${countOf(n.workloads, "workload", "workloads")} owned by node`,
-			n.id,
-			"node",
-		),
-		opacity: nodeOpacity(i, nodes.length),
-		percent: n.workloads > 0 ? (n.workloads / total) * 100 : undefined,
-	}));
+	return nodes.map((n, i) => {
+		const opacity = nodeOpacity(i, nodes.length);
+
+		if (n.workloads === undefined) {
+			return {
+				...ofThing("node", n.id, "node"),
+				about: { thing: "node" as const, id: n.id, unreported: true as const },
+				opacity,
+				percent: undefined,
+				faint: true,
+			};
+		}
+
+		return {
+			...ofThing(
+				`${countOf(n.workloads, "workload", "workloads")} owned by node`,
+				n.id,
+				"node",
+			),
+			about: {
+				thing: "node" as const,
+				id: n.id,
+				amount: n.workloads,
+				share: total === 0 ? 0 : n.workloads / total,
+				total: { amount: total, things: nodes.length },
+			},
+			opacity,
+			percent: n.workloads > 0 ? (n.workloads / total) * 100 : undefined,
+		};
+	});
 }
 
 /**

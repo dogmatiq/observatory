@@ -291,7 +291,12 @@ func documentOf(view observe.ClusterView) map[string]any {
 
 	nodes := map[string]any{}
 	for _, n := range o.Cluster.Nodes {
-		nodes[n.ID] = map[string]any{"workloads": n.Workloads}
+		// A node whose engine doesn't divide its work into workloads has none.
+		node := map[string]any{}
+		if n.Workloads != nil {
+			node["workloads"] = *n.Workloads
+		}
+		nodes[n.ID] = node
 	}
 	doc["nodes"] = nodes
 
@@ -305,7 +310,14 @@ func documentOf(view observe.ClusterView) map[string]any {
 		return map[string]any{"rate": significant(*r.PerSecond)}
 	}
 
+	// The coverage of the tiles that only some of the nodes report the metrics
+	// of, such as while a deploy is under way.
+	coverage := map[string]any{}
+
 	if e := o.Events; e != nil {
+		if e.Coverage != nil {
+			coverage["events"] = *e.Coverage
+		}
 		if e.Streams != nil {
 			streams := map[string]any{}
 			for _, s := range e.Streams {
@@ -320,6 +332,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 	}
 
 	if q := o.Queues; q != nil {
+		if q.Coverage != nil {
+			coverage["queues"] = *q.Coverage
+		}
 		if q.Queues != nil {
 			queues := map[string]any{}
 			for _, s := range q.Queues {
@@ -337,6 +352,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 	}
 
 	doc["rates"] = rates
+	if len(coverage) > 0 {
+		doc["coverage"] = coverage
+	}
 
 	handlers := map[string]any{}
 	for _, card := range o.Handlers {
@@ -367,6 +385,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 		}
 		if card.Charted != "" {
 			h["charted"] = card.Charted
+		}
+		if card.Coverage != nil {
+			h["coverage"] = *card.Coverage
 		}
 
 		if s.Bindings != nil {
