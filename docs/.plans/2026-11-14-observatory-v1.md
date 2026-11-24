@@ -1027,7 +1027,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   right, and "how the recently handled commands were spread across the nodes", on its bar of nodes. Its chart's annotation follows
   what the chart counts: "events recorded over the last minute", or, for an integration that records no events,
   "commands handled over the last minute". A flag is an icon beside a card's label that is shown only while something
-  is true of what the card is about. Done: the segment hovercards' advice says
+  is true of what the card is about.
+  The projection digest's explainer is approved. Its bar's annotation is "how the recently handled events were spread
+  across the nodes". Neither the integration's nor the projection's bar of nodes has advice, whatever the handler's
+  concurrency preference, because nothing promises how an engine spreads a handler's work across its nodes. Advice
+  could rest on the engine's `ClusterModel`, if a view reads it. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
