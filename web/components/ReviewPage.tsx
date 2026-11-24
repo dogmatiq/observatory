@@ -101,6 +101,9 @@ export function ReviewPage() {
 							<Part
 								step={0}
 								title="Tiles above, applications below"
+								notDeciding={
+									"What the tiles and the cards say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or contact is lost (SS); whether the grid is of cards or of squares (SL 1)."
+								}
 								recommendation="Approve the layout. The tiles answer how busy the site is and whether anything is wrong, and the grid below answers where, with every application one click from its view."
 								note="The three tiles are the events per minute, the messages waiting and the applications in contact. The applications are in the order of their names, so that an application keeps its place."
 							>
@@ -112,6 +115,9 @@ export function ReviewPage() {
 							<Part
 								step={1}
 								title="The grid of applications"
+								notDeciding={
+									"What a card's figures are, and what their popovers say (SW); how a card looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
+								}
 								note="Each application is a small card with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
 							>
 								<State
@@ -147,7 +153,13 @@ export function ReviewPage() {
 							title="Site view: states"
 							note="How the view looks as its applications' messages fail and as contact with them is lost: the accents, the blur and the words that take the place of a card's figures. The words of the tiles' cards come in the next chunk."
 						>
-							<Part step={0} title="The view in each state">
+							<Part
+								step={0}
+								title="The view in each state"
+								notDeciding={
+									"The layout (SL); what the tiles and their cards say (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
+								}
+							>
 								<State
 									label="Three applications with failing messages"
 									note="checkout, mailer and regulatory-reports have the orange accent and the red &quot;+N&quot;, as a handler card does, and so does the queues tile."
@@ -211,6 +223,9 @@ export function ReviewPage() {
 							<Part
 								step={1}
 								title="The icons"
+								notDeciding={
+									"How the cards look, which is as on the cluster view; the cards of the headlines (SW 2); the words in a card of the grid (SS); what a site is, which nothing on the view explains yet."
+								}
 								note="The card of each tile's icon says what its section is about. Nothing on the view says what a site is yet. While only some of the applications' nodes report what the events or queues tile shows, its card says why, as a status. It says nothing about versions, because the applications at a site run different engines and versions as a matter of course."
 							>
 								<State
@@ -277,6 +292,9 @@ export function ReviewPage() {
 							<Part
 								step={2}
 								title="The headlines and detail lines"
+								notDeciding={
+									"The card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW 1); the cards of the bars' segments (SB)."
+								}
 								note="The events tile's headline is the events per minute, and its detail line counts the applications that recorded any. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, and its detail line gives the number out of contact, if any are."
 							>
 								<State
@@ -325,7 +343,10 @@ export function ReviewPage() {
 							<Part
 								step={1}
 								title="The bars"
-								note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's card drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. The applications tile has no bar."
+								notDeciding={
+									"How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' other cards (SW)."
+								}
+								note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's card drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
 							>
 								<State
 									label="Pointing at an application on the events bar"
@@ -370,6 +391,9 @@ export function ReviewPage() {
 							<Part
 								step={1}
 								title="The applications tile's chart"
+								notDeciding={
+									"How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's headline and words (SW)."
+								}
 								recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
 								note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
 							>
@@ -390,7 +414,13 @@ export function ReviewPage() {
 						title="Events tile"
 						note="Under review: the status on the card of the icon while only some nodes report what the tile shows, and the card of a segment of the bar, which drills down, with its figures apart from its words. The rest of the tile is settled, including the tile of an engine that appends every event to one stream."
 					>
-						<Part step={0} title="The tile">
+						<Part
+							step={0}
+							title="The tile"
+							notDeciding={
+								"What the cards say: the status on the icon's card (EV 1) and the card of a segment of the bar (EV 4), though they open when pointed at here."
+							}
+						>
 							<State label="Several streams" decided>
 								<EventsTile
 									application={application}
@@ -425,6 +455,9 @@ export function ReviewPage() {
 						<Part
 							step={1}
 							title="The icon"
+							notDeciding={
+								"The blur and the glitch (EV 0); the card's first paragraph, which is settled."
+							}
 							decided={false}
 							note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The card of the icon says why, as a status. The queues tile and the kind icon of a handler card show the same status in the same case."
 						>
@@ -521,6 +554,9 @@ export function ReviewPage() {
 						<Part
 							step={4}
 							title="The bar"
+							notDeciding={
+								"Which streams the bar shows, and how it is drawn, which are settled; the status on the icon's card (EV 1)."
+							}
 							decided={false}
 							recommendation="Approve. The sentence about the bar is the same each time and has no figures in it, which are the stream's events and share."
 							note="Each segment is an event stream, and has the card of that stream: its events and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that appends every event to one stream has no bar, so the card is only ever of one of several streams."
@@ -557,7 +593,11 @@ export function ReviewPage() {
 						title="Queues tile"
 						note="Under review: the card of a segment of the bar, as on the events tile. The rest of the tile is settled, including the tile of an engine that keeps every message in one queue."
 					>
-						<Part step={0} title="The tile">
+						<Part
+							step={0}
+							title="The tile"
+							notDeciding={"The card of a segment of the bar (QU 4)."}
+						>
 							<State label="Several queues" decided>
 								<QueuesTile
 									application={application}
@@ -586,6 +626,9 @@ export function ReviewPage() {
 						<Part
 							step={4}
 							title="The bar"
+							notDeciding={
+								"Which queues the bar shows, and how it is drawn, which are settled; the card of a segment of the events tile's bar (EV 4)."
+							}
 							decided={false}
 							recommendation="Approve, as the events tile's bar."
 							note="Each segment is a queue, and has the card of that queue: its messages and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that keeps every message in one queue has no bar, so the card is only ever of one of several queues."
@@ -617,7 +660,13 @@ export function ReviewPage() {
 						title="Cluster tile"
 						note="The tile of an engine that clusters, in each of its states, and then its parts, from the least specific to the most: what its icon, its headline, its detail line and its bar show when they are pointed at, and its chart."
 					>
-						<Part step={0} title="The tile">
+						<Part
+							step={0}
+							title="The tile"
+							notDeciding={
+								"What any card says (CL 2 to CL 4, and WD); the chart, which is settled (CL 5). Only the state of a node that doesn't report its workloads is open here."
+							}
+						>
 							{(
 								[
 									["Several nodes", undefined, 3],
@@ -699,6 +748,9 @@ export function ReviewPage() {
 						<Part
 							step={2}
 							title="The headline"
+							notDeciding={
+								"The words for contact in the card's first sentence and in its status (WD 1 and WD 2); the card of the workloads (CL 3)."
+							}
 							decided={false}
 							recommendation="Approve. The card counts nodes, so it has the node's icon, as the card of each node on the bar does, and its words never change."
 							note="Its words never change. Its icon is the node's, because the number counts nodes. The status at the bottom shows only while no node is live, so the card is shown with it."
@@ -805,6 +857,9 @@ export function ReviewPage() {
 						<Part
 							step={3}
 							title="The detail line"
+							notDeciding={
+								"The card of the words “cluster nodes”, which is the headline's (CL 2); the bar (CL 4)."
+							}
 							decided={false}
 							recommendation="Approve. Its words never change. While only some of the nodes report their workloads, the number counts the workloads of the nodes that do, blurred by how few they are, and the card says so, as a status, which is shown here."
 							note="The line under the headline, such as “cluster nodes, 5 workloads”. The words “cluster nodes” have the card of the headline, above. The workloads have their own, which never changes, and are left out for an engine that doesn't divide its work."
@@ -856,6 +911,9 @@ export function ReviewPage() {
 						<Part
 							step={4}
 							title="The bar"
+							notDeciding={
+								"How the bar is drawn, which is settled; the card of the workloads in the detail line (CL 3)."
+							}
 							decided={false}
 							recommendation="Approve. A node's card drills down: its workloads and its share are its figures, a node that owns none has no share, and a node that doesn't report its workloads, while others do, shows only its ID, with a status. The words about the bar never change."
 							note="Each segment is a node, and has the card of that node. The card drills down: its figures are the node's workloads and its share of them, and its words, about the bar, never change. A node that owns none has no share."
@@ -1006,7 +1064,13 @@ export function ReviewPage() {
 						title="Engine tile"
 						note="The tile of an engine that doesn't cluster, in place of the cluster tile, in each of its states, and then its parts, from the least specific to the most. It has no detail line and no bar."
 					>
-						<Part step={0} title="The tile">
+						<Part
+							step={0}
+							title="The tile"
+							notDeciding={
+								"What the cards say (EN 2, and WD); the chart, which is settled (EN 3)."
+							}
+						>
 							<State label="Online" decided>
 								<EngineTile
 									application={application}
@@ -1072,6 +1136,9 @@ export function ReviewPage() {
 						<Part
 							step={2}
 							title="The headline"
+							notDeciding={
+								"The words for contact in the card (WD 3 to WD 5); the chart (EN 3)."
+							}
 							decided={false}
 							recommendation="Approve. The card says what being online means for the reader, and the status says what is unknown once contact is lost. Neither mentions nodes or clusters."
 							note="Its words never change. The status at the bottom shows only while the engine is offline, so the card is shown with it."
@@ -1159,6 +1226,9 @@ export function ReviewPage() {
 						<Part
 							step={1}
 							title="The cluster nodes card: what the number counts"
+							notDeciding={
+								"The status of the same card (WD 2); the rest of the card (CL 2)."
+							}
 							note="The first sentence of the card on the cluster tile's headline."
 						>
 							<State
@@ -1216,6 +1286,9 @@ export function ReviewPage() {
 						<Part
 							step={2}
 							title="The cluster nodes card: the status when no node is in contact"
+							notDeciding={
+								"The card's first sentence (WD 1); the rest of the card (CL 2)."
+							}
 							note="The status of the same card while no node is in contact."
 						>
 							<State
@@ -1265,6 +1338,9 @@ export function ReviewPage() {
 						<Part
 							step={3}
 							title="The engine card: what online means"
+							notDeciding={
+								"The second half of the sentence (WD 4); the status (WD 5); the rest of the card (EN 2)."
+							}
 							note="The first half of the card on the engine tile's headline."
 						>
 							<State
@@ -1312,6 +1388,9 @@ export function ReviewPage() {
 						<Part
 							step={4}
 							title="The engine card: which figures are current"
+							notDeciding={
+								"The first half of the sentence (WD 3); the status (WD 5); the rest of the card (EN 2)."
+							}
 							note={
 								'The second half of the same sentence, which said "the figures on this page".'
 							}
@@ -1363,6 +1442,9 @@ export function ReviewPage() {
 						<Part
 							step={5}
 							title="The engine card: the status when the engine is out of contact"
+							notDeciding={
+								"The card's sentence (WD 3 and WD 4); the rest of the card (EN 2)."
+							}
 							note="The status of the same card while the engine is offline."
 						>
 							<State
@@ -1833,7 +1915,7 @@ function partSettled(
  * its place in the order of review, from the least specific to the most, and is 0
  * for the tile as a whole. Each state inside it is given an ID that is unique on
  * the page: the tile's code, the step, and a letter for its place, such as "CL 4A".
- * The states come before any choices, so that a state's letter is its place. `decided` says whether the part is settled, or still under
+ * The states come before any choices, so that a state's letter is its place. A part that has anything open says what it shows that isn't being decided in it, and where that is decided instead, so that a reviewer doesn't judge it there. `decided` says whether the part is settled, or still under
  * review, if all of its states are one or the other; otherwise each state says.
  *
  * The states are in a grid whose rows are shared, so that the states in one row
@@ -1843,16 +1925,32 @@ type PartProps = {
 	step?: number;
 	title: string;
 	note?: string;
-	decided?: boolean;
 
 	/** What the reviewer is recommended to decide, if the part is under review. */
 	recommendation?: string;
 
 	children?: ReactNode;
-};
+} & (
+	| {
+			/** True if the whole part is settled, so it has nothing open to explain. */
+			decided: true;
+			notDeciding?: never;
+	  }
+	| {
+			decided?: false;
+
+			/**
+			 * What the part shows, or what is near it, that the reviewer is not
+			 * deciding here, even though it is drawn, and where it is decided
+			 * instead.
+			 */
+			notDeciding: string;
+	  }
+);
 
 function Part(props: PartProps) {
-	const { step, title, note, decided, recommendation, children } = props;
+	const { step, title, note, decided, notDeciding, recommendation, children } =
+		props;
 	const tile = useContext(TileCode);
 	const { ids } = useContext(Accepted);
 	const settled = partSettled(tile, props, ids);
@@ -1872,6 +1970,14 @@ function Part(props: PartProps) {
 						)}
 					</h3>
 					{note && <p className="text-sm text-muted">{note}</p>}
+					{notDeciding && (
+						<p className="mt-1 text-sm text-muted">
+							<span className="font-semibold text-fg-soft">
+								Not decided here:
+							</span>{" "}
+							{notDeciding}
+						</p>
+					)}
 				</div>
 			}
 		>
