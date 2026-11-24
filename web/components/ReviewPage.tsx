@@ -230,7 +230,7 @@ export function ReviewPage() {
 								words: <p>{partialText(undefined)}</p>,
 							},
 						]}
-						recommendation="Approve, with this wording."
+						recommendation="Approve, with this wording. It is the shape proposed in review, with two changes: it says &quot;at the eu-west site&quot;, as the cluster view says where an application is, and it leaves out event streams, because this tile shows no streams, only which applications record the most events."
 					>
 						<Panel>
 							<InfoCard
@@ -257,7 +257,7 @@ export function ReviewPage() {
 								words: <p>{partialText(undefined)}</p>,
 							},
 						]}
-						recommendation="Approve, with this wording."
+						recommendation="Approve, with this wording, in the same shape as the events tile's. It leaves out queues, because this tile shows no queues, only which applications have the most messages waiting."
 					>
 						<Panel>
 							<InfoCard
@@ -293,19 +293,75 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="At no site"
-						note="The same cards, for the applications that run at no site."
+						note="The same cards, for the applications that run at no site, which have no site to name, so they name the applications."
 						recommendation="Approve, with this wording."
 					>
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="application"
-								kind="Applications"
-							>
-								{siteAbout.applications(undefined)}
-							</InfoCard>
-						</Panel>
+						<div className="grid gap-3">
+							<Panel>
+								<InfoCard subsystem="streams" icon="event" kind="Events">
+									{siteAbout.events(undefined)}
+								</InfoCard>
+							</Panel>
+							<Panel>
+								<InfoCard subsystem="queues" icon="message" kind="Queues">
+									{siteAbout.queues(undefined)}
+								</InfoCard>
+							</Panel>
+							<Panel>
+								<InfoCard
+									subsystem="cluster"
+									icon="application"
+									kind="Applications"
+								>
+									{siteAbout.applications(undefined)}
+								</InfoCard>
+							</Panel>
+						</div>
 					</State>
+					<Choices
+						of="A"
+						title="the events tile's words"
+						choices={[
+							[
+								"As proposed in review",
+								<InfoCard
+									key="proposed"
+									subsystem="streams"
+									icon="event"
+									kind="Events"
+									status={sitePartialStatus}
+								>
+									<p>
+										This section shows information about the events and event
+										streams in the{" "}
+										<span className="font-semibold text-fg">eu-west</span> site.
+									</p>
+								</InfoCard>,
+							],
+						]}
+					/>
+					<Choices
+						of="B"
+						title="the queues tile's words"
+						choices={[
+							[
+								"In the shape proposed for the events tile",
+								<InfoCard
+									key="proposed"
+									subsystem="queues"
+									icon="message"
+									kind="Queues"
+									status={sitePartialStatus}
+								>
+									<p>
+										This section shows information about the messages and queues
+										in the{" "}
+										<span className="font-semibold text-fg">eu-west</span> site.
+									</p>
+								</InfoCard>,
+							],
+						]}
+					/>
 				</Part>
 			</Tile>
 

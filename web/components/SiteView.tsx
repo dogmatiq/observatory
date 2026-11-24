@@ -149,14 +149,13 @@ function TheApplications({ site }: { site: SiteData["site"] }) {
 export const siteAbout = {
 	events: (site: SiteData["site"]) => (
 		<p>
-			This section shows information about the events in{" "}
-			<TheApplications site={site} />.
+			This section shows information about the events <AtTheSite site={site} />.
 		</p>
 	),
 	queues: (site: SiteData["site"]) => (
 		<p>
-			This section shows information about the messages in{" "}
-			<TheApplications site={site} />.
+			This section shows information about the messages{" "}
+			<AtTheSite site={site} />.
 		</p>
 	),
 	applications: (site: SiteData["site"]) => (
@@ -166,6 +165,20 @@ export const siteAbout = {
 		</p>
 	),
 };
+
+/**
+ * AtTheSite says where the things in a sentence are: "at the **eu-west** site",
+ * or "of the applications that run at no site".
+ */
+function AtTheSite({ site }: { site: SiteData["site"] }) {
+	return site === undefined ? (
+		<>of the applications that run at no site</>
+	) : (
+		<>
+			at the <span className="font-semibold text-fg">{site.name}</span> site
+		</>
+	);
+}
 
 /**
  * sitePartialStatus is the status of the card of a tile's icon while only some of
