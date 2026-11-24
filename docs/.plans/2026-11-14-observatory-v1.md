@@ -983,6 +983,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   events of each aggregate instance is kept, but not the order of events from different instances.", shown only when
   the engine reports the multiple-streams model. In a window too narrow for the annotations beside the card at full
   size, each is a numbered marker on the card, and their words are listed under it, by number.
+  The events card's explainer defines an event stream only when the card shows its streams. Each bar's advice, such
+  as "An even spread is better", is in the explainer of its card, only when the card has the bar, and leaves the
+  hovercards of the bar's segments, which then only drill down; that move is made when the explainer is built. A bar's
+  amounts are a spread: "distribution" and "shared among" are not used. Done: the segment hovercards' advice says
+  "An even spread is better".
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked

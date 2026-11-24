@@ -36,7 +36,7 @@ test("the card of an event stream says what it is, which one, how much of the ba
 	expect(text).toContain(
 		"This bar shows how the application's events are spread across its streams.",
 	);
-	expect(text).toContain("An even distribution is better.");
+	expect(text).toContain("An even spread is better.");
 });
 
 test("the card of a queue says what the bar shows, and that an even spread is better", () => {
@@ -58,7 +58,7 @@ test("the card of a queue says what the bar shows, and that an even spread is be
 	expect(text).toContain(
 		"This bar shows how the application's messages are spread across its queues.",
 	);
-	expect(text).toContain("An even distribution is better");
+	expect(text).toContain("An even spread is better");
 });
 
 test("a card's words have no figures in them, and are the same whatever its figures, but for the advice, which is only there when the bar can be spread unevenly", () => {
@@ -152,7 +152,7 @@ test("the card of a node says what the bar shows, gives its share, and has no ad
 	expect(text).toContain(
 		"Workloads vary in size, so two nodes with the same number of workloads can have very different amounts of work to do.",
 	);
-	expect(text).not.toContain("even distribution");
+	expect(text).not.toContain("even spread");
 });
 
 test("the card of a node that doesn't report its workloads, while others do, says so as a status", () => {

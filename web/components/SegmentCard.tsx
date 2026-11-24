@@ -22,7 +22,7 @@ export const things = {
 		amount: ["event", "events"],
 		bar: "This bar shows how the application's events are spread across its streams.",
 		advice:
-			"An even distribution is better. Events on a stream are processed in order, so a stream that holds more than its fair share limits throughput.",
+			"An even spread is better. Events on a stream are processed in order, so a stream that holds more than its fair share limits throughput.",
 	},
 	queue: {
 		subsystem: "queues",
@@ -31,7 +31,7 @@ export const things = {
 		amount: ["message", "messages"],
 		bar: "This bar shows how the application's messages are spread across its queues.",
 		advice:
-			"An even distribution is better, because it lets the messages that are waiting be worked through in parallel.",
+			"An even spread is better, because it lets the messages that are waiting be worked through in parallel.",
 	},
 	node: {
 		subsystem: "cluster",
@@ -52,7 +52,7 @@ export const things = {
  * time, and has no figures in it. The advice about how the bar is best spread is
  * there only when the bar can be spread unevenly, which is when there is more than
  * one thing, and more than one of what is spread. A node has no advice, because
- * nothing is promised about how an even distribution of workloads serves it.
+ * nothing is promised about how an even spread of workloads serves it.
  */
 export function SegmentCard({ about }: { about: SegmentAbout }) {
 	if (about.thing === "application") {
