@@ -1005,13 +1005,12 @@ Tick each item when it is done, and write the pull request or commit that did it
   "The statements application's engine spreads messages across several queues. An even spread is better; a queue that
   holds more than its fair share limits parallel throughput."
   The cluster explainer is approved. It has no box, because the cluster card is shown only for an engine that clusters,
-  so the card already says what the box would. Under the card it says "Each node is one running process of the
-  application's engine, and the nodes share the application's work.", "A heartbeat is a signal that a node sends
-  repeatedly to show that it is running. The line along the bottom has a section for each node, which rises when the
-  node sends a heartbeat and falls until it sends the next, so a node that stops sending them sinks to the bottom."
-  and, when the card shows workloads, "A workload
-  is an ongoing task that the cluster gives to one of its nodes, such as delivering messages to one of the
-  application's handlers." Its annotations are "the number of nodes in contact now", "the number of workloads in the
+  so the card already says what the box would. Under the card it says, following the card from top to bottom, "Each
+  node is a running process of the application's engine, and the nodes share the application's work.", when the card
+  shows workloads "The work is divided into workloads, ongoing tasks such as delivering messages to a handler, and each
+  is given to one node at a time.", and "Each node sends heartbeats to show that it is running. Its section of the line
+  rises with each heartbeat and falls until the next, so a silent node sinks to the bottom." Its paragraphs describe
+  what happens rather than define terms, as the events and queues explainers' do. Its annotations are "the number of nodes in contact now", "the number of workloads in the
   cluster", "how the workloads are spread across the nodes" and "how recently each node sent a heartbeat". Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
