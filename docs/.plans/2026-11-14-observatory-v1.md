@@ -986,7 +986,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   The events card's explainer defines an event stream only when the card shows its streams. Each bar's advice, such
   as "An even spread is better", is in the explainer of its card, only when the card has the bar, and leaves the
   hovercards of the bar's segments, which then only drill down; that move is made when the explainer is built. A bar's
-  amounts are a spread: "distribution" and "shared among" are not used. Done: the segment hovercards' advice says
+  amounts are a spread: "distribution" and "shared among" are not used. In the explainer the advice
+  names what is spread, and pointing at it focuses the bar: "An even spread across the streams is better. Events on a
+  stream are processed in order, so a stream that holds more than its fair share limits throughput." Done: the segment hovercards' advice says
   "An even spread is better".
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
