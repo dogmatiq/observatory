@@ -978,9 +978,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   explainer has a title, which says what the card is about and where, in place of "This section shows information
   about…"; then the annotated card, whose annotations say what each part is; and then a paragraph of the definitions
   of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
-  Text that is true of this application only is drawn apart, on a sunken ground, with the icon of what it is about.
-  It names the application, in bold. The events card's reads "The statements application spreads its events across
-  several event streams. An even spread is better; a stream that holds more than its fair share limits parallel
+  Text that depends on the engine that runs this application is drawn apart, on a sunken ground, with the engine icon.
+  Its first sentence has the engine as its subject, named through the application, in bold. The events card's reads
+  "The statements application's engine spreads events across several event streams. An even spread is better; a stream that holds more than its fair share limits parallel
   throughput." and "Each aggregate instance is bound to a single stream so that its events can be read in order.", shown whenever the card shows its bar of streams, which an engine that reports the
   multiple-streams model shows even while only one stream has been seen. In a window too narrow for the annotations beside the card at full
   size, each is a numbered marker on the card, and their words are listed under it, by number.
