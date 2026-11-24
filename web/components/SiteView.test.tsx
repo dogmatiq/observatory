@@ -36,7 +36,7 @@ test("each application is in the order given, and links to its application view"
 	);
 });
 
-test("an application that is out of contact says so in place of its figures", () => {
+test("an application that is out of contact says so beside its name, and its figures are not available", () => {
 	const name = apps[1]?.application.name as string;
 	render(
 		<SiteOverview data={siteOf(withContact(apps, { out: [name] }), euWest)} />,
@@ -45,7 +45,10 @@ test("an application that is out of contact says so in place of its figures", ()
 	const grid = screen.getByRole("region", { name: "Applications" });
 	const link = within(grid).getByRole("link", { name: new RegExp(`^${name}`) });
 
-	expect(link.textContent).toBe(`${name}${outOfContactWords}`);
+	expect(link.textContent).toMatch(new RegExp(`^${name}${outOfContactWords}`));
+	expect(
+		within(link).getAllByRole("img", { name: "not available" }).length,
+	).toBeGreaterThan(0);
 });
 
 test("the applications tile counts those in contact, and those out of contact", () => {

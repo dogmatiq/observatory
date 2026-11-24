@@ -496,9 +496,12 @@ export function ApplicationCells({
 /**
  * ApplicationCell is the card of one application in [ApplicationCells]. An
  * application that is out of contact has the red accent along its top, and says
- * so in words in place of its figures. An application with failing messages has
- * the orange accent. While only some of its nodes are in contact, its figures are
- * blurred by how few are, by the coverage rule.
+ * so in red beside its name. Its figures keep their places, as zeros that are not
+ * available, which glitch when contact is lost, so that the blur alone says how
+ * far a figure is trusted and the red alone says that contact is lost. An
+ * application with failing messages has the orange accent. While only some of its
+ * nodes are in contact, its figures are blurred by how few are, by the coverage
+ * rule.
  */
 function ApplicationCell({
 	site,
@@ -523,16 +526,19 @@ function ApplicationCell({
 				"flex flex-col gap-1.5 px-3.5 pt-3 pb-2.5 text-fg",
 			)}
 		>
-			<span className="truncate text-xs font-bold tracking-[0.04em] uppercase">
-				{app.application.name}
+			<span className="flex items-baseline justify-between gap-2">
+				<span className="min-w-0 truncate text-xs font-bold tracking-[0.04em] uppercase">
+					{app.application.name}
+				</span>
+				{out && (
+					<span className="flex-none text-xs text-bad">{outOfContact}</span>
+				)}
 			</span>
-			{out ? (
-				<span className="text-sm text-bad">{outOfContact}</span>
-			) : (
+			<Distrusted value={out}>
 				<Covered coverage={app.coverage ?? 1}>
 					<ApplicationFigures app={app} explained />
 				</Covered>
-			)}
+			</Distrusted>
 		</a>
 	);
 }

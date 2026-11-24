@@ -171,7 +171,7 @@ export function ReviewPage() {
 								</State>
 								<State
 									label="Two applications out of contact, and two with only some nodes in contact"
-									note="The two out of contact, kyc and payroll, have the red accent, and say &quot;Contact lost&quot; in place of their figures, because a card of the grid has no popover to carry a status, which is an exception to the rule that a figure that isn't working keeps its place as a blurry zero. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile counts the two out of contact in its detail line."
+									note="The two out of contact, kyc and payroll, have the red accent and say &quot;Contact lost&quot; in red beside their names, and their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile counts the two out of contact in its detail line."
 									recommendation="Approve, with &quot;Contact lost&quot;. It says what happened, as a status, in two words. The red accent and the words mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 									wide
 								>
@@ -215,7 +215,7 @@ export function ReviewPage() {
 								</State>
 								<Choices
 									of="B"
-									title="the words in place of the figures"
+									title="the words beside the name"
 									framed={false}
 									choices={(
 										[
