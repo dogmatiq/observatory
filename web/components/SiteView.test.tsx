@@ -121,3 +121,14 @@ test("the events tile counts the event streams of all the applications together"
 		`events per minute, in ${data.events?.streams} streams`,
 	);
 });
+
+test("the queues tile counts the queues of all the applications together", () => {
+	const data = siteOf(apps, euWest);
+	render(<SiteOverview data={data} />);
+
+	const tile = screen.getByRole("article", { name: "Queues" });
+
+	expect(tile.textContent).toMatch(
+		new RegExp(`messages in ${data.queues?.queues} queues, `),
+	);
+});

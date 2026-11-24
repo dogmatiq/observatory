@@ -163,6 +163,7 @@ function applicationAt(i: number): SiteApplication {
 		queues: {
 			messages: Math.round(busy * 40 * r()),
 			failing: 0,
+			queues: 1 + Math.floor(r() * 3),
 		},
 	};
 }
@@ -271,6 +272,7 @@ export function siteOf(
 		},
 		queues: {
 			messages,
+			queues: applications.reduce((sum, a) => sum + (a.queues?.queues ?? 0), 0),
 			failing,
 			coverage,
 			throughput: { perMinute: handled },

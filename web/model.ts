@@ -86,6 +86,13 @@ export interface SiteData {
 		/** The number of messages that are waiting, across the applications. */
 		messages: number;
 
+		/**
+		 * The number of queues of all the applications together, if any
+		 * application's engine reports its queues. An engine that keeps every
+		 * message in one queue has one.
+		 */
+		queues?: number;
+
 		/** The number of those messages whose delivery is failing. */
 		failing: number;
 
@@ -134,7 +141,7 @@ export interface SiteApplication {
 	events?: { perMinute?: number; streams?: number };
 
 	/** The messages that are waiting, if the engine supports it. */
-	queues?: { messages: number; failing: number };
+	queues?: { messages: number; failing: number; queues?: number };
 }
 
 /**

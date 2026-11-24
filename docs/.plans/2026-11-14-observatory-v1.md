@@ -944,8 +944,8 @@ Tick each item when it is done, and write the pull request or commit that did it
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with the number of event streams of all the applications together, which is how
   widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
-  that are failing, and a bar of which applications have the most, with no count of queues, which only their own
-  application reads; and the number of applications in contact, with the
+  that are failing, and a bar of which applications have the most, and the number of queues of all the
+  applications together, which says roughly how widely the site's work can be spread; and the number of applications in contact, with the
   number out of contact, whose chart is the heartbeat chart with a share for each application in contact. Below them,
   each application in the order of their names, as a small card with its name, its events per minute and its messages
   waiting, linking to its application view; the plan's first idea, a grid of squares like a contribution graph, is the

@@ -155,7 +155,7 @@ export const siteAbout = {
 	),
 	queues: (site: SiteData["site"]) => (
 		<p>
-			This section shows information about the messages{" "}
+			This section shows information about the messages and queues{" "}
 			<AtTheSite site={site} />.
 		</p>
 	),
@@ -292,8 +292,9 @@ function SiteEventsTile({
 
 /**
  * SiteQueuesTile is the site's queues tile, whose headline is the messages that
- * wait across the applications, with those that are failing, and whose bar shows
- * which applications have the most waiting.
+ * wait across the applications, with those that are failing, whose detail line
+ * gives the number of queues of all the applications together, and whose bar
+ * shows which applications have the most waiting.
  */
 function SiteQueuesTile({
 	data,
@@ -335,6 +336,13 @@ function SiteQueuesTile({
 			detail={
 				<>
 					<Noun>{nounFor(queues.messages, "message", "messages")}</Noun>
+					{queues.queues !== undefined && (
+						<>
+							{" in "}
+							<Ramped value={queues.queues} format={formatCompact} />
+							{` ${nounFor(queues.queues, "queue", "queues")}`}
+						</>
+					)}
 					{queues.throughput && (
 						<>
 							{", "}

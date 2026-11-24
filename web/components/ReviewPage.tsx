@@ -257,7 +257,7 @@ export function ReviewPage() {
 								words: <p>{partialText(undefined)}</p>,
 							},
 						]}
-						recommendation="Approve, with this wording, in the same shape as the events tile's. It leaves out queues, because only an application's own nodes read its queues, so the tile doesn't count them across the site."
+						recommendation="Approve, with this wording, in the same shape as the events tile's. The tile counts the queues of all the applications together in its detail line, which says roughly how widely the site's work can be spread."
 					>
 						<Panel>
 							<InfoCard
@@ -332,7 +332,7 @@ export function ReviewPage() {
 					notDeciding={
 						"The card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
 					}
-					note="The events tile's headline is the events per minute, and its detail line gives the number of event streams of all the applications together, as in &quot;in 412 streams&quot;. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, as in &quot;94 +2&quot;, and its detail line is the word &quot;applications&quot;."
+					note="The events tile's headline is the events per minute, and its detail line gives the number of event streams of all the applications together, as in &quot;in 412 streams&quot;. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute, as in &quot;messages in 37 queues, 19.6K/min&quot;. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, as in &quot;94 +2&quot;, and its detail line is the word &quot;applications&quot;."
 				>
 					<State
 						label="The card of the applications in contact"
