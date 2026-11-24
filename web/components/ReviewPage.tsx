@@ -230,7 +230,7 @@ export function ReviewPage() {
 								words: <p>{partialText(undefined)}</p>,
 							},
 						]}
-						recommendation="Approve, with this wording. It is the shape proposed in review, with two changes: it says &quot;at the eu-west site&quot;, as the cluster view says where an application is, and it leaves out event streams, because this tile shows no streams, only which applications record the most events."
+						recommendation="Approve, with this wording, which was proposed in review, with &quot;at the eu-west site&quot;, as the cluster view says where an application is. The tile counts the event streams of all the applications together in its detail line."
 					>
 						<Panel>
 							<InfoCard
@@ -257,7 +257,7 @@ export function ReviewPage() {
 								words: <p>{partialText(undefined)}</p>,
 							},
 						]}
-						recommendation="Approve, with this wording, in the same shape as the events tile's. It leaves out queues, because this tile shows no queues, only which applications have the most messages waiting."
+						recommendation="Approve, with this wording, in the same shape as the events tile's. It leaves out queues, because only an application's own nodes read its queues, so the tile doesn't count them across the site."
 					>
 						<Panel>
 							<InfoCard
@@ -318,50 +318,6 @@ export function ReviewPage() {
 							</Panel>
 						</div>
 					</State>
-					<Choices
-						of="A"
-						title="the events tile's words"
-						choices={[
-							[
-								"As proposed in review",
-								<InfoCard
-									key="proposed"
-									subsystem="streams"
-									icon="event"
-									kind="Events"
-									status={sitePartialStatus}
-								>
-									<p>
-										This section shows information about the events and event
-										streams in the{" "}
-										<span className="font-semibold text-fg">eu-west</span> site.
-									</p>
-								</InfoCard>,
-							],
-						]}
-					/>
-					<Choices
-						of="B"
-						title="the queues tile's words"
-						choices={[
-							[
-								"In the shape proposed for the events tile",
-								<InfoCard
-									key="proposed"
-									subsystem="queues"
-									icon="message"
-									kind="Queues"
-									status={sitePartialStatus}
-								>
-									<p>
-										This section shows information about the messages and queues
-										in the{" "}
-										<span className="font-semibold text-fg">eu-west</span> site.
-									</p>
-								</InfoCard>,
-							],
-						]}
-					/>
 				</Part>
 			</Tile>
 
@@ -376,7 +332,7 @@ export function ReviewPage() {
 					notDeciding={
 						"The card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
 					}
-					note="The events tile's headline is the events per minute, and its detail line counts the applications that recorded any. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, as in &quot;94 +2&quot;, and its detail line is the word &quot;applications&quot;."
+					note="The events tile's headline is the events per minute, and its detail line gives the number of event streams of all the applications together, as in &quot;in 412 streams&quot;. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, as in &quot;94 +2&quot;, and its detail line is the word &quot;applications&quot;."
 				>
 					<State
 						label="The card of the applications in contact"

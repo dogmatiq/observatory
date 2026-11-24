@@ -156,7 +156,10 @@ function applicationAt(i: number): SiteApplication {
 		application: { name: names[i] as string, key: keyOf(i) },
 		nodes,
 		heartbeats: [],
-		events: { perMinute: Math.round(busy * 2400) },
+		events: {
+			perMinute: Math.round(busy * 2400),
+			streams: 1 + Math.floor(r() * 8),
+		},
 		queues: {
 			messages: Math.round(busy * 40 * r()),
 			failing: 0,
@@ -259,6 +262,10 @@ export function siteOf(
 		site,
 		events: {
 			rate: { perMinute },
+			streams: applications.reduce(
+				(sum, a) => sum + (a.events?.streams ?? 0),
+				0,
+			),
 			coverage,
 			history: historyOf(perMinute, 7),
 		},

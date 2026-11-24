@@ -110,3 +110,14 @@ test("the applications tile is a red zero alone when every application is out of
 
 	expect(tile.textContent).toMatch(/^0applications$/);
 });
+
+test("the events tile counts the event streams of all the applications together", () => {
+	const data = siteOf(apps, euWest);
+	render(<SiteOverview data={data} />);
+
+	const tile = screen.getByRole("article", { name: "Events" });
+
+	expect(tile.textContent).toContain(
+		`events per minute, in ${data.events?.streams} streams`,
+	);
+});

@@ -149,7 +149,8 @@ function TheApplications({ site }: { site: SiteData["site"] }) {
 export const siteAbout = {
 	events: (site: SiteData["site"]) => (
 		<p>
-			This section shows information about the events <AtTheSite site={site} />.
+			This section shows information about the events and event streams{" "}
+			<AtTheSite site={site} />.
 		</p>
 	),
 	queues: (site: SiteData["site"]) => (
@@ -206,8 +207,9 @@ export const siteHandlingWords: RateWords = {
 
 /**
  * SiteEventsTile is the site's events tile, whose headline is the events per
- * minute across the applications, and whose bar shows which applications record
- * the most.
+ * minute across the applications, whose detail line gives the number of event
+ * streams of all the applications together, and whose bar shows which
+ * applications record the most.
  */
 function SiteEventsTile({
 	data,
@@ -217,10 +219,6 @@ function SiteEventsTile({
 	events: NonNullable<SiteData["events"]>;
 }) {
 	const { scaled, per, state } = useRate(events.rate.perMinute);
-	const recording = data.applications.filter(
-		(a) => (a.events?.perMinute ?? 0) > 0,
-	).length;
-
 	const rateCard = (
 		<RateCard
 			subsystem="streams"
@@ -253,9 +251,13 @@ function SiteEventsTile({
 							<Noun>{`events per ${per}`}</Noun>
 						</span>
 					</Popover>
-					{", from "}
-					<Ramped value={recording} format={String} />
-					{` ${nounFor(recording, "application", "applications")}`}
+					{events.streams !== undefined && (
+						<>
+							{", in "}
+							<Ramped value={events.streams} format={formatCompact} />
+							{` ${nounFor(events.streams, "stream", "streams")}`}
+						</>
+					)}
 				</>
 			}
 			bar={
