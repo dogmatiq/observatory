@@ -978,6 +978,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   explainer has a title, which says what the card is about and where, in place of "This section shows information
   about…"; then the annotated card, whose annotations say what each part is; and then a paragraph of the definitions
   of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
+  Text that is true of this application only is drawn apart, on a sunken ground, with the icon of what it is about.
+  The events card's is "This application can spread its events across several event streams; the order of the
+  events of each aggregate instance is kept, but not the order of events from different instances.", shown only when
+  the engine reports the multiple-streams model. In a window too narrow for the annotations beside the card at full
+  size, each is a numbered marker on the card, and their words are listed under it, by number.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
