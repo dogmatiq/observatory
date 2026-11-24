@@ -1024,7 +1024,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   instance is bound to the queue that holds its deadlines.", is there only when the bar has more than one segment.
   The integration digest's explainer is approved. Its annotations include "the handler prefers to handle messages one
   at a time", on the flag of a handler that asks to minimize concurrency, which is Lucide's "merge" turned to point
-  right, and "how recent commands were spread across the nodes", on its bar of nodes. Its chart's annotation follows
+  right, and "how the recently handled commands were spread across the nodes", on its bar of nodes. Its chart's annotation follows
   what the chart counts: "events recorded over the last minute", or, for an integration that records no events,
   "commands handled over the last minute". A flag is an icon beside a card's label that is shown only while something
   is true of what the card is about. Done: the segment hovercards' advice says
