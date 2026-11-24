@@ -13,7 +13,7 @@ import { NodesCard, WorkloadsCard } from "./ClusterCards.tsx";
 import { EngineCard } from "./EngineCard.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Figure } from "./Figure.tsx";
-import { HandlerCard } from "./HandlerCard.tsx";
+import { HandlerDigest } from "./HandlerDigest.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
@@ -168,7 +168,7 @@ export function Overview({
 					<ErrorBoundary key={handler.key}>
 						<Distrusted value={down}>
 							<Covered coverage={handler.coverage ?? 1}>
-								<HandlerCard
+								<HandlerDigest
 									application={application}
 									handler={handler}
 									href={links.handler?.(handler.key)}

@@ -45,9 +45,9 @@ import { RateCard } from "./RateCard.tsx";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
 import { SegmentCard, things } from "./SegmentCard.tsx";
 import {
-	ApplicationCells,
 	ApplicationsCard,
 	ApplicationsTile,
+	CompactDigests,
 	ContactLostCard,
 	SiteBreakdown,
 	SiteOverview,
@@ -108,7 +108,10 @@ export function ReviewPage() {
 						recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred cards fit in about a screen."
 						wide
 					>
-						<SiteBreakdown data={siteOf(calm, euWest)} breakdown="cells" />
+						<SiteBreakdown
+							data={siteOf(calm, euWest)}
+							breakdown="compact-digests"
+						/>
 					</State>
 					<Choices
 						of="A"
@@ -142,7 +145,7 @@ export function ReviewPage() {
 				>
 					<State
 						label="Three applications with failing messages"
-						note="checkout, mailer and regulatory-reports have the orange accent and the orange &quot;+N&quot;, as a handler card does, and so does the queues tile."
+						note="checkout, mailer and regulatory-reports have the orange accent and the orange &quot;+N&quot;, as a handler digest does, and so does the queues tile."
 						recommendation="Approve, as the cluster view does it."
 						wide
 					>
@@ -192,7 +195,7 @@ export function ReviewPage() {
 					</State>
 					<Choices
 						of="B"
-						title="how a cell says that contact is lost"
+						title="how a compact digest says that contact is lost"
 						framed={false}
 						choices={(
 							[
@@ -202,7 +205,7 @@ export function ReviewPage() {
 							] as const
 						).map(([label, words]) => [
 							label,
-							<ApplicationCells
+							<CompactDigests
 								key={label}
 								data={siteOf(someOut.slice(44, 50), euWest)}
 								alert={{ words }}
@@ -333,13 +336,13 @@ export function ReviewPage() {
 			<Tile
 				code="IC"
 				title="Which thing a card is about"
-				note="A rule for every card that opens from the page, on every view: where a card says which thing it is about. It comes before the site view's headline cards, because the card of a cell's alert icon follows it."
+				note="A rule for every card that opens from the page, on every view: where a card says which thing it is about. It comes before the site view's headline cards, because the card of a compact digest's alert icon follows it."
 			>
 				<Part
 					step={1}
 					title="The thing's name or ID, under its kind"
 					notDeciding={
-						"The other words of any card, which keep their own reviews; the card of a cell's alert icon, which is SH 2 and follows this rule either way; how an ID is shortened and copied, which is settled."
+						"The other words of any card, which keep their own reviews; the card of a compact digest's alert icon, which is SH 2 and follows this rule either way; how an ID is shortened and copied, which is settled."
 					}
 					note="Today a card says which thing it is about in one of three ways: an ID under its kind, copyable, on the cards of a cluster, an engine, a stream, a queue and a node; a name under its kind, in bold, on the site view's application cards; or the name inside a sentence, on a handler's card. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;. The rule makes that concrete: a card about one thing shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. Sentences may still say where the thing is, such as which application it is in, because that is not its identity."
 				>
@@ -350,7 +353,7 @@ export function ReviewPage() {
 						precedents={[
 							{
 								where:
-									"On the cluster view, the card of a handler card's kind icon",
+									"On the cluster view, the card of a handler digest's kind icon",
 								status: "settled",
 								words: handlerKindAbout(atSite, "account", "aggregate"),
 							},
@@ -407,7 +410,7 @@ export function ReviewPage() {
 									}}
 								/>
 							</Captioned>
-							<Captioned caption="Has a name: a cell's alert icon">
+							<Captioned caption="Has a name: a compact digest's alert icon">
 								<ContactLostCard app={contactLostExample} />
 							</Captioned>
 							<Captioned caption="Has only an ID: the cluster tile's icon">
@@ -486,16 +489,16 @@ export function ReviewPage() {
 					notDeciding={
 						"The words on the tiles themselves (SH 1); the card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
 					}
-					note="The card that opens when a tile's headline, or the words of its detail line, are pointed at, and the card of the alert icon of a cell whose application is out of contact."
+					note="The card that opens when a tile's headline, or the words of its detail line, are pointed at, and the card of the alert icon of a compact digest whose application is out of contact."
 				>
 					<State
-						label="The card of a cell's alert icon"
+						label="The card of a compact digest's alert icon"
 						note="It names the application, and its status says what losing contact means for the reader. Its form follows the engine card's status, which is under review at WD 5, so it follows whatever WD 5 decides."
 						recommendation="Approve, with this wording. It is the engine card's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
 						precedents={[
 							{
 								where:
-									"On the cluster view, the card of a handler card's kind icon, for its shape",
+									"On the cluster view, the card of a handler digest's kind icon, for its shape",
 								status: "settled",
 								words: (
 									<>
@@ -750,7 +753,7 @@ export function ReviewPage() {
 						"The blur and the glitch (EV 0); the card's first paragraph, which is settled."
 					}
 					decided={false}
-					note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The card of the icon says why, as a status. The queues tile and the kind icon of a handler card show the same status in the same case."
+					note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The card of the icon says why, as a status. The queues tile and the kind icon of a handler digest show the same status in the same case."
 				>
 					<State
 						label="Only some of the nodes report what the tile shows"

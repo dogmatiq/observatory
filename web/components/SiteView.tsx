@@ -40,11 +40,12 @@ import { useRate } from "./useRate.ts";
 
 /**
  * Breakdown is how the site view lays out its applications below its tiles:
- * `cells`, a grid of small cards, each with the application's name and figures,
+ * `compact-digests`, a grid of compact digests, each with the application's name
+ * and figures,
  * or `squares`, a grid of small squares in the manner of a contribution graph,
  * each of which names its application only when it is pointed at.
  */
-export type Breakdown = "cells" | "squares";
+export type Breakdown = "compact-digests" | "squares";
 
 /**
  * SiteOverview is the site view: the totals of the applications at a site, or at
@@ -56,7 +57,7 @@ export function SiteOverview({ data }: { data: SiteData }) {
 	return (
 		<div className="grid gap-8">
 			<SiteTotals data={data} />
-			<SiteBreakdown data={data} breakdown="cells" />
+			<SiteBreakdown data={data} breakdown="compact-digests" />
 		</div>
 	);
 }
@@ -74,8 +75,8 @@ export function SiteBreakdown({
 }) {
 	return (
 		<section aria-label="Applications">
-			{breakdown === "cells" ? (
-				<ApplicationCells data={data} alert="icon" />
+			{breakdown === "compact-digests" ? (
+				<CompactDigests data={data} alert="icon" />
 			) : (
 				<ApplicationSquares data={data} />
 			)}
@@ -497,33 +498,33 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 }
 
 /**
- * CellAlert is how a cell says that its application is out of contact: by an
+ * DigestAlert is how a compact digest says that its application is out of contact: by an
  * alert icon at the right of its name, whose popover says what is wrong, or by
  * words beside its name.
  */
-export type CellAlert = "icon" | { words: string };
+export type DigestAlert = "icon" | { words: string };
 
 /**
- * ApplicationCells is the breakdown of the site view as a grid of cells, which
- * are small cards, one for each application, in the order of the applications.
- * Each cell names its application, gives its events per minute and its messages
+ * CompactDigests is the breakdown of the site view as a grid of compact
+ * digests, one for each application, in the order of the applications. Each
+ * compact digest names its application, gives its events per minute and its messages
  * waiting, and links to its application view.
  */
-export function ApplicationCells({
+export function CompactDigests({
 	data,
 	alert,
 }: {
 	data: SiteData;
 
-	/** How a cell says that its application is out of contact. */
-	alert: CellAlert;
+	/** How a compact digest says that its application is out of contact. */
+	alert: DigestAlert;
 }) {
 	return (
 		<ul className="grid grid-cols-[repeat(auto-fill,minmax(176px,1fr))] gap-3">
 			{data.applications.map((a) => (
 				<li key={a.application.key} className="min-w-0">
 					<ErrorBoundary>
-						<ApplicationCell site={data.site} app={a} alert={alert} />
+						<CompactDigest site={data.site} app={a} alert={alert} />
 					</ErrorBoundary>
 				</li>
 			))}
@@ -532,7 +533,7 @@ export function ApplicationCells({
 }
 
 /**
- * ApplicationCell is the cell of one application in [ApplicationCells]. An
+ * CompactDigest is the compact digest of one application in [CompactDigests]. An
  * application that is out of contact has the red accent along its top, and says
  * so in red at the right of its name, as `alert` says. Its figures keep their places, as zeros that are not
  * available, which glitch when contact is lost, so that the blur alone says how
@@ -541,14 +542,14 @@ export function ApplicationCells({
  * nodes are in contact, its figures are blurred by how few are, by the coverage
  * rule.
  */
-function ApplicationCell({
+function CompactDigest({
 	site,
 	app,
 	alert,
 }: {
 	site: SiteData["site"];
 	app: SiteApplication;
-	alert: CellAlert;
+	alert: DigestAlert;
 }) {
 	const out = app.nodes === 0;
 	const failing = app.queues?.failing ?? 0;
@@ -560,7 +561,7 @@ function ApplicationCell({
 			className={cn(
 				cardClasses,
 				accent ? accentClasses[accent] : raisedClasses,
-				// A cell with an accent keeps it when pointed at, as a tile does.
+				// A compact digest with an accent keeps it when pointed at, as a tile does.
 				accent ? "no-underline hover:no-underline" : linkedCardClasses,
 				"flex flex-col gap-1.5 px-3.5 pt-3 pb-2.5 text-fg",
 			)}
@@ -591,7 +592,7 @@ function ApplicationCell({
 }
 
 /**
- * ContactLostCard is the card of the alert icon of a cell whose application is
+ * ContactLostCard is the card of the alert icon of a compact digest whose application is
  * out of contact. It names the application and says, as a status, what losing
  * contact means for the reader.
  */

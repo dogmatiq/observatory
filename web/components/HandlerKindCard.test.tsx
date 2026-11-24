@@ -3,7 +3,7 @@ import { afterEach, expect, test } from "vitest";
 import { application } from "../fixtures/overview.ts";
 import type { HandlerKind } from "../model.ts";
 import { tipOf } from "../test-support.ts";
-import { HandlerCard } from "./HandlerCard.tsx";
+import { HandlerDigest } from "./HandlerDigest.tsx";
 import { HandlerKindCard } from "./HandlerKindCard.tsx";
 
 afterEach(cleanup);
@@ -47,7 +47,7 @@ test("each kind of handler has a card that reminds the reader what it does, and 
 
 test("pointing at the kind icon of a handler's card shows the card of its kind", async () => {
 	const { container } = render(
-		<HandlerCard
+		<HandlerDigest
 			application={application}
 			handler={{
 				key: "k",

@@ -3,7 +3,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { application } from "../fixtures/overview.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { tipOf } from "../test-support.ts";
-import { HandlerCard } from "./HandlerCard.tsx";
+import { HandlerDigest } from "./HandlerDigest.tsx";
 
 afterEach(cleanup);
 
@@ -14,13 +14,13 @@ const quiet: HandlerSummary = {
 	bindings: [],
 };
 
-function card(
+function digest(
 	kind: HandlerData["kind"],
 	summary: Partial<HandlerSummary> = {},
 	rest: Partial<HandlerData> = {},
 ) {
 	return render(
-		<HandlerCard
+		<HandlerDigest
 			application={application}
 			handler={{
 				key: "k",
@@ -33,7 +33,7 @@ function card(
 	);
 }
 
-/** The numbers on the card, each as its label and its value. */
+/** The numbers on the digest, each as its label and its value. */
 function stats(container: HTMLElement) {
 	return Object.fromEntries(
 		[...container.querySelectorAll("span.text-xs")].map((label) => [
@@ -44,7 +44,7 @@ function stats(container: HTMLElement) {
 }
 
 test("an aggregate shows its instances and commands", () => {
-	const { container } = card("aggregate", {
+	const { container } = digest("aggregate", {
 		instances: 1200,
 		queuedMessages: 3,
 		bindings: [{ id: "abcdefgh1", instances: 1200 }],
@@ -57,7 +57,7 @@ test("an aggregate shows its instances and commands", () => {
 });
 
 test("the numbers of messages are on the right, with their labels, and the numbers of instances stay on the left", () => {
-	const { container } = card("process", {
+	const { container } = digest("process", {
 		schedulesDeadlines: true,
 		bindings: [{ id: "aaaaaaaa", instances: 4 }],
 	});
@@ -73,13 +73,13 @@ test("the numbers of messages are on the right, with their labels, and the numbe
 });
 
 test("an aggregate with one instance says so in the singular", () => {
-	const { container } = card("aggregate", { instances: 1 });
+	const { container } = digest("aggregate", { instances: 1 });
 
 	expect(stats(container)).toHaveProperty("instance", "1");
 });
 
 test("an aggregate shows its active instances only when it is given them", async () => {
-	const { container } = card("aggregate", {
+	const { container } = digest("aggregate", {
 		instances: 5,
 		activeInstances: { count: 2, title: "Recently active" },
 	});
@@ -89,7 +89,7 @@ test("an aggregate shows its active instances only when it is given them", async
 });
 
 test("a process shows the instances in progress, its events and its deadlines", () => {
-	const { container } = card("process", {
+	const { container } = digest("process", {
 		schedulesDeadlines: true,
 		unhandledEvents: 7,
 		queuedMessages: 1,
@@ -107,7 +107,7 @@ test("a process shows the instances in progress, its events and its deadlines", 
 });
 
 test("a message kind on its own is the ones that are pending, and its popover says so", async () => {
-	card("process", {
+	digest("process", {
 		schedulesDeadlines: true,
 		unhandledEvents: 1,
 		queuedMessages: 2,
@@ -118,7 +118,7 @@ test("a message kind on its own is the ones that are pending, and its popover sa
 });
 
 test("a process that schedules no deadlines has no deadlines or bar", () => {
-	const { container } = card("process", {
+	const { container } = digest("process", {
 		bindings: [{ id: "aaaaaaaa", instances: 4 }],
 	});
 
@@ -127,19 +127,22 @@ test("a process that schedules no deadlines has no deadlines or bar", () => {
 });
 
 test("an integration shows its commands", () => {
-	const { container } = card("integration", { queuedMessages: 12 });
+	const { container } = digest("integration", { queuedMessages: 12 });
 
 	expect(stats(container)).toEqual({ commands: "12" });
 });
 
 test("a projection shows its events", () => {
-	const { container } = card("projection", { unhandledEvents: 12_000 });
+	const { container } = digest("projection", { unhandledEvents: 12_000 });
 
 	expect(stats(container)).toEqual({ events: "12.0K" });
 });
 
-test("failing messages are counted after the others that wait, and the card is named by its handler", () => {
-	const { container } = card("integration", { failing: 1, queuedMessages: 4 });
+test("failing messages are counted after the others that wait, and the digest is named by its handler", () => {
+	const { container } = digest("integration", {
+		failing: 1,
+		queuedMessages: 4,
+	});
 
 	const article = screen.getByRole("article", { name: "the-handler" });
 	expect(within(article).getByText("+1")).toBeDefined();
@@ -150,7 +153,7 @@ test("failing messages are counted after the others that wait, and the card is n
 });
 
 test("the number that waits is not coloured because some of it is failing, and only the failing count is", () => {
-	card("integration", { failing: 1, queuedMessages: 4 });
+	digest("integration", { failing: 1, queuedMessages: 4 });
 
 	// The count is in a box that is red, inside the one that holds it beside the
 	// number that waits, which is not.
@@ -162,7 +165,10 @@ test("the number that waits is not coloured because some of it is failing, and o
 });
 
 test("when all that waits is failing, the number that doesn't is zero and recedes", () => {
-	const { container } = card("integration", { failing: 2, queuedMessages: 2 });
+	const { container } = digest("integration", {
+		failing: 2,
+		queuedMessages: 2,
+	});
 
 	expect(stats(container)).toEqual({
 		commands: "0+2 and 2 messages failing",
@@ -184,14 +190,14 @@ test("a number that falls to zero recedes once it has got there, and not while i
 		},
 	});
 	const { container, rerender } = render(
-		<HandlerCard application={application} handler={handler(30)} />,
+		<HandlerDigest application={application} handler={handler(30)} />,
 	);
 	const faint = () => container.querySelector("span.text-faint");
 
 	// Nothing of the stats is faint but the other numbers that are zero.
 	expect(container.textContent).toContain("30");
 
-	rerender(<HandlerCard application={application} handler={handler(0)} />);
+	rerender(<HandlerDigest application={application} handler={handler(0)} />);
 	act(() => {
 		vi.advanceTimersByTime(80);
 	});
@@ -211,20 +217,20 @@ test("a number that falls to zero recedes once it has got there, and not while i
 	vi.useRealTimers();
 });
 
-test("a card with no failing messages does not say so", () => {
-	card("integration");
+test("a digest with no failing messages does not say so", () => {
+	digest("integration");
 
 	expect(screen.queryByText(/failing/)).toBeNull();
 });
 
 test("the handler's kind and whether it is disabled are shown", () => {
-	card("projection", {}, { disabled: true });
+	digest("projection", {}, { disabled: true });
 
 	expect(screen.getByText("projection, disabled")).toBeDefined();
 });
 
 test("a handler that minimizes concurrency says so in a popover", async () => {
-	card("integration", {}, { minimizesConcurrency: true });
+	digest("integration", {}, { minimizesConcurrency: true });
 
 	const icon = screen.getByText("integration").querySelector("svg");
 	expect(await tipOf(icon?.parentElement as Element)).toMatch(
@@ -232,14 +238,14 @@ test("a handler that minimizes concurrency says so in a popover", async () => {
 	);
 });
 
-test("a card is not a link unless it is given one", () => {
-	card("projection");
+test("a digest is not a link unless it is given one", () => {
+	digest("projection");
 	expect(screen.queryByRole("link")).toBeNull();
 
 	cleanup();
 
 	render(
-		<HandlerCard
+		<HandlerDigest
 			application={application}
 			handler={{
 				key: "k",
@@ -254,7 +260,7 @@ test("a card is not a link unless it is given one", () => {
 });
 
 test("the numbers that the engine doesn't report are left out", () => {
-	const aggregate = card(
+	const aggregate = digest(
 		"aggregate",
 		{ queuedMessages: undefined },
 		{ summary: { failing: 0, bindings: [] } },
@@ -263,7 +269,7 @@ test("the numbers that the engine doesn't report are left out", () => {
 
 	cleanup();
 
-	const process = card(
+	const process = digest(
 		"process",
 		{},
 		{ summary: { failing: 0, schedulesDeadlines: true, bindings: [] } },
@@ -272,7 +278,7 @@ test("the numbers that the engine doesn't report are left out", () => {
 
 	cleanup();
 
-	const projection = card(
+	const projection = digest(
 		"projection",
 		{},
 		{ summary: { failing: 0, bindings: [] } },
@@ -280,7 +286,7 @@ test("the numbers that the engine doesn't report are left out", () => {
 	expect(stats(projection.container)).toEqual({});
 });
 
-/** The segments of the bar of nodes on the card, by their titles. */
+/** The segments of the bar of nodes on the digest, by their titles. */
 function nodeBar(container: HTMLElement) {
 	return [...container.querySelectorAll("div[role=img]")].map((e) =>
 		e.getAttribute("aria-label"),
@@ -293,7 +299,7 @@ const nodes = [
 ];
 
 test("an integration shows a bar of the nodes that handled its commands", () => {
-	const { container } = card("integration", {}, { nodes });
+	const { container } = digest("integration", {}, { nodes });
 
 	expect(nodeBar(container)).toEqual([
 		"180 commands/min on node aaaaaaaa",
@@ -302,7 +308,7 @@ test("an integration shows a bar of the nodes that handled its commands", () => 
 });
 
 test("a projection shows a bar of the nodes that handled its events", () => {
-	const { container } = card("projection", {}, { nodes });
+	const { container } = digest("projection", {}, { nodes });
 
 	expect(nodeBar(container)).toEqual([
 		"180 events/min on node aaaaaaaa",
@@ -310,20 +316,23 @@ test("a projection shows a bar of the nodes that handled its events", () => {
 	]);
 });
 
-test("the bar of nodes is at the bottom of the card", () => {
-	const { container } = card("integration", { failing: 2 }, { nodes });
+test("the bar of nodes is at the bottom of the digest", () => {
+	const { container } = digest("integration", { failing: 2 }, { nodes });
 
 	const bottom = container.querySelector(".mt-auto");
 	expect(nodeBar(bottom as HTMLElement)).toHaveLength(2);
 });
 
-test("failing messages don't add a line, so that they don't change the height of the card", () => {
-	const { container } = card("integration", { failing: 2, queuedMessages: 2 });
+test("failing messages don't add a line, so that they don't change the height of the digest", () => {
+	const { container } = digest("integration", {
+		failing: 2,
+		queuedMessages: 2,
+	});
 
 	expect(container.querySelector(".mt-auto")).toBeNull();
 });
 
-test("every card keeps the room along the bottom, whether it has a bar or not, so that the bars of the cards in a row sit in one place", () => {
+test("every digest keeps the room along the bottom, whether it has a bar or not, so that the bars of the digests in a row sit in one place", () => {
 	const cases: [HandlerData["kind"], Partial<HandlerSummary>][] = [
 		["integration", {}],
 		["aggregate", { bindings: [] }],
@@ -331,21 +340,21 @@ test("every card keeps the room along the bottom, whether it has a bar or not, s
 		["aggregate", { bindings: undefined }],
 	];
 	for (const [kind, summary] of cases) {
-		const { container } = card(kind, summary);
+		const { container } = digest(kind, summary);
 		expect(container.firstElementChild?.className).toContain("pb-15");
 		cleanup();
 	}
 });
 
-test("a card with no chart has a sky in its place, which has the moon if no sky of the page has been drawn longer", () => {
-	const { container } = card("integration");
+test("a digest with no chart has a sky in its place, which has the moon if no sky of the page has been drawn longer", () => {
+	const { container } = digest("integration");
 
 	expect(container.querySelector("[data-moon]")).not.toBeNull();
 });
 
-test("a card with a chart has no sky", () => {
+test("a digest with a chart has no sky", () => {
 	const chart = { end: 0, points: [{ at: 0, value: 1 }] };
-	const { container } = card(
+	const { container } = digest(
 		"integration",
 		{},
 		{ history: chart, charted: "commands" },
@@ -355,12 +364,12 @@ test("a card with a chart has no sky", () => {
 });
 
 test("an integration or a projection whose nodes say nothing has no bar", () => {
-	expect(nodeBar(card("integration").container)).toEqual([]);
-	expect(card("integration").container.querySelector(".bg-sunk")).toBeNull();
+	expect(nodeBar(digest("integration").container)).toEqual([]);
+	expect(digest("integration").container.querySelector(".bg-sunk")).toBeNull();
 });
 
-test("nodes that all handled nothing give an empty track, that keeps the card's place", () => {
-	const { container } = card(
+test("nodes that all handled nothing give an empty track, that keeps the digest's place", () => {
+	const { container } = digest(
 		"projection",
 		{},
 		{ nodes: [{ id: "aaaaaaaa", rate: 0 }] },
@@ -371,7 +380,7 @@ test("nodes that all handled nothing give an empty track, that keeps the card's 
 });
 
 test("a handler with an empty list of nodes has an empty track too", () => {
-	const { container } = card("integration", {}, { nodes: [] });
+	const { container } = digest("integration", {}, { nodes: [] });
 
 	expect(nodeBar(container)).toEqual([]);
 	expect(container.querySelector(".bg-sunk")).not.toBeNull();
@@ -379,7 +388,7 @@ test("a handler with an empty list of nodes has an empty track too", () => {
 
 test("an aggregate and a process don't draw a bar of nodes", () => {
 	for (const kind of ["aggregate", "process"] as const) {
-		const { container } = card(kind, { instances: 1 }, { nodes });
+		const { container } = digest(kind, { instances: 1 }, { nodes });
 		expect(nodeBar(container).join()).not.toContain("on node");
 		cleanup();
 	}
@@ -388,7 +397,7 @@ test("an aggregate and a process don't draw a bar of nodes", () => {
 test("a chart has the color of the messages that it counts", () => {
 	const chart = { end: 0, points: [{ at: 0, value: 1 }] };
 
-	const commands = card(
+	const commands = digest(
 		"integration",
 		{},
 		{ history: chart, charted: "commands" },
@@ -399,7 +408,7 @@ test("a chart has the color of the messages that it counts", () => {
 
 	cleanup();
 
-	const events = card(
+	const events = digest(
 		"integration",
 		{},
 		{ history: chart, charted: "events" },
@@ -411,7 +420,7 @@ test("a chart has the color of the messages that it counts", () => {
 
 test("the punctuation of a handler's name is muted, and the words are not, and a popover has the whole name", async () => {
 	render(
-		<HandlerCard
+		<HandlerDigest
 			application={application}
 			handler={{
 				key: "k",
@@ -422,9 +431,9 @@ test("the punctuation of a handler's name is muted, and the words are not, and a
 		/>,
 	);
 
-	const card = screen.getByRole("article", { name: "statement-schedule.v2" });
+	const digest = screen.getByRole("article", { name: "statement-schedule.v2" });
 	const name = document.getElementById(
-		card.getAttribute("aria-labelledby") as string,
+		digest.getAttribute("aria-labelledby") as string,
 	) as HTMLElement;
 	expect(name.textContent).toBe("statement-schedule.v2");
 	expect(await tipOf(name)).toBe("statement-schedule.v2");

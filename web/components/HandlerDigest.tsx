@@ -29,7 +29,7 @@ const minimizesConcurrencyText =
 	"Minimize concurrency: this handler's configuration instructs the engine to attempt to process messages one at a time, minimizing conflicts and/or contention.";
 
 /**
- * What the chart of a handler's card counts, by the kind of handler, for the
+ * What the chart of a handler's digest counts, by the kind of handler, for the
  * words of the sky that is there if no node reports it.
  */
 const chartedWords: Record<HandlerData["kind"], string> = {
@@ -40,17 +40,17 @@ const chartedWords: Record<HandlerData["kind"], string> = {
 };
 
 /**
- * HandlerCard is the card of one handler, on the cluster view. It shows the
+ * HandlerDigest is the digest of one handler, on the cluster view. It shows the
  * handler's name and kind, the numbers that matter for that kind of handler, and
  * how many of its messages are failing. Along its bottom are a bar of how its
  * instances are spread, if it has instances, and a chart of the events that it
  * records or handles per minute, if it has one.
  *
- * The card is a link if it has an `href`, and is outlined when pointed at,
+ * The digest is a link if it has an `href`, and is outlined when pointed at,
  * unless it has failing messages. Otherwise it is an article named by the
  * handler's name, and nothing happens when it is pointed at.
  */
-export function HandlerCard({
+export function HandlerDigest({
 	application,
 	handler,
 	href,
@@ -67,11 +67,11 @@ export function HandlerCard({
 		cardClasses,
 		"flex flex-col gap-5 p-5",
 		subsystemColors[handlerSubsystem(handler.kind)],
-		// A card with failing messages has an accent along its top.
+		// A digest with failing messages has an accent along its top.
 		failing ? accentClasses.failing : raisedClasses,
-		// A card has room along the bottom for its chart, or, if no node reports what
+		// A digest has room along the bottom for its chart, or, if no node reports what
 		// the chart counts, for the sky that is there instead, so that the bars of
-		// the cards in a row are where they are.
+		// the digests in a row are where they are.
 		"pb-15",
 		href !== undefined && !failing && linkedCardClasses,
 		href !== undefined && failing && "no-underline hover:no-underline",
@@ -165,7 +165,7 @@ export function HandlerCard({
 }
 
 /**
- * Summary is the numbers of a handler's card, and the bar and the failing
+ * Summary is the numbers of a handler's digest, and the bar and the failing
  * messages under them. Which numbers a handler has depends on its kind.
  */
 function Summary({
@@ -333,7 +333,7 @@ function Summary({
 }
 
 interface StatProps {
-	/** Identifies the stat among the others of its card, whatever its label says. */
+	/** Identifies the stat among the others of its digest, whatever its label says. */
 	id: string;
 
 	/** The kind of thing that the number counts, shown as an icon before it. */
@@ -355,7 +355,7 @@ interface StatProps {
 	title?: string;
 
 	/**
-	 * True if the stat is aligned to the right of the card, with its label under
+	 * True if the stat is aligned to the right of the digest, with its label under
 	 * it, which is how the numbers of messages are, so that the numbers of
 	 * instances stay on the left.
 	 */
