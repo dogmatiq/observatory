@@ -7,8 +7,8 @@ import {
 	withContact,
 } from "../fixtures/site.ts";
 import { applicationAtSitePath } from "../lib/route.ts";
-import { stubBrowser } from "../test-support.ts";
-import { outOfContactWords, SiteBreakdown, SiteOverview } from "./SiteView.tsx";
+import { stubBrowser, tipOf } from "../test-support.ts";
+import { SiteBreakdown, SiteOverview } from "./SiteView.tsx";
 
 beforeEach(stubBrowser);
 afterEach(() => {
@@ -36,7 +36,7 @@ test("each application is in the order given, and links to its application view"
 	);
 });
 
-test("an application that is out of contact says so beside its name, and its figures are not available", () => {
+test("an application that is out of contact says so by an icon beside its name, and its figures are not available", () => {
 	const name = apps[1]?.application.name as string;
 	render(
 		<SiteOverview data={siteOf(withContact(apps, { out: [name] }), euWest)} />,
@@ -45,7 +45,7 @@ test("an application that is out of contact says so beside its name, and its fig
 	const grid = screen.getByRole("region", { name: "Applications" });
 	const link = within(grid).getByRole("link", { name: new RegExp(`^${name}`) });
 
-	expect(link.textContent).toMatch(new RegExp(`^${name}${outOfContactWords}`));
+	expect(link.textContent).toMatch(new RegExp(`^${name}Contact lost`));
 	expect(
 		within(link).getAllByRole("img", { name: "not available" }).length,
 	).toBeGreaterThan(0);
@@ -84,4 +84,17 @@ test("each square names its application to assistive technology", () => {
 			.getAllByRole("link")
 			.map((l) => l.textContent),
 	).toEqual(apps.map((a) => a.application.name));
+});
+
+test("the alert icon of an application out of contact says what losing contact means", async () => {
+	const name = apps[1]?.application.name as string;
+	render(
+		<SiteOverview data={siteOf(withContact(apps, { out: [name] }), euWest)} />,
+	);
+
+	const icon = screen.getByText("Contact lost").parentElement as HTMLElement;
+
+	expect(await tipOf(icon)).toContain(
+		"Contact with the application has been lost, so it's unknown whether the application is working.",
+	);
 });

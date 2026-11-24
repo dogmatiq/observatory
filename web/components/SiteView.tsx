@@ -71,7 +71,7 @@ export function SiteBreakdown({
 	return (
 		<section aria-label="Applications">
 			{breakdown === "cells" ? (
-				<ApplicationCells data={data} outOfContact={outOfContactWords} />
+				<ApplicationCells data={data} alert="icon" />
 			) : (
 				<ApplicationSquares data={data} />
 			)}
@@ -456,36 +456,33 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 }
 
 /**
- * ApplicationCells is the breakdown of the site view as a grid of small cards,
- * one for each application, in the order of the applications. Each card names
- * its application and gives its events per minute and its messages waiting, or
- * says that it is out of contact, and links to its application view.
+ * CellAlert is how a cell says that its application is out of contact: by an
+ * alert icon at the right of its name, whose popover says what is wrong, or by
+ * words beside its name.
  */
-/**
- * outOfContactWords is what the card of an application in [ApplicationCells]
- * says in place of its figures while the application is out of contact.
- */
-export const outOfContactWords = "Contact lost";
+export type CellAlert = "icon" | { words: string };
 
+/**
+ * ApplicationCells is the breakdown of the site view as a grid of cells, which
+ * are small cards, one for each application, in the order of the applications.
+ * Each cell names its application, gives its events per minute and its messages
+ * waiting, and links to its application view.
+ */
 export function ApplicationCells({
 	data,
-	outOfContact,
+	alert,
 }: {
 	data: SiteData;
 
-	/** What a card says in place of its figures while out of contact. */
-	outOfContact: string;
+	/** How a cell says that its application is out of contact. */
+	alert: CellAlert;
 }) {
 	return (
 		<ul className="grid grid-cols-[repeat(auto-fill,minmax(176px,1fr))] gap-3">
 			{data.applications.map((a) => (
 				<li key={a.application.key} className="min-w-0">
 					<ErrorBoundary>
-						<ApplicationCell
-							site={data.site}
-							app={a}
-							outOfContact={outOfContact}
-						/>
+						<ApplicationCell site={data.site} app={a} alert={alert} />
 					</ErrorBoundary>
 				</li>
 			))}
@@ -494,9 +491,9 @@ export function ApplicationCells({
 }
 
 /**
- * ApplicationCell is the card of one application in [ApplicationCells]. An
+ * ApplicationCell is the cell of one application in [ApplicationCells]. An
  * application that is out of contact has the red accent along its top, and says
- * so in red beside its name. Its figures keep their places, as zeros that are not
+ * so in red at the right of its name, as `alert` says. Its figures keep their places, as zeros that are not
  * available, which glitch when contact is lost, so that the blur alone says how
  * far a figure is trusted and the red alone says that contact is lost. An
  * application with failing messages has the orange accent. While only some of its
@@ -506,11 +503,11 @@ export function ApplicationCells({
 function ApplicationCell({
 	site,
 	app,
-	outOfContact,
+	alert,
 }: {
 	site: SiteData["site"];
 	app: SiteApplication;
-	outOfContact: string;
+	alert: CellAlert;
 }) {
 	const out = app.nodes === 0;
 	const failing = app.queues?.failing ?? 0;
@@ -522,7 +519,8 @@ function ApplicationCell({
 			className={cn(
 				cardClasses,
 				accent ? accentClasses[accent] : raisedClasses,
-				linkedCardClasses,
+				// A cell with an accent keeps it when pointed at, as a tile does.
+				accent ? "no-underline hover:no-underline" : linkedCardClasses,
 				"flex flex-col gap-1.5 px-3.5 pt-3 pb-2.5 text-fg",
 			)}
 		>
@@ -530,9 +528,17 @@ function ApplicationCell({
 				<span className="min-w-0 truncate text-xs font-bold tracking-[0.04em] uppercase">
 					{app.application.name}
 				</span>
-				{out && (
-					<span className="flex-none text-xs text-bad">{outOfContact}</span>
-				)}
+				{out &&
+					(alert === "icon" ? (
+						<Popover card content={<ContactLostCard app={app} />}>
+							<span className="flex-none self-center text-bad">
+								<Icon name="alert" className="size-4" />
+								<span className="sr-only">Contact lost</span>
+							</span>
+						</Popover>
+					) : (
+						<span className="flex-none text-xs text-bad">{alert.words}</span>
+					))}
 			</span>
 			<Distrusted value={out}>
 				<Covered coverage={app.coverage ?? 1}>
@@ -542,6 +548,32 @@ function ApplicationCell({
 		</a>
 	);
 }
+
+/**
+ * ContactLostCard is the card of the alert icon of a cell whose application is
+ * out of contact. It names the application and says, as a status, what losing
+ * contact means for the reader.
+ */
+export function ContactLostCard({ app }: { app: SiteApplication }) {
+	return (
+		<InfoCard
+			subsystem="cluster"
+			icon="application"
+			kind="Application"
+			identifier={
+				<span className="font-semibold text-fg">{app.application.name}</span>
+			}
+			status={{ icon: "alert", text: contactLostText }}
+		/>
+	);
+}
+
+/**
+ * contactLostText is the status of an application that is out of contact, as
+ * the engine card says it of an engine.
+ */
+const contactLostText =
+	"Contact with the application has been lost, so it's unknown whether the application is working.";
 
 /**
  * ApplicationFigures is the events per minute and the messages waiting of one
@@ -710,7 +742,7 @@ export function ApplicationCard({ app }: { app: SiteApplication }) {
 				out
 					? {
 							icon: "alert",
-							text: "Contact with the application has been lost, so it's unknown whether the application is working.",
+							text: contactLostText,
 						}
 					: undefined
 			}

@@ -171,8 +171,8 @@ export function ReviewPage() {
 								</State>
 								<State
 									label="Two applications out of contact, and two with only some nodes in contact"
-									note="The two out of contact, kyc and payroll, have the red accent and say &quot;Contact lost&quot; in red beside their names, and their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile counts the two out of contact in its detail line."
-									recommendation="Approve, with &quot;Contact lost&quot;. It says what happened, as a status, in two words. The red accent and the words mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
+									note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as the other cards have their icon there, and pointing at the icon shows a card that says contact with the application has been lost. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile counts the two out of contact in its detail line."
+									recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its card gives the words, as the status of a card does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 									wide
 								>
 									<SiteDemo data={siteOf(someOut, euWest)} />
@@ -215,20 +215,20 @@ export function ReviewPage() {
 								</State>
 								<Choices
 									of="B"
-									title="the words beside the name"
+									title="how a cell says that contact is lost"
 									framed={false}
 									choices={(
 										[
-											["No contact", "No contact"],
-											["Offline, as the engine tile says", "Offline"],
-											["Out of contact, as before", "out of contact"],
+											["Words beside the name: Contact lost", "Contact lost"],
+											["Words beside the name: No contact", "No contact"],
+											["Words beside the name: Offline", "Offline"],
 										] as const
 									).map(([label, words]) => [
 										label,
 										<ApplicationCells
 											key={label}
 											data={siteOf(someOut.slice(44, 50), euWest)}
-											outOfContact={words}
+											alert={{ words }}
 										/>,
 									])}
 								/>
