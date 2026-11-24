@@ -979,12 +979,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   about…"; then the annotated card, whose annotations say what each part is; and then a paragraph of the definitions
   of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
   Text that is true of this application only is drawn apart, on a sunken ground, with the icon of what it is about.
-  It names the application, in bold. The events card's reads "The statements application can spread its events
-  across several event streams. An even spread is
-  better; events on a stream are processed in order, so a stream that holds more than its fair share limits
-  throughput." and "The events of each aggregate instance are appended to one event stream, so their order is kept.",
-  shown whenever the card shows its bar of streams, with its first sentence chosen by whether the engine reports the
-  multiple-streams model. In a window too narrow for the annotations beside the card at full
+  It names the application, in bold. The events card's reads "The statements application spreads its events across
+  several event streams. An even spread is better; events on a stream are processed in order, so a stream that holds
+  more than its fair share limits throughput." and "Each aggregate instance's events are appended to a single event
+  stream, so their order is kept.", shown whenever the card shows its bar of streams, which an engine that reports the
+  multiple-streams model shows even while only one stream has been seen. In a window too narrow for the annotations beside the card at full
   size, each is a numbered marker on the card, and their words are listed under it, by number.
   The events card's explainer defines an event stream only when the card shows its streams. Each bar's advice, such
   as "An even spread is better", is in the explainer of its card, only when the card has the bar, and leaves the
