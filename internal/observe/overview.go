@@ -250,6 +250,72 @@ type Overview struct {
 	// Handlers is a card for each handler of the application, aggregates first,
 	// then processes, integrations and projections, each by name.
 	Handlers []HandlerCard `json:"handlers"`
+
+	// Versions says whether the nodes that report run the same versions of the
+	// engine and of the application.
+	Versions Versions `json:"versions"`
+}
+
+// Versions says whether the nodes of a cluster that report run the same version
+// of something, each as [VersionsSame], [VersionsDifferent] or [VersionsUnknown].
+type Versions struct {
+	// Engine is about the version of the engine software, as each node's
+	// preamble gives it.
+	Engine string `json:"engine"`
+
+	// Application is about the version of the application, as each node's
+	// preamble gives it.
+	Application string `json:"application"`
+}
+
+const (
+	// VersionsSame means that every node gives the same version.
+	VersionsSame = "same"
+
+	// VersionsDifferent means that two nodes give different versions.
+	VersionsDifferent = "different"
+
+	// VersionsUnknown means that no two nodes give different versions, but a
+	// node doesn't give its version, so it isn't known whether they are the same.
+	VersionsUnknown = "unknown"
+)
+
+// versionsOf returns whether the nodes that report at the time now run the same
+// versions of the engine and the application. Versions are compared only for
+// equality: the spec promises an order only for the engine's version, and
+// nothing here needs one.
+func versionsOf(now time.Time, nodes []Node) Versions {
+	compare := func(version func(Node) string) string {
+		seen := map[string]bool{}
+		unknown := false
+		for _, n := range nodes {
+			if !n.Reporting(now) {
+				continue
+			}
+			if v := version(n); v == "" {
+				unknown = true
+			} else {
+				seen[v] = true
+			}
+		}
+		switch {
+		case len(seen) > 1:
+			return VersionsDifferent
+		case unknown:
+			return VersionsUnknown
+		default:
+			return VersionsSame
+		}
+	}
+
+	return Versions{
+		Engine: compare(func(n Node) string {
+			return n.Preamble.GetImplementation().GetVersion()
+		}),
+		Application: compare(func(n Node) string {
+			return n.Preamble.GetApplication().GetVersion()
+		}),
+	}
 }
 
 // A part of a tile that no node of the cluster supports the metrics for is
@@ -777,6 +843,8 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 	for i := range o.Handlers {
 		o.Handlers[i].Coverage = handlers
 	}
+
+	o.Versions = versionsOf(now, nodes)
 
 	return app, o, r
 }

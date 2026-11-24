@@ -301,6 +301,10 @@ func documentOf(view observe.ClusterView) map[string]any {
 	if view.Down {
 		doc["down"] = true
 	}
+	doc["versions"] = map[string]any{
+		"engine":      o.Versions.Engine,
+		"application": o.Versions.Application,
+	}
 
 	if c := o.Cluster; c != nil {
 		cluster := map[string]any{}

@@ -1,7 +1,7 @@
 import type { Application, HandlerKind } from "../model.ts";
 import { ApplicationName } from "./ApplicationName.tsx";
 import { InfoCard } from "./InfoCard.tsx";
-import { partialStatus } from "./partial.ts";
+import { usePartialStatus } from "./partial.ts";
 import { handlerSubsystem, kindColors } from "./subsystems.ts";
 
 /**
@@ -43,6 +43,8 @@ export function HandlerKindCard({
 	 */
 	partial?: boolean;
 }) {
+	const partialStatus = usePartialStatus();
+
 	return (
 		<InfoCard
 			subsystem={handlerSubsystem(kind)}

@@ -1,7 +1,9 @@
+import { useContext } from "react";
 import { formatCompact, formatPercent } from "../lib/format.ts";
 import type { SegmentAbout } from "../lib/segments.ts";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
+import { VersionsContext, versionsSentence } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 
 /**
@@ -51,6 +53,7 @@ const things = {
  * nothing is promised about how an even distribution of workloads serves it.
  */
 export function SegmentCard({ about }: { about: SegmentAbout }) {
+	const versions = useContext(VersionsContext);
 	const of = things[about.thing];
 
 	// A node that doesn't report its workloads while others do has a share that
@@ -64,7 +67,7 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 				identifier={<Identifier id={about.id} of={of.kind.toLowerCase()} />}
 				status={{
 					icon: "alert",
-					text: "This node's workloads are unknown, but other nodes in the cluster report their workloads. This node may be running a different version of the engine.",
+					text: `This node's workloads are unknown, but other nodes in the cluster report their workloads.${versionsSentence(versions, "This node")}`,
 				}}
 			/>
 		);

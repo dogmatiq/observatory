@@ -33,7 +33,7 @@ import {
 } from "./Overview.tsx";
 import { Page } from "./Page.tsx";
 import { panelClasses } from "./Popover.tsx";
-import { partialStatus } from "./partial.ts";
+import { partialText } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 import { SegmentCard } from "./SegmentCard.tsx";
 
@@ -121,7 +121,7 @@ export function ReviewPage() {
 								recommendation="Approve, with this wording. It says what the nodes do, then what follows for the numbers, as the user sees them, and then the likely cause."
 							>
 								<Panel>
-									<EventsIconCard status={partialStatus.text} />
+									<EventsIconCard status={partialText(undefined)} />
 								</Panel>
 							</State>
 							<State

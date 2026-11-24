@@ -235,7 +235,26 @@ export interface OverviewData {
 	};
 
 	handlers: HandlerData[];
+
+	/**
+	 * Whether the nodes that report run the same versions of the engine and of
+	 * the application. Absent if the document doesn't say.
+	 */
+	versions?: Versions;
 }
+
+/**
+ * Whether the nodes of a cluster that report run the same version of the engine,
+ * and of the application: "same" if every node gives the same version,
+ * "different" if two give different ones, and "unknown" if none differ but a node
+ * doesn't give its version.
+ */
+export interface Versions {
+	engine: VersionsState;
+	application: VersionsState;
+}
+
+export type VersionsState = "same" | "different" | "unknown";
 
 export type HandlerKind =
 	| "aggregate"

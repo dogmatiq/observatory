@@ -337,6 +337,22 @@ test("a tile or a card that only some of the nodes report has their coverage", (
 	expect(selectCluster(s, 0)?.overview.events?.coverage).toBe(0.5);
 });
 
+test("the overview says whether the nodes run the same versions", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			versions: { engine: "different", application: "same" },
+			handlers: {},
+		}),
+		0,
+	]);
+
+	expect(selectCluster(s, 0)?.overview.versions).toEqual({
+		engine: "different",
+		application: "same",
+	});
+});
+
 test("apply doesn't change the snapshot that it is given", () => {
 	const before = applied([changed({ rates: { events: 1 } }), 0]);
 	apply(before, changed({ rates: { events: null } }), 1);

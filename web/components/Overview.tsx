@@ -20,7 +20,7 @@ import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
 import { describedClasses, Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
-import { partialStatus } from "./partial.ts";
+import { usePartialStatus, VersionsContext } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 import { RateCard, type RateWords } from "./RateCard.tsx";
 import { Sky } from "./Sky.tsx";
@@ -152,33 +152,35 @@ export function Overview({
 	down?: boolean;
 }) {
 	return (
-		<div className="grid gap-8">
-			<Totals
-				application={application}
-				data={data}
-				links={links}
-				clusterId={clusterId}
-				down={down}
-			/>
-			<section
-				className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5"
-				aria-label="Handlers"
-			>
-				{data.handlers.map((handler) => (
-					<ErrorBoundary key={handler.key}>
-						<Distrusted value={down}>
-							<Covered coverage={handler.coverage ?? 1}>
-								<HandlerCard
-									application={application}
-									handler={handler}
-									href={links.handler?.(handler.key)}
-								/>
-							</Covered>
-						</Distrusted>
-					</ErrorBoundary>
-				))}
-			</section>
-		</div>
+		<VersionsContext value={data.versions}>
+			<div className="grid gap-8">
+				<Totals
+					application={application}
+					data={data}
+					links={links}
+					clusterId={clusterId}
+					down={down}
+				/>
+				<section
+					className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5"
+					aria-label="Handlers"
+				>
+					{data.handlers.map((handler) => (
+						<ErrorBoundary key={handler.key}>
+							<Distrusted value={down}>
+								<Covered coverage={handler.coverage ?? 1}>
+									<HandlerCard
+										application={application}
+										handler={handler}
+										href={links.handler?.(handler.key)}
+									/>
+								</Covered>
+							</Distrusted>
+						</ErrorBoundary>
+					))}
+				</section>
+			</div>
+		</VersionsContext>
 	);
 }
 
@@ -216,6 +218,9 @@ export function EventsTile({
 	data: NonNullable<OverviewData["events"]>;
 	href: string | undefined;
 }) {
+	// The status of the card of the icon, while only some nodes report the tile.
+	const partialStatus = usePartialStatus();
+
 	const { rate, streams, oneStream } = data;
 	const total = streams?.reduce((sum, s) => sum + s.size, 0) ?? 0;
 
@@ -398,6 +403,9 @@ export function QueuesTile({
 	data: NonNullable<OverviewData["queues"]>;
 	href: string | undefined;
 }) {
+	// The status of the card of the icon, while only some nodes report the tile.
+	const partialStatus = usePartialStatus();
+
 	const { queues, throughput, oneQueue } = data;
 	const messages = queues?.reduce((sum, q) => sum + q.size, 0) ?? 0;
 

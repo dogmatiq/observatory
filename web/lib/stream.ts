@@ -10,6 +10,7 @@ import type {
 	LiveNode,
 	OverviewData,
 	SpreadPart,
+	VersionsState,
 } from "../model.ts";
 
 /**
@@ -580,6 +581,17 @@ export function selectCluster(
 	const rates = isObject(doc.rates) ? doc.rates : {};
 
 	const overview: OverviewData = { handlers: [] };
+
+	// Whether the nodes run the same versions, which the statuses of a section
+	// that only some nodes report say.
+	if (isObject(doc.versions)) {
+		const state = (v: unknown): VersionsState =>
+			v === "same" || v === "different" ? v : "unknown";
+		overview.versions = {
+			engine: state(doc.versions.engine),
+			application: state(doc.versions.application),
+		};
+	}
 
 	// A part of a tile that the document doesn't have is one that no node
 	// supports, and the tile leaves it out. A rate that the document has, and that
