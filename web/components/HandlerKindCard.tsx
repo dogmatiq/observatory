@@ -9,7 +9,7 @@ import { handlerSubsystem, kindColors } from "./subsystems.ts";
  * kind, with its article. It says what the handler does for the application
  * first, and then, as a secondary matter, which messages it handles.
  */
-const reminders: Record<HandlerKind, string> = {
+export const handlerKindReminders: Record<HandlerKind, string> = {
 	aggregate:
 		"An aggregate enforces the application's business rules for each of its instances, by deciding which events each command produces.",
 	process:
@@ -72,7 +72,7 @@ export function handlerKindAbout(
 				<span className="font-semibold text-fg">{name}</span> {kind} in the{" "}
 				<ApplicationName application={application} />.
 			</p>
-			<p>{reminders[kind]}</p>
+			<p>{handlerKindReminders[kind]}</p>
 		</>
 	);
 }

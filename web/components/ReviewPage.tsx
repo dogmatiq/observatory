@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { application, overview } from "../fixtures/overview.ts";
 import {
 	euWest,
@@ -10,6 +10,7 @@ import { Covered } from "../lib/distrust.tsx";
 import { formatCompact, formatPercent } from "../lib/format.ts";
 import { LiveData } from "../lib/live.tsx";
 import type { Application, OverviewData, SiteData } from "../model.ts";
+import { ApplicationName } from "./ApplicationName.tsx";
 import {
 	NodesCard,
 	nodesText,
@@ -17,7 +18,11 @@ import {
 	WorkloadsCard,
 } from "./ClusterCards.tsx";
 import { EngineCard, engineOutText } from "./EngineCard.tsx";
-import { handlerKindAbout } from "./HandlerKindCard.tsx";
+import {
+	HandlerKindCard,
+	handlerKindAbout,
+	handlerKindReminders,
+} from "./HandlerKindCard.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { messagesWaitingText } from "./MessagesWaitingCard.tsx";
@@ -52,6 +57,7 @@ import {
 	siteHandlingWords,
 	sitePartialStatus,
 } from "./SiteView.tsx";
+import { handlerSubsystem, kindColors } from "./subsystems.ts";
 
 /**
  * ReviewPage shows every state of the tiles that are being worked on, or that
@@ -319,6 +325,122 @@ export function ReviewPage() {
 									{siteAbout.applications(undefined)}
 								</InfoCard>
 							</Panel>
+						</div>
+					</State>
+				</Part>
+			</Tile>
+
+			<Tile
+				code="IC"
+				title="Which thing a card is about"
+				note="A rule for every card that opens from the page, on every view: where a card says which thing it is about. It comes before the site view's headline cards, because the card of a cell's alert icon follows it."
+			>
+				<Part
+					step={1}
+					title="The thing's name or ID, under its kind"
+					notDeciding={
+						"The other words of any card, which keep their own reviews; the card of a cell's alert icon, which is SH 2 and follows this rule either way; how an ID is shortened and copied, which is settled."
+					}
+					note="Today a card says which thing it is about in one of three ways: an ID under its kind, copyable, on the cards of a cluster, an engine, a stream, a queue and a node; a name under its kind, in bold, on the site view's application cards; or the name inside a sentence, on a handler's card. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;. The rule makes that concrete: a card about one thing shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. Sentences may still say where the thing is, such as which application it is in, because that is not its identity."
+				>
+					<State
+						label="A handler's card, under the rule"
+						note="The kind is AGGREGATE, as now, and its name, account, is beneath it, where the other cards name their thing. The sentence says &quot;this aggregate&quot; and where it is. This is the only card that the rule changes."
+						recommendation="Approve. The handler is named where every other card names its thing, so a reader always finds it in the same place, and a handler named &quot;aggregate&quot; still reads clearly."
+						precedents={[
+							{
+								where:
+									"On the cluster view, the card of a handler card's kind icon",
+								status: "settled",
+								words: handlerKindAbout(atSite, "account", "aggregate"),
+							},
+						]}
+					>
+						<Panel>
+							<InfoCard
+								subsystem={handlerSubsystem("aggregate")}
+								icon="aggregate"
+								iconColor={kindColors.aggregate}
+								kind="aggregate"
+								identifier={
+									<span className="font-semibold text-fg">account</span>
+								}
+							>
+								<p>
+									This section shows information about this aggregate in the{" "}
+									<ApplicationName application={atSite} />.
+								</p>
+								<p>{handlerKindReminders.aggregate}</p>
+							</InfoCard>
+						</Panel>
+					</State>
+					<Choices
+						of="A"
+						title="where a handler's card names the handler"
+						choices={[
+							[
+								"As it is now, with the name in the sentence",
+								<HandlerKindCard
+									key="now"
+									application={atSite}
+									name="account"
+									kind="aggregate"
+								/>,
+							],
+						]}
+					/>
+					<State
+						label="The cards that already follow the rule"
+						note="Shown so that the rule can be seen whole; none of them changes. The cards of a section about many things, such as the events tile's icon, name no one thing, so they have nothing under their kind."
+						recommendation="Approve the rule as these cards show it: a name in bold where the thing has one, an ID where it has only an ID, and nothing where the card is about many things."
+						wide
+					>
+						<div className="flex flex-wrap items-start gap-6">
+							<Captioned caption="Has a name: an application on a bar">
+								<SegmentCard
+									about={{
+										thing: "application",
+										of: "events",
+										application: { name: "payments", key: "p" },
+										amount: 2140,
+										share: 0.1834,
+									}}
+								/>
+							</Captioned>
+							<Captioned caption="Has a name: a cell's alert icon">
+								<ContactLostCard app={contactLostExample} />
+							</Captioned>
+							<Captioned caption="Has only an ID: the cluster tile's icon">
+								<InfoCard
+									subsystem="cluster"
+									icon="cluster"
+									kind="Cluster"
+									identifier={
+										<Identifier
+											id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
+											of="cluster"
+										/>
+									}
+								>
+									{clusterAbout(atSite)}
+								</InfoCard>
+							</Captioned>
+							<Captioned caption="Has only an ID: a stream on a bar">
+								<SegmentCard
+									about={{
+										thing: "event-stream",
+										id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
+										amount: 612,
+										share: 0.42,
+										total: { amount: 1457, things: 3 },
+									}}
+								/>
+							</Captioned>
+							<Captioned caption="About many things: the events tile's icon">
+								<InfoCard subsystem="streams" icon="event" kind="Events">
+									{eventsAbout(atSite)}
+								</InfoCard>
+							</Captioned>
 						</div>
 					</State>
 				</Part>
@@ -1564,6 +1686,25 @@ export function ReviewPage() {
 const contactLostExample = withContact(siteApplications, { out: ["kyc"] }).find(
 	(a) => a.application.name === "kyc",
 ) as SiteData["applications"][number];
+
+/**
+ * Captioned shows a card in the frame of a panel, with a caption above it that
+ * says which card it is.
+ */
+function Captioned({
+	caption,
+	children,
+}: {
+	caption: string;
+	children: ReactNode;
+}) {
+	return (
+		<div className="flex flex-col gap-2">
+			<span className="text-xs text-muted">{caption}</span>
+			<Panel>{children}</Panel>
+		</div>
+	);
+}
 
 /** The application of the cluster view's fixture, at a site. */
 const atSite = { ...application, site: "eu-west" };
