@@ -67,10 +67,10 @@ import { handlerSubsystem, kindColors } from "./subsystems.ts";
  * a layout first, then about states, then about words. Each tile is
  * shown whole, and then part by part, in the order of review, from the least
  * specific to the most: its icon, its headline, its detail line, its
- * bar and its chart. A card whose words never change, and that has a status in
+ * bar and its chart. A hovercard whose words never change, and that has a status in
  * some states, is shown once, with its status.
  *
- * A popover is drawn where it stands, in the frame of a panel, because a person
+ * A hovercard is drawn where it stands, in the frame of a panel, because a person
  * can't point at several at once.
  */
 export function ReviewPage() {
@@ -85,7 +85,7 @@ export function ReviewPage() {
 					step={0}
 					title="Tiles above, applications below"
 					notDeciding={
-						"What the tiles and the cards say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or contact is lost (SS); whether the grid is of cards or of squares (SL 1)."
+						"What the tiles and the compact digests say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or contact is lost (SS); whether the grid is of compact digests or of squares (SL 1)."
 					}
 					recommendation="Approve the layout. The tiles answer how busy the site is and whether anything is wrong, and the grid below answers where, with every application one click from its view."
 					note="The three tiles are the events per minute, the messages waiting and the applications in contact. The applications are in the order of their names, so that an application keeps its place."
@@ -99,13 +99,13 @@ export function ReviewPage() {
 					step={1}
 					title="The grid of applications"
 					notDeciding={
-						"What a card's figures are, and what their popovers say (SH); how a card looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
+						"What a compact digest's figures are, and what their hovercards say (SH); how a compact digest looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
 					}
-					note="Each application is a small card with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
+					note="Each application is a compact digest with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
 				>
 					<State
-						label="Cards with names and figures"
-						recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred cards fit in about a screen."
+						label="Compact digests with names and figures"
+						recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred compact digests fit in about a screen."
 						wide
 					>
 						<SiteBreakdown
@@ -134,13 +134,13 @@ export function ReviewPage() {
 			<Tile
 				code="SS"
 				title="Site view: states"
-				note="How the view looks as its applications' messages fail and as contact with them is lost: the accents, the blur and the words that take the place of a card's figures. The words of the tiles' cards come in the next chunk."
+				note="How the view looks as its applications' messages fail and as contact with them is lost: the accents, the blur and the words that take the place of a compact digest's figures. The words of the tiles' hovercards come in the next chunk."
 			>
 				<Part
 					step={0}
 					title="The view in each state"
 					notDeciding={
-						"The layout (SL); what the tiles and their cards say, including the card that explains the applications tile's headline (SW and SH); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
+						"The layout (SL); what the tiles and their hovercards say, including the hovercard that explains the applications tile's headline (SW and SH); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
 					}
 				>
 					<State
@@ -153,8 +153,8 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="Two applications out of contact, and two with only some nodes in contact"
-						note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as the other cards have their icon there, and pointing at the icon shows a card that says the application is out of contact, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
-						recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its card gives the words, as the status of a card does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
+						note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as tiles and handler digests have their icon there, and pointing at the icon shows a hovercard that says the application is out of contact, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
+						recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its hovercard gives the words, as the status of a hovercard does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 						wide
 					>
 						<SiteDemo data={siteOf(someOut, euWest)} />
@@ -218,15 +218,15 @@ export function ReviewPage() {
 			<Tile
 				code="SW"
 				title="Site view: the icons' words"
-				note="What the card of each tile's icon says."
+				note="What the hovercard of each tile's icon says."
 			>
 				<Part
 					step={1}
 					title="The icons"
 					notDeciding={
-						"How the cards look, which is as on the cluster view; the cards of the headlines (SH); the words in a card of the grid (SS); what a site is, which nothing on the view explains yet."
+						"How the hovercards look, which is as on the cluster view; the hovercards of the headlines (SH); the words in a compact digest of the grid (SS); what a site is, which nothing on the view explains yet."
 					}
-					note="The card of each tile's icon says what its section is about. Nothing on the view says what a site is yet. While only some of the applications' nodes report what the events or queues tile shows, its card says why, as a status. It says nothing about versions, because the applications at a site run different engines and versions as a matter of course."
+					note="The hovercard of each tile's icon says what its section is about. Nothing on the view says what a site is yet. While only some of the applications' nodes report what the events or queues tile shows, its hovercard says why, as a status. It says nothing about versions, because the applications at a site run different engines and versions as a matter of course."
 				>
 					<State
 						label="The events tile, while only some nodes report it"
@@ -305,7 +305,7 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="At no site"
-						note="The same cards, for the applications that run at no site. They say only &quot;the applications&quot;, so that an operator who has no sites never meets the word &quot;site&quot;."
+						note="The same hovercards, for the applications that run at no site. They say only &quot;the applications&quot;, so that an operator who has no sites never meets the word &quot;site&quot;."
 						recommendation="Approve, with this wording."
 					>
 						<div className="grid gap-3">
@@ -335,25 +335,25 @@ export function ReviewPage() {
 
 			<Tile
 				code="IC"
-				title="Which thing a card is about"
-				note="A rule for every card that opens from the page, on every view: where a card says which thing it is about. It comes before the site view's headline cards, because the card of a compact digest's alert icon follows it."
+				title="Which thing a hovercard is about"
+				note="A rule for every hovercard that opens from the page, on every view: where a hovercard says which thing it is about. It comes before the site view's headline hovercards, because the hovercard of a compact digest's alert icon follows it."
 			>
 				<Part
 					step={1}
 					title="The thing's name or ID, under its kind"
 					notDeciding={
-						"The other words of any card, which keep their own reviews; the card of a compact digest's alert icon, which is SH 2 and follows this rule either way; how an ID is shortened and copied, which is settled."
+						"The other words of any hovercard, which keep their own reviews; the hovercard of a compact digest's alert icon, which is SH 2 and follows this rule either way; how an ID is shortened and copied, which is settled."
 					}
-					note="Today a card says which thing it is about in one of three ways: an ID under its kind, copyable, on the cards of a cluster, an engine, a stream, a queue and a node; a name under its kind, in bold, on the site view's application cards; or the name inside a sentence, on a handler's card. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;. The rule makes that concrete: a card about one thing shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. Sentences may still say where the thing is, such as which application it is in, because that is not its identity."
+					note="Today a hovercard says which thing it is about in one of three ways: an ID under its kind, copyable, on the hovercards of a cluster, an engine, a stream, a queue and a node; a name under its kind, in bold, on the site view's application hovercards; or the name inside a sentence, on a handler's hovercard. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;. The rule makes that concrete: a hovercard about one thing shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. Sentences may still say where the thing is, such as which application it is in, because that is not its identity."
 				>
 					<State
-						label="A handler's card, under the rule"
-						note="The kind is AGGREGATE, as now, and its name, account, is beneath it, where the other cards name their thing. The sentence says &quot;this aggregate&quot; and where it is. This is the only card that the rule changes."
-						recommendation="Approve. The handler is named where every other card names its thing, so a reader always finds it in the same place, and a handler named &quot;aggregate&quot; still reads clearly."
+						label="A handler's hovercard, under the rule"
+						note="The kind is AGGREGATE, as now, and its name, account, is beneath it, where the other hovercards name their thing. The sentence says &quot;this aggregate&quot; and where it is. This is the only hovercard that the rule changes."
+						recommendation="Approve. The handler is named where every other hovercard names its thing, so a reader always finds it in the same place, and a handler named &quot;aggregate&quot; still reads clearly."
 						precedents={[
 							{
 								where:
-									"On the cluster view, the card of a handler digest's kind icon",
+									"On the cluster view, the hovercard of a handler digest's kind icon",
 								status: "settled",
 								words: handlerKindAbout(atSite, "account", "aggregate"),
 							},
@@ -379,7 +379,7 @@ export function ReviewPage() {
 					</State>
 					<Choices
 						of="A"
-						title="where a handler's card names the handler"
+						title="where a handler's hovercard names the handler"
 						choices={[
 							[
 								"As it is now, with the name in the sentence",
@@ -393,9 +393,9 @@ export function ReviewPage() {
 						]}
 					/>
 					<State
-						label="The cards that already follow the rule"
-						note="Shown so that the rule can be seen whole; none of them changes. The cards of a section about many things, such as the events tile's icon, name no one thing, so they have nothing under their kind."
-						recommendation="Approve the rule as these cards show it: a name in bold where the thing has one, an ID where it has only an ID, and nothing where the card is about many things."
+						label="The hovercards that already follow the rule"
+						note="Shown so that the rule can be seen whole; none of them changes. The hovercards of a section about many things, such as the events tile's icon, name no one thing, so they have nothing under their kind."
+						recommendation="Approve the rule as these hovercards show it: a name in bold where the thing has one, an ID where it has only an ID, and nothing where the hovercard is about many things."
 						wide
 					>
 						<div className="flex flex-wrap items-start gap-6">
@@ -452,13 +452,13 @@ export function ReviewPage() {
 			<Tile
 				code="SH"
 				title="Site view: the headlines' words"
-				note="What each tile's headline and detail line say, and then what the card of each headline says."
+				note="What each tile's headline and detail line say, and then what the hovercard of each headline says."
 			>
 				<Part
 					step={1}
 					title="The headlines and detail lines"
 					notDeciding={
-						"The cards that open when the headlines and detail lines are pointed at (SH 2); the cards of the icons (SW); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
+						"The hovercards that open when the headlines and detail lines are pointed at (SH 2); the hovercards of the icons (SW); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
 					}
 					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
 				>
@@ -485,20 +485,20 @@ export function ReviewPage() {
 
 				<Part
 					step={2}
-					title="The cards of the headlines"
+					title="The hovercards of the headlines"
 					notDeciding={
-						"The words on the tiles themselves (SH 1); the card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
+						"The words on the tiles themselves (SH 1); the hovercard of the messages waiting, which is the cluster view's and settled; the hovercards of the icons (SW); the hovercards of the bars' segments (SB)."
 					}
-					note="The card that opens when a tile's headline, or the words of its detail line, are pointed at, and the card of the alert icon of a compact digest whose application is out of contact."
+					note="The hovercard that opens when a tile's headline, or the words of its detail line, are pointed at, and the hovercard of the alert icon of a compact digest whose application is out of contact."
 				>
 					<State
-						label="The card of a compact digest's alert icon"
-						note="It names the application, and its status says what losing contact means for the reader. Its form follows the engine card's status, which is under review at WD 5, so it follows whatever WD 5 decides."
-						recommendation="Approve, with this wording. It is the engine card's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
+						label="The hovercard of a compact digest's alert icon"
+						note="It names the application, and its status says what losing contact means for the reader. Its form follows the engine hovercard's status, which is under review at WD 5, so it follows whatever WD 5 decides."
+						recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
 						precedents={[
 							{
 								where:
-									"On the cluster view, the card of a handler digest's kind icon, for its shape",
+									"On the cluster view, the hovercard of a handler digest's kind icon, for its shape",
 								status: "settled",
 								words: (
 									<>
@@ -512,7 +512,7 @@ export function ReviewPage() {
 							},
 							{
 								where:
-									"On the cluster view, the status of the engine card, for its words",
+									"On the cluster view, the status of the engine hovercard, for its words",
 								status: { underReview: "WD 5" },
 								words: <p>{engineOutText}</p>,
 							},
@@ -523,10 +523,11 @@ export function ReviewPage() {
 						</Panel>
 					</State>
 					<State
-						label="The card of the applications in contact"
+						label="The hovercard of the applications in contact"
 						precedents={[
 							{
-								where: "On the cluster view, the card of the cluster nodes",
+								where:
+									"On the cluster view, the hovercard of the cluster nodes",
 								status: { underReview: "CL 2 and WD 1" },
 								words: <p>{nodesText}</p>,
 							},
@@ -536,23 +537,24 @@ export function ReviewPage() {
 								words: <p>{noNodesText}</p>,
 							},
 							{
-								where: "The card of the messages waiting",
+								where: "The hovercard of the messages waiting",
 								status: "settled",
 								words: <p>{messagesWaitingText}</p>,
 							},
 						]}
 						note="Its status is there only while every application is out of contact."
-						recommendation="Approve, with this wording and example. It covers an engine that clusters and one that doesn't, so it says &quot;its engine, or any node of its cluster&quot;, and its example is the messages waiting card's, with red in place of orange. The status follows the cluster's &quot;Every node is out of contact, so it's unknown whether the application is working&quot;."
+						recommendation="Approve, with this wording and example. It covers an engine that clusters and one that doesn't, so it says &quot;its engine, or any node of its cluster&quot;, and its example is the messages waiting hovercard's, with red in place of orange. The status follows the cluster's &quot;Every node is out of contact, so it's unknown whether the application is working&quot;."
 					>
 						<Panel>
 							<ApplicationsCard live={0} />
 						</Panel>
 					</State>
 					<State
-						label="The card of the events per minute"
+						label="The hovercard of the events per minute"
 						precedents={[
 							{
-								where: "On the cluster view, the card of the events per minute",
+								where:
+									"On the cluster view, the hovercard of the events per minute",
 								status: "settled",
 								words: (
 									<p>
@@ -573,11 +575,11 @@ export function ReviewPage() {
 						</Panel>
 					</State>
 					<State
-						label="The card of the messages handled per minute"
+						label="The hovercard of the messages handled per minute"
 						precedents={[
 							{
 								where:
-									"On the cluster view, the card of the messages handled per minute",
+									"On the cluster view, the hovercard of the messages handled per minute",
 								status: "settled",
 								words: (
 									<>
@@ -607,22 +609,22 @@ export function ReviewPage() {
 			<Tile
 				code="SB"
 				title="Site view: the bars"
-				note="The card of a segment of the events and queues tiles' bars."
+				note="The hovercard of a segment of the events and queues tiles' bars."
 			>
 				<Part
 					step={1}
 					title="The bars"
 					notDeciding={
-						"How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' other cards (SW and SH)."
+						"How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' other hovercards (SW and SH)."
 					}
-					note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's card drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
+					note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's hovercard drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
 				>
 					<State
 						label="Pointing at an application on the events bar"
 						precedents={[
 							{
 								where:
-									"On the cluster view, the card of a stream on the events bar",
+									"On the cluster view, the hovercard of a stream on the events bar",
 								status: { underReview: "EV 4" },
 								words: (
 									<>
@@ -651,7 +653,7 @@ export function ReviewPage() {
 						precedents={[
 							{
 								where:
-									"On the cluster view, the card of a queue on the queues bar",
+									"On the cluster view, the hovercard of a queue on the queues bar",
 								status: { underReview: "QU 4" },
 								words: (
 									<>
@@ -706,13 +708,13 @@ export function ReviewPage() {
 			<Tile
 				code="EV"
 				title="Events tile"
-				note="Under review: the status on the card of the icon while only some nodes report what the tile shows, and the card of a segment of the bar, which drills down, with its figures apart from its words. The rest of the tile is settled, including the tile of an engine that appends every event to one stream."
+				note="Under review: the status on the hovercard of the icon while only some nodes report what the tile shows, and the hovercard of a segment of the bar, which drills down, with its figures apart from its words. The rest of the tile is settled, including the tile of an engine that appends every event to one stream."
 			>
 				<Part
 					step={0}
 					title="The tile"
 					notDeciding={
-						"What the cards say: the status on the icon's card (EV 1) and the card of a segment of the bar (EV 4), though they open when pointed at here."
+						"What the hovercards say: the status on the icon's hovercard (EV 1) and the hovercard of a segment of the bar (EV 4), though they open when pointed at here."
 					}
 				>
 					<State label="Several streams" decided>
@@ -750,10 +752,10 @@ export function ReviewPage() {
 					step={1}
 					title="The icon"
 					notDeciding={
-						"The blur and the glitch (EV 0); the card's first paragraph, which is settled."
+						"The blur and the glitch (EV 0); the hovercard's first paragraph, which is settled."
 					}
 					decided={false}
-					note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The card of the icon says why, as a status. The queues tile and the kind icon of a handler digest show the same status in the same case."
+					note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The hovercard of the icon says why, as a status. The queues tile and the kind icon of a handler digest show the same status in the same case."
 				>
 					<State
 						label="Only some of the nodes report what the tile shows"
@@ -770,11 +772,11 @@ export function ReviewPage() {
 					step={4}
 					title="The bar"
 					notDeciding={
-						"Which streams the bar shows, and how it is drawn, which are settled; the status on the icon's card (EV 1)."
+						"Which streams the bar shows, and how it is drawn, which are settled; the status on the icon's hovercard (EV 1)."
 					}
 					decided={false}
 					recommendation="Approve. The sentence about the bar is the same each time and has no figures in it, which are the stream's events and share."
-					note="Each segment is an event stream, and has the card of that stream: its events and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that appends every event to one stream has no bar, so the card is only ever of one of several streams."
+					note="Each segment is an event stream, and has the hovercard of that stream: its events and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that appends every event to one stream has no bar, so the hovercard is only ever of one of several streams."
 				>
 					{(
 						[
@@ -806,7 +808,7 @@ export function ReviewPage() {
 			<Tile
 				code="QU"
 				title="Queues tile"
-				note="Under review: the card of a segment of the bar, as on the events tile. The rest of the tile is settled, including the tile of an engine that keeps every message in one queue."
+				note="Under review: the hovercard of a segment of the bar, as on the events tile. The rest of the tile is settled, including the tile of an engine that keeps every message in one queue."
 			>
 				<Part step={0} title="The tile" decided>
 					<State label="Several queues" decided>
@@ -838,11 +840,11 @@ export function ReviewPage() {
 					step={4}
 					title="The bar"
 					notDeciding={
-						"Which queues the bar shows, and how it is drawn, which are settled; the card of a segment of the events tile's bar (EV 4)."
+						"Which queues the bar shows, and how it is drawn, which are settled; the hovercard of a segment of the events tile's bar (EV 4)."
 					}
 					decided={false}
 					recommendation="Approve, as the events tile's bar."
-					note="Each segment is a queue, and has the card of that queue: its messages and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that keeps every message in one queue has no bar, so the card is only ever of one of several queues."
+					note="Each segment is a queue, and has the hovercard of that queue: its messages and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that keeps every message in one queue has no bar, so the hovercard is only ever of one of several queues."
 				>
 					{(
 						[
@@ -875,7 +877,7 @@ export function ReviewPage() {
 					step={0}
 					title="The tile"
 					notDeciding={
-						"What any card says (CL 2 to CL 4, and WD); the chart, which is settled (CL 5). Only the state of a node that doesn't report its workloads is open here."
+						"What any hovercard says (CL 2 to CL 4, and WD); the chart, which is settled (CL 5). Only the state of a node that doesn't report its workloads is open here."
 					}
 				>
 					{(
@@ -914,7 +916,7 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="A node that doesn't report its workloads"
-						note="Other nodes report their workloads and this one doesn't, so this one is supported and not working, and its card says only that its workloads are unknown: its share isn't known, and its segment is a faint square. The number of workloads counts only the nodes that report them, blurred by how few they are."
+						note="Other nodes report their workloads and this one doesn't, so this one is supported and not working, and its hovercard says only that its workloads are unknown: its share isn't known, and its segment is a faint square. The number of workloads counts only the nodes that report them, blurred by how few they are."
 						decided={false}
 						recommendation="Approve. The cluster supports what any of its nodes supports, and a node that doesn't is supported and not working, which it stops being when every node supports the same things."
 					>
@@ -960,15 +962,15 @@ export function ReviewPage() {
 					step={2}
 					title="The headline"
 					notDeciding={
-						"The words for contact in the card's first sentence and in its status (WD 1 and WD 2); the card of the workloads (CL 3)."
+						"The words for contact in the hovercard's first sentence and in its status (WD 1 and WD 2); the hovercard of the workloads (CL 3)."
 					}
 					decided={false}
-					recommendation="Approve. The card counts nodes, so it has the node's icon, as the card of each node on the bar does, and its words never change."
-					note="Its words never change. Its icon is the node's, because the number counts nodes. The status at the bottom shows only while no node is live, so the card is shown with it."
+					recommendation="Approve. The hovercard counts nodes, so it has the node's icon, as the hovercard of each node on the bar does, and its words never change."
+					note="Its words never change. Its icon is the node's, because the number counts nodes. The status at the bottom shows only while no node is live, so the hovercard is shown with it."
 				>
 					<State
 						label="Pointing at the number of nodes"
-						recommendation="Approve, with this wording. It starts by saying what the number is, as the cards of the rates and of the messages waiting do, and says that it counts the nodes in contact, so that a count during an outage of one node isn't read as the size of the cluster. The words for contact are reviewed on their own, at WD."
+						recommendation="Approve, with this wording. It starts by saying what the number is, as the hovercards of the rates and of the messages waiting do, and says that it counts the nodes in contact, so that a count during an outage of one node isn't read as the size of the cluster. The words for contact are reviewed on their own, at WD."
 					>
 						<Panel>
 							<NodesCard live={0} />
@@ -976,7 +978,7 @@ export function ReviewPage() {
 					</State>
 					<Choices
 						of="A"
-						title="what the card says about the count"
+						title="what the hovercard says about the count"
 						choices={[
 							[
 								"As it was",
@@ -1067,11 +1069,11 @@ export function ReviewPage() {
 					step={3}
 					title="The detail line"
 					notDeciding={
-						"The card of the words “cluster nodes”, which is the headline's (CL 2); the bar (CL 4)."
+						"The hovercard of the words “cluster nodes”, which is the headline's (CL 2); the bar (CL 4)."
 					}
 					decided={false}
-					recommendation="Approve. Its words never change. While only some of the nodes report their workloads, the number counts the workloads of the nodes that do, blurred by how few they are, and the card says so, as a status, which is shown here."
-					note="The line under the headline, such as “cluster nodes, 5 workloads”. The words “cluster nodes” have the card of the headline, above. The workloads have their own, which never changes, and are left out for an engine that doesn't divide its work."
+					recommendation="Approve. Its words never change. While only some of the nodes report their workloads, the number counts the workloads of the nodes that do, blurred by how few they are, and the hovercard says so, as a status, which is shown here."
+					note="The line under the headline, such as “cluster nodes, 5 workloads”. The words “cluster nodes” have the hovercard of the headline, above. The workloads have their own, which never changes, and are left out for an engine that doesn't divide its work."
 				>
 					<State
 						label="Pointing at “5 workloads”"
@@ -1121,11 +1123,11 @@ export function ReviewPage() {
 					step={4}
 					title="The bar"
 					notDeciding={
-						"How the bar is drawn, which is settled; the card of the workloads in the detail line (CL 3)."
+						"How the bar is drawn, which is settled; the hovercard of the workloads in the detail line (CL 3)."
 					}
 					decided={false}
-					recommendation="Approve. A node's card drills down: its workloads and its share are its figures, a node that owns none has no share, and a node that doesn't report its workloads, while others do, shows only its ID, with a status. The words about the bar never change."
-					note="Each segment is a node, and has the card of that node. The card drills down: its figures are the node's workloads and its share of them, and its words, about the bar, never change. A node that owns none has no share."
+					recommendation="Approve. A node's hovercard drills down: its workloads and its share are its figures, a node that owns none has no share, and a node that doesn't report its workloads, while others do, shows only its ID, with a status. The words about the bar never change."
+					note="Each segment is a node, and has the hovercard of that node. The hovercard drills down: its figures are the node's workloads and its share of them, and its words, about the bar, never change. A node that owns none has no share."
 				>
 					{(
 						[
@@ -1159,9 +1161,9 @@ export function ReviewPage() {
 					))}
 					<State
 						label="Pointing at a node that doesn't report its workloads"
-						note="Other nodes report their workloads and this one doesn't, so its card has a status. One or several nodes can be in this state at once."
+						note="Other nodes report their workloads and this one doesn't, so its hovercard has a status. One or several nodes can be in this state at once."
 						decided={false}
-						recommendation="Approve, with this wording. It is supported and not working, so it keeps its place in the bar, as a faint square, and its card says why, as a status, without a negation."
+						recommendation="Approve, with this wording. It is supported and not working, so it keeps its place in the bar, as a faint square, and its hovercard says why, as a status, without a negation."
 					>
 						<Panel>
 							<SegmentCard
@@ -1336,11 +1338,11 @@ export function ReviewPage() {
 					step={2}
 					title="The headline"
 					notDeciding={
-						"The words for contact in the card (WD 3 to WD 5); the chart (EN 3)."
+						"The words for contact in the hovercard (WD 3 to WD 5); the chart (EN 3)."
 					}
 					decided={false}
-					recommendation="Approve. The card says what being online means for the reader, and the status says what is unknown once contact is lost. Neither mentions nodes or clusters."
-					note="Its words never change. The status at the bottom shows only while the engine is offline, so the card is shown with it."
+					recommendation="Approve. The hovercard says what being online means for the reader, and the status says what is unknown once contact is lost. Neither mentions nodes or clusters."
+					note="Its words never change. The status at the bottom shows only while the engine is offline, so the hovercard is shown with it."
 				>
 					<State
 						label="Pointing at “Online” or “Offline”"
@@ -1420,15 +1422,15 @@ export function ReviewPage() {
 			<Tile
 				code="WD"
 				title="Words for contact"
-				note="Each place where a card says what is in contact with the nodes, or with the engine, reviewed on its own until there is a consensus. The user is using an app, so a card doesn't say &quot;this page&quot;. Each state shows the card with that one place changed, and its other words as recommended."
+				note="Each place where a hovercard says what is in contact with the nodes, or with the engine, reviewed on its own until there is a consensus. The user is using an app, so a hovercard doesn't say &quot;this page&quot;. Each state shows the hovercard with that one place changed, and its other words as recommended."
 			>
 				<Part
 					step={1}
 					title="The cluster nodes card: what the number counts"
 					notDeciding={
-						"The status of the same card (WD 2); the rest of the card (CL 2)."
+						"The status of the same hovercard (WD 2); the rest of the hovercard (CL 2)."
 					}
-					note="The first sentence of the card on the cluster tile's headline."
+					note="The first sentence of the hovercard on the cluster tile's headline."
 				>
 					<State
 						label="In contact, with no one named"
@@ -1486,15 +1488,15 @@ export function ReviewPage() {
 					step={2}
 					title="The cluster nodes card: the status when no node is in contact"
 					notDeciding={
-						"The card's first sentence (WD 1); the rest of the card (CL 2)."
+						"The hovercard's first sentence (WD 1); the rest of the hovercard (CL 2)."
 					}
-					note="The status of the same card while no node is in contact."
+					note="The status of the same hovercard while no node is in contact."
 				>
 					<State
 						label="Out of contact"
 						wide
 						recommendation={
-							'Approve, with this wording. "Out of contact" says what is known, names no one, and is about the nodes, which are what the card counts.'
+							'Approve, with this wording. "Out of contact" says what is known, names no one, and is about the nodes, which are what the hovercard counts.'
 						}
 					>
 						<ContactCard
@@ -1538,14 +1540,14 @@ export function ReviewPage() {
 					step={3}
 					title="The engine card: what online means"
 					notDeciding={
-						"The second half of the sentence (WD 4); the status (WD 5); the rest of the card (EN 2)."
+						"The second half of the sentence (WD 4); the status (WD 5); the rest of the hovercard (EN 2)."
 					}
-					note="The first half of the card on the engine tile's headline."
+					note="The first half of the hovercard on the engine tile's headline."
 				>
 					<State
 						label="In contact, with no one named"
 						wide
-						recommendation="Approve, with this wording. It defines online by contact, as the cluster's card counts nodes by it, without naming the app."
+						recommendation="Approve, with this wording. It defines online by contact, as the cluster's hovercard counts nodes by it, without naming the app."
 					>
 						<ContactCard
 							card="engine-online"
@@ -1588,7 +1590,7 @@ export function ReviewPage() {
 					step={4}
 					title="The engine card: which figures are current"
 					notDeciding={
-						"The first half of the sentence (WD 3); the status (WD 5); the rest of the card (EN 2)."
+						"The first half of the sentence (WD 3); the status (WD 5); the rest of the hovercard (EN 2)."
 					}
 					note={
 						'The second half of the same sentence, which said "the figures on this page".'
@@ -1642,9 +1644,9 @@ export function ReviewPage() {
 					step={5}
 					title="The engine card: the status when the engine is out of contact"
 					notDeciding={
-						"The card's sentence (WD 3 and WD 4); the rest of the card (EN 2)."
+						"The hovercard's sentence (WD 3 and WD 4); the rest of the hovercard (EN 2)."
 					}
-					note="The status of the same card while the engine is offline."
+					note="The status of the same hovercard while the engine is offline."
 				>
 					<State
 						label="Out of contact"
@@ -1691,8 +1693,8 @@ const contactLostExample = withContact(siteApplications, { out: ["kyc"] }).find(
 ) as SiteData["applications"][number];
 
 /**
- * Captioned shows a card in the frame of a panel, with a caption above it that
- * says which card it is.
+ * Captioned shows a hovercard in the frame of a panel, with a caption above it that
+ * says which hovercard it is.
  */
 function Captioned({
 	caption,
@@ -1941,11 +1943,11 @@ function clusterTile(nodes: number): NonNullable<OverviewData["cluster"]> {
 
 /** The data of the events tile, with the given rate, or without one. */
 /** A figure at the size of a headline, with buttons that do things to it. */
-/** A card of a process, with buttons that change the numbers on it. */
+/** A handler digest of a process, with buttons that change the numbers on it. */
 /** A count of failing messages after a number, with buttons that change it. */
 /**
- * ContactCard draws the card of the cluster's nodes or of the engine, with `text`
- * in the place that `card` names, and the card's other words as recommended, so
+ * ContactCard draws the hovercard of the cluster's nodes or of the engine, with `text`
+ * in the place that `card` names, and the hovercard's other words as recommended, so
  * that one place's words can be judged on their own.
  */
 function ContactCard({
@@ -2058,11 +2060,11 @@ function CoverageDemo() {
 	);
 }
 
-/** The ID of the node that the cards of a node on this page are of. */
+/** The ID of the node that the hovercards of a node on this page are of. */
 const nodeId = "113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93";
 
 /**
- * NodeCardWith is the card of a node on the cluster tile's bar, with other words
+ * NodeCardWith is the hovercard of a node on the cluster tile's bar, with other words
  * than its own, for a choice of wording: `paragraphs` for one that owns three of
  * five workloads, or `status` for one that doesn't report its workloads.
  */
@@ -2097,7 +2099,7 @@ function NodeCardWith({
 	);
 }
 
-/** EventsIconCard is the card of the events tile's icon, with `status`. */
+/** EventsIconCard is the hovercard of the events tile's icon, with `status`. */
 function EventsIconCard({ status }: { status: string }) {
 	return (
 		<InfoCard
