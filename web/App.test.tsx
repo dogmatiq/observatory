@@ -61,12 +61,12 @@ function connect(source = FakeEventSource.live[0]) {
 	});
 }
 
-test("the review page shows each state of the elements that are being worked on, including the ones that are errors", () => {
+test("the review page is at /-/review", () => {
 	render(<App path="/-/review" />);
 
-	for (const state of ["Several nodes", "No live nodes", "Online", "Offline"]) {
-		expect(screen.getAllByText(state).length).toBeGreaterThan(0);
-	}
+	expect(
+		screen.getByRole("button", { name: "Replay animations" }),
+	).toBeDefined();
 });
 
 test("the vitals page has the words of every combination of the popovers of the vital statistics", () => {

@@ -9,13 +9,14 @@ import { InfoCard } from "./InfoCard.tsx";
  * The words say only that the failing messages are shown separately, and the
  * example shows how.
  */
+/** What the card of the messages waiting says the number counts. */
+export const messagesWaitingText =
+	"The number of messages that are waiting to be delivered. If there are any failing messages, they are shown separately.";
+
 export function MessagesWaitingCard() {
 	return (
 		<InfoCard subsystem="queues" icon="message" kind="Messages waiting">
-			<p>
-				The number of messages that are waiting to be delivered. If there are
-				any failing messages, they are shown separately.
-			</p>
+			<p>{messagesWaitingText}</p>
 			<SetApartExample rest="waiting" part="failing" partInk="text-failing" />
 			<p>
 				Lower is better. If the number keeps rising, messages are arriving

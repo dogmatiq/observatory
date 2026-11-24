@@ -11,6 +11,14 @@ import { InfoCard } from "./InfoCard.tsx";
  * a status, that every node is out of contact, so whether the application is
  * working is unknown.
  */
+/** What the card of the cluster's nodes says the number counts. */
+export const nodesText =
+	"The number of nodes that are in contact now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work.";
+
+/** The status of the card of the cluster's nodes when no node is in contact. */
+export const noNodesText =
+	"Every node is out of contact, so it's unknown whether the application is working.";
+
 export function NodesCard({ live }: { live: number }) {
 	return (
 		<InfoCard
@@ -21,16 +29,12 @@ export function NodesCard({ live }: { live: number }) {
 				live === 0
 					? {
 							icon: "alert",
-							text: "Every node is out of contact, so it's unknown whether the application is working.",
+							text: noNodesText,
 						}
 					: undefined
 			}
 		>
-			<p>
-				The number of nodes that are in contact now. A node is one running
-				process of the application's engine. Together, the nodes form a cluster
-				that shares the application's work.
-			</p>
+			<p>{nodesText}</p>
 		</InfoCard>
 	);
 }

@@ -16,7 +16,7 @@ import { Ramped } from "./Ramped.tsx";
  * spread, if anything is promised about that, and about how not to misread it, if
  * there is a likely misreading.
  */
-const things = {
+export const things = {
 	"event-stream": {
 		subsystem: "streams",
 		icon: "event-stream",
