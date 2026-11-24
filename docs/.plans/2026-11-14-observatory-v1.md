@@ -985,6 +985,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   stream, so their order is kept.", shown whenever the card shows its bar of streams, which an engine that reports the
   multiple-streams model shows even while only one stream has been seen. In a window too narrow for the annotations beside the card at full
   size, each is a numbered marker on the card, and their words are listed under it, by number.
+  The rules for every explainer, drawn from the events card's, are in docs/ui-design.md under Explainers, and the
+  queues, cluster, handler digest and compact digest explainers are built from them at `/-/annotations`, for review.
   When the events card shows its streams, its explainer says "Each event that the application records is written to a
   single event stream. An event stream keeps its events in the order they were written, so they can be read in that
   order." Each bar's advice, such
