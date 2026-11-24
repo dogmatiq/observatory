@@ -979,7 +979,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   about…"; then the annotated card, whose annotations say what each part is; and then a paragraph of the definitions
   of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
   Text that is true of this application only is drawn apart, on a sunken ground, with the icon of what it is about.
-  The events card's reads "This application can spread its events across several event streams. An even spread is
+  It names the application, in bold. The events card's reads "The statements application can spread its events
+  across several event streams. An even spread is
   better; events on a stream are processed in order, so a stream that holds more than its fair share limits
   throughput." and "The events of each aggregate instance are appended to one event stream, so their order is kept.",
   shown whenever the card shows its bar of streams, with its first sentence chosen by whether the engine reports the
