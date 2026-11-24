@@ -329,7 +329,7 @@ test("a tile that only some of the nodes report shows their numbers, blurred by 
 
 	const tip = await tipOf(tile.querySelector("svg")?.parentElement as Element);
 	expect(tip).toContain(
-		"Only some of the cluster's nodes report what this section shows",
+		"Only some of the cluster's nodes report the metrics shown in this section",
 	);
 });
 

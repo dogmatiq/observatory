@@ -189,7 +189,7 @@ function AtTheSite({ site }: { site: SiteData["site"] }) {
  */
 export const sitePartialStatus = {
 	icon: "alert",
-	text: "Only some of the applications fully report what this section shows, so the numbers may appear lower than they really are.",
+	text: "Only some of the applications fully report the metrics shown in this section, so the numbers may appear lower than they really are.",
 } as const;
 
 /** What the card of the rate of the site's events tile says. */

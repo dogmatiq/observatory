@@ -10,5 +10,5 @@
  */
 export const partialStatus = {
 	icon: "alert",
-	text: "Only some of the cluster's nodes report what this section shows, so the numbers may appear lower than they really are.",
+	text: "Only some of the cluster's nodes report the metrics shown in this section, so the numbers may appear lower than they really are.",
 } as const;
