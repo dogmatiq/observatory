@@ -208,8 +208,9 @@ export const siteHandlingWords: RateWords = {
 
 /**
  * SiteEventsTile is the site's events tile, whose headline is the events per
- * minute across the applications, whose detail line gives the number of event
- * streams of all the applications together, and whose bar shows which
+ * minute across the applications, whose detail line gives the events in the
+ * event streams of all the applications together, and how many streams there
+ * are, as the cluster view's does, and whose bar shows which
  * applications record the most.
  */
 function SiteEventsTile({
@@ -254,9 +255,11 @@ function SiteEventsTile({
 					</Popover>
 					{events.streams !== undefined && (
 						<>
-							{", in "}
-							<Ramped value={events.streams} format={formatCompact} />
-							{` ${nounFor(events.streams, "stream", "streams")}`}
+							{", "}
+							<Ramped value={events.streams.events} format={formatCompact} />
+							{` ${nounFor(events.streams.events, "event", "events")} in `}
+							<Ramped value={events.streams.count} format={formatCompact} />
+							{` ${nounFor(events.streams.count, "stream", "streams")}`}
 						</>
 					)}
 				</>

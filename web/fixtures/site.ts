@@ -158,7 +158,10 @@ function applicationAt(i: number): SiteApplication {
 		heartbeats: [],
 		events: {
 			perMinute: Math.round(busy * 2400),
-			streams: 1 + Math.floor(r() * 8),
+			streams: {
+				count: 1 + Math.floor(r() * 8),
+				events: Math.round(busy * 400_000 + r() * 2_000),
+			},
 		},
 		queues: {
 			messages: Math.round(busy * 40 * r()),
@@ -264,8 +267,11 @@ export function siteOf(
 		events: {
 			rate: { perMinute },
 			streams: applications.reduce(
-				(sum, a) => sum + (a.events?.streams ?? 0),
-				0,
+				(sum, a) => ({
+					count: sum.count + (a.events?.streams?.count ?? 0),
+					events: sum.events + (a.events?.streams?.events ?? 0),
+				}),
+				{ count: 0, events: 0 },
 			),
 			coverage,
 			history: historyOf(perMinute, 7),

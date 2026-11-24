@@ -334,7 +334,7 @@ export function ReviewPage() {
 					notDeciding={
 						"The cards that open when the headlines and detail lines are pointed at (SH 2); the cards of the icons (SW); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
 					}
-					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the number of event streams of all the applications together. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
+					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
 				>
 					<State
 						label="Two applications out of contact, three with failing messages"

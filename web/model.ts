@@ -61,11 +61,11 @@ export interface SiteData {
 		rate: { perMinute?: number };
 
 		/**
-		 * The number of event streams of all the applications together, if any
-		 * application's engine reports its streams. An engine that appends every
-		 * event to one stream has one.
+		 * The event streams of all the applications together, if any application's
+		 * engine reports its streams: how many there are, and how many events they
+		 * hold. An engine that appends every event to one stream has one.
 		 */
-		streams?: number;
+		streams?: Streams;
 
 		/**
 		 * The share of the nodes at the site that report the events recorded, if
@@ -135,13 +135,22 @@ export interface SiteApplication {
 	heartbeats: number[];
 
 	/**
-	 * The events recorded per minute, if the engine supports it, and the number of
-	 * the application's event streams, if the engine reports them.
+	 * The events recorded per minute, if the engine supports it, and the
+	 * application's event streams, if the engine reports them.
 	 */
-	events?: { perMinute?: number; streams?: number };
+	events?: { perMinute?: number; streams?: Streams };
 
 	/** The messages that are waiting, if the engine supports it. */
 	queues?: { messages: number; failing: number; queues?: number };
+}
+
+/**
+ * Streams is some event streams: how many there are, and how many events they
+ * hold together.
+ */
+export interface Streams {
+	count: number;
+	events: number;
 }
 
 /**

@@ -942,8 +942,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   nodes' sets of live nodes, so a node that leaves cleanly isn't counted. An engine that doesn't report its live nodes
   has no "+N". The headline's card gets the worked example of a number set apart.
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
-  minute across the applications, with the number of event streams of all the applications together, which is how
-  widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
+  minute across the applications, with the events in the event streams of all the applications together, and the number of
+  those streams, which is how widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
   that are failing, and a bar of which applications have the most, and the number of queues of all the
   applications together, which says roughly how widely the site's work can be spread; and the number of applications in contact, with the
   number out of contact, whose chart is the heartbeat chart with a share for each application in contact. Below them,
