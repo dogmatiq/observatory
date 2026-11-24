@@ -1018,7 +1018,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   The aggregate's digest explainer is approved. Its arrows point at the figures themselves: the handler's name from
   above the card, the kind and the instances level from the left, the commands waiting from above, and the failing
   count level from the right. Its box says "several event streams", so it is there only when the bar has more than one
-  segment. Done: the segment hovercards' advice says
+  segment.
+  The process digest's explainer is approved. Under the card it has only the reminder of what a process does, and its
+  box, "The statements application's engine spreads this process's instances across several deadline queues. Each
+  instance is bound to the queue that holds its deadlines.", is there only when the bar has more than one segment. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
