@@ -973,7 +973,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   made-up figures, fixed for each layout, chosen so that every state worth explaining is shown, such as a "+N", an
   accent and blur, and it shows only what this card can show, by the rules for how what the nodes support shapes the
   layout. It is subtly labelled as example figures, and is in shades of gray, except for the part that the reader
-  points at, or whose annotation the reader points at, which is in its own colors.
+  points at, or whose annotation the reader points at, which is in its own colors, blending into the gray. Every
+  explainer has a title, which says what the card is about and where, in place of "This section shows information
+  about…"; then the annotated card, whose annotations say what each part is; and then a paragraph of the definitions
+  of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
