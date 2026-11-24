@@ -1106,258 +1106,316 @@ export function ReviewPage() {
 						</Part>
 					</Tile>
 
-					<Tile
-						code="SV"
-						title="Site view"
-						note="The view of a site, designed here before it is built: the totals of the applications at the site as three tiles, the same size as the cluster view's, and each application below them. It is shown at the scale that it is designed for, which is about a hundred applications. The figures are made up."
-					>
-						<Part
-							step={0}
-							title="The view"
-							recommendation="Approve the layout. The tiles answer how busy the site is and whether anything is wrong, and the grid below answers where, with every application one click from its view."
-							note="The applications are in the order of their names, so that an application keeps its place. The tiles follow the cluster view's rules: the coverage rule blurs the totals while only some nodes report them, and the totals of a site whose applications are all out of contact are the last ones, distrusted."
+					<Sequence>
+						<Tile
+							code="SL"
+							title="Site view: layout"
+							note="The view of a site, designed here before it is built, in chunks that are shown one at a time, each once the one before it is decided. This chunk is the layout only: the totals of the applications at the site as three tiles, the same size as the cluster view's, and each application below them, at the scale that the view is designed for, which is about a hundred applications. The figures are made up. The states, the words and the details come in later chunks."
 						>
-							<State
-								label="Every application in contact, three with failing messages"
-								wide
+							<Part
+								step={0}
+								title="Tiles above, applications below"
+								recommendation="Approve the layout. The tiles answer how busy the site is and whether anything is wrong, and the grid below answers where, with every application one click from its view."
+								note="The three tiles are the events per minute, the messages waiting and the applications in contact. The applications are in the order of their names, so that an application keeps its place."
 							>
-								<SiteDemo data={siteOf(siteApplications, euWest)} />
-							</State>
-							<State
-								label="Two applications out of contact, and two with only some nodes in contact"
-								note="The two out of contact have the red accent, and say so. The figures of the two partly in contact are blurred by the coverage rule, and so, slightly, are the totals."
-								wide
-							>
-								<SiteDemo data={siteOf(someOut, euWest)} />
-							</State>
-							<State label="Every application out of contact" wide>
-								<SiteDemo
-									data={siteOf(
-										withContact(siteApplications.slice(0, 18), {
-											out: siteApplications
-												.slice(0, 18)
-												.map((a) => a.application.name),
-										}),
-										euWest,
-									)}
-								/>
-							</State>
-							<State label="One application" wide>
-								<SiteDemo
-									data={siteOf(siteApplications.slice(81, 82), euWest)}
-								/>
-							</State>
-							<State
-								label="Applications at no site"
-								note="The view of the applications that run at no site, at the address of the site whose key is the nil UUID. Its words say &quot;the applications that run at no site&quot;."
-								wide
-							>
-								<SiteDemo
-									data={siteOf(siteApplications.slice(40, 52), undefined)}
-								/>
-							</State>
-						</Part>
+								<State label="Every application in contact" wide>
+									<SiteDemo data={siteOf(calm, euWest)} />
+								</State>
+							</Part>
 
-						<Part
-							step={1}
-							title="The grid of applications"
-							note="Each application is a small card with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
-						>
-							<State
-								label="Cards with names and figures"
-								recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred cards fit in about a screen."
-								wide
+							<Part
+								step={1}
+								title="The grid of applications"
+								note="Each application is a small card with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
 							>
-								<SiteBreakdown
-									data={siteOf(someOut, euWest)}
-									breakdown="cells"
-								/>
-							</State>
-							<Choices
-								of="A"
-								title="the grid"
-								framed={false}
-								choices={[
-									[
-										"Squares, like a contribution graph",
-										<SiteBreakdown
-											key="squares"
-											data={siteOf(someOut, euWest)}
-											breakdown="squares"
-										/>,
-									],
-								]}
-							/>
-						</Part>
-
-						<Part
-							step={2}
-							title="The icons"
-							note="The card of each tile's icon says what its section is about. Nothing on the view says what a site is yet. While only some of the applications' nodes report what the events or queues tile shows, its card says why, as a status. It says nothing about versions, because the applications at a site run different engines and versions as a matter of course."
-						>
-							<State
-								label="The events tile, while only some nodes report it"
-								recommendation="Approve, with this wording."
-							>
-								<Panel>
-									<InfoCard
-										subsystem="streams"
-										icon="event"
-										kind="Events"
-										status={sitePartialStatus}
-									>
-										{siteAbout.events(euWest)}
-									</InfoCard>
-								</Panel>
-							</State>
-							<State
-								label="The queues tile, while only some nodes report it"
-								recommendation="Approve, with this wording."
-							>
-								<Panel>
-									<InfoCard
-										subsystem="queues"
-										icon="message"
-										kind="Queues"
-										status={sitePartialStatus}
-									>
-										{siteAbout.queues(euWest)}
-									</InfoCard>
-								</Panel>
-							</State>
-							<State
-								label="The applications tile"
-								recommendation="Approve, with this wording."
-							>
-								<Panel>
-									<InfoCard
-										subsystem="cluster"
-										icon="application"
-										kind="Applications"
-									>
-										{siteAbout.applications(euWest)}
-									</InfoCard>
-								</Panel>
-							</State>
-							<State
-								label="At no site"
-								note="The same cards, for the applications that run at no site."
-								recommendation="Approve, with this wording."
-							>
-								<Panel>
-									<InfoCard
-										subsystem="cluster"
-										icon="application"
-										kind="Applications"
-									>
-										{siteAbout.applications(undefined)}
-									</InfoCard>
-								</Panel>
-							</State>
-						</Part>
-
-						<Part
-							step={3}
-							title="The headlines and detail lines"
-							note="The events tile's headline is the events per minute, and its detail line counts the applications that recorded any. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, and its detail line gives the number out of contact, if any are."
-						>
-							<State
-								label="The card of the applications in contact"
-								note="Its status is there only while every application is out of contact."
-								recommendation="Approve, with this wording. It covers an engine that clusters and one that doesn't, so it says &quot;its engine, or any node of its cluster&quot;. The status follows the cluster's &quot;Every node is out of contact, so it's unknown whether the application is working&quot;."
-							>
-								<Panel>
-									<ApplicationsCard live={0} />
-								</Panel>
-							</State>
-							<State
-								label="The card of the events per minute"
-								recommendation="Approve, with this wording, which is the cluster's with &quot;the applications&quot; in place of &quot;the application&quot;."
-							>
-								<Panel>
-									<RateCard
-										subsystem="streams"
-										icon="event"
-										words={siteEventRateWords}
-										state="known"
+								<State
+									label="Cards with names and figures"
+									recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred cards fit in about a screen."
+									wide
+								>
+									<SiteBreakdown
+										data={siteOf(calm, euWest)}
+										breakdown="cells"
 									/>
-								</Panel>
-							</State>
-							<State
-								label="The card of the messages handled per minute"
-								recommendation="Approve, with this wording, as for the events."
-							>
-								<Panel>
-									<RateCard
-										subsystem="queues"
-										icon="message"
-										words={siteHandlingWords}
-										state="known"
-									/>
-								</Panel>
-							</State>
-						</Part>
+								</State>
+								<Choices
+									of="A"
+									title="the grid"
+									framed={false}
+									choices={[
+										[
+											"Squares, like a contribution graph",
+											<SiteBreakdown
+												key="squares"
+												data={siteOf(calm, euWest)}
+												breakdown="squares"
+											/>,
+										],
+									]}
+								/>
+							</Part>
+						</Tile>
 
-						<Part
-							step={4}
-							title="The bars"
-							note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's card drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. The applications tile has no bar."
+						<Tile
+							code="SS"
+							title="Site view: states"
+							note="How the view looks as its applications' messages fail and as contact with them is lost: the accents, the blur and the words that take the place of a card's figures. The words of the tiles' cards come in the next chunk."
 						>
-							<State
-								label="Pointing at an application on the events bar"
-								recommendation="Approve, with this wording."
-							>
-								<Panel>
-									<SegmentCard
-										about={{
-											thing: "application",
-											of: "events",
-											application: { name: "payments", key: "p" },
-											amount: 2140,
-											share: 0.1834,
-										}}
-									/>
-								</Panel>
-							</State>
-							<State
-								label="Pointing at an application on the queues bar"
-								recommendation="Approve, with this wording."
-							>
-								<Panel>
-									<SegmentCard
-										about={{
-											thing: "application",
-											of: "messages",
-											application: { name: "payments", key: "p" },
-											amount: 31,
-											share: 0.124,
-										}}
-									/>
-								</Panel>
-							</State>
-						</Part>
-
-						<Part
-							step={5}
-							title="The applications tile's chart"
-							recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
-							note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
-						>
-							<State label="Every application in contact" wide>
-								<div className="max-w-md">
+							<Part step={0} title="The view in each state">
+								<State
+									label="Three applications with failing messages"
+									note="checkout, mailer and regulatory-reports have the orange accent and the red &quot;+N&quot;, as a handler card does, and so does the queues tile."
+									recommendation="Approve, as the cluster view does it."
+									wide
+								>
+									<SiteDemo data={siteOf(siteApplications, euWest)} />
+								</State>
+								<State
+									label="Two applications out of contact, and two with only some nodes in contact"
+									note="The two out of contact, kyc and payroll, have the red accent, and say so in place of their figures. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile counts the two out of contact in its detail line."
+									recommendation="Approve. The red accent and the words mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
+									wide
+								>
+									<SiteDemo data={siteOf(someOut, euWest)} />
+								</State>
+								<State
+									label="Every application out of contact"
+									note="The totals are the last ones, distrusted, as a cluster's are when every node is out of contact, and the applications tile's headline is a red 0."
+									recommendation="Approve, as the cluster view does it."
+									wide
+								>
 									<SiteDemo
-										data={siteOf(siteApplications.slice(0, 12), euWest)}
-										only="applications"
+										data={siteOf(
+											withContact(siteApplications.slice(0, 18), {
+												out: siteApplications
+													.slice(0, 18)
+													.map((a) => a.application.name),
+											}),
+											euWest,
+										)}
 									/>
-								</div>
-							</State>
-						</Part>
-					</Tile>
+								</State>
+								<State
+									label="One application"
+									recommendation="Approve. The view keeps its layout, and each bar is one segment."
+									wide
+								>
+									<SiteDemo
+										data={siteOf(siteApplications.slice(81, 82), euWest)}
+									/>
+								</State>
+								<State
+									label="Applications at no site"
+									note="The view of the applications that run at no site, at the address of the site whose key is the nil UUID. It looks the same as a site's; its words, which say &quot;the applications that run at no site&quot;, are reviewed with the tiles' words."
+									recommendation="Approve."
+									wide
+								>
+									<SiteDemo
+										data={siteOf(siteApplications.slice(40, 52), undefined)}
+									/>
+								</State>
+							</Part>
+						</Tile>
+
+						<Tile
+							code="SW"
+							title="Site view: the tiles' words"
+							note="What the card of each tile's icon and headline says."
+						>
+							<Part
+								step={1}
+								title="The icons"
+								note="The card of each tile's icon says what its section is about. Nothing on the view says what a site is yet. While only some of the applications' nodes report what the events or queues tile shows, its card says why, as a status. It says nothing about versions, because the applications at a site run different engines and versions as a matter of course."
+							>
+								<State
+									label="The events tile, while only some nodes report it"
+									recommendation="Approve, with this wording."
+								>
+									<Panel>
+										<InfoCard
+											subsystem="streams"
+											icon="event"
+											kind="Events"
+											status={sitePartialStatus}
+										>
+											{siteAbout.events(euWest)}
+										</InfoCard>
+									</Panel>
+								</State>
+								<State
+									label="The queues tile, while only some nodes report it"
+									recommendation="Approve, with this wording."
+								>
+									<Panel>
+										<InfoCard
+											subsystem="queues"
+											icon="message"
+											kind="Queues"
+											status={sitePartialStatus}
+										>
+											{siteAbout.queues(euWest)}
+										</InfoCard>
+									</Panel>
+								</State>
+								<State
+									label="The applications tile"
+									recommendation="Approve, with this wording."
+								>
+									<Panel>
+										<InfoCard
+											subsystem="cluster"
+											icon="application"
+											kind="Applications"
+										>
+											{siteAbout.applications(euWest)}
+										</InfoCard>
+									</Panel>
+								</State>
+								<State
+									label="At no site"
+									note="The same cards, for the applications that run at no site."
+									recommendation="Approve, with this wording."
+								>
+									<Panel>
+										<InfoCard
+											subsystem="cluster"
+											icon="application"
+											kind="Applications"
+										>
+											{siteAbout.applications(undefined)}
+										</InfoCard>
+									</Panel>
+								</State>
+							</Part>
+
+							<Part
+								step={2}
+								title="The headlines and detail lines"
+								note="The events tile's headline is the events per minute, and its detail line counts the applications that recorded any. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, and its detail line gives the number out of contact, if any are."
+							>
+								<State
+									label="The card of the applications in contact"
+									note="Its status is there only while every application is out of contact."
+									recommendation="Approve, with this wording. It covers an engine that clusters and one that doesn't, so it says &quot;its engine, or any node of its cluster&quot;. The status follows the cluster's &quot;Every node is out of contact, so it's unknown whether the application is working&quot;."
+								>
+									<Panel>
+										<ApplicationsCard live={0} />
+									</Panel>
+								</State>
+								<State
+									label="The card of the events per minute"
+									recommendation="Approve, with this wording, which is the cluster's with &quot;the applications&quot; in place of &quot;the application&quot;."
+								>
+									<Panel>
+										<RateCard
+											subsystem="streams"
+											icon="event"
+											words={siteEventRateWords}
+											state="known"
+										/>
+									</Panel>
+								</State>
+								<State
+									label="The card of the messages handled per minute"
+									recommendation="Approve, with this wording, as for the events."
+								>
+									<Panel>
+										<RateCard
+											subsystem="queues"
+											icon="message"
+											words={siteHandlingWords}
+											state="known"
+										/>
+									</Panel>
+								</State>
+							</Part>
+						</Tile>
+
+						<Tile
+							code="SB"
+							title="Site view: the bars"
+							note="The card of a segment of the events and queues tiles' bars."
+						>
+							<Part
+								step={1}
+								title="The bars"
+								note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's card drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. The applications tile has no bar."
+							>
+								<State
+									label="Pointing at an application on the events bar"
+									recommendation="Approve, with this wording."
+								>
+									<Panel>
+										<SegmentCard
+											about={{
+												thing: "application",
+												of: "events",
+												application: { name: "payments", key: "p" },
+												amount: 2140,
+												share: 0.1834,
+											}}
+										/>
+									</Panel>
+								</State>
+								<State
+									label="Pointing at an application on the queues bar"
+									recommendation="Approve, with this wording."
+								>
+									<Panel>
+										<SegmentCard
+											about={{
+												thing: "application",
+												of: "messages",
+												application: { name: "payments", key: "p" },
+												amount: 31,
+												share: 0.124,
+											}}
+										/>
+									</Panel>
+								</State>
+							</Part>
+						</Tile>
+
+						<Tile
+							code="SC"
+							title="Site view: the applications tile's chart"
+							note="The chart along the bottom of the applications tile."
+						>
+							<Part
+								step={1}
+								title="The applications tile's chart"
+								recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
+								note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
+							>
+								<State label="Every application in contact" wide>
+									<div className="max-w-md">
+										<SiteDemo
+											data={siteOf(siteApplications.slice(0, 12), euWest)}
+											only="applications"
+										/>
+									</div>
+								</State>
+							</Part>
+						</Tile>
+					</Sequence>
 				</div>
 			</Page>
 		</Accepted.Provider>
 	);
 }
+
+/**
+ * The applications of the site view, all in contact, with no failing messages,
+ * for judging its layout on its own.
+ */
+const calm = siteApplications.map((a) =>
+	a.queues === undefined
+		? a
+		: {
+				...a,
+				queues: { messages: a.queues.messages - a.queues.failing, failing: 0 },
+			},
+);
 
 /**
  * The applications of the site view with two out of contact, and two with only
@@ -1577,24 +1635,16 @@ const TileCode = createContext("");
  * the order that they are reviewed. `code` is the start of the ID of each state
  * that is drawn inside it, such as "CL" for "CL 4A".
  */
-function Tile({
-	code,
-	title,
-	note,
-	children,
-}: {
+type TileProps = {
 	code: string;
 	title: string;
 	note: string;
 	children: ReactNode;
-}) {
+};
+
+function Tile({ code, title, note, children }: TileProps) {
 	const { ids } = useContext(Accepted);
-	const parts = Children.toArray(children).filter(
-		(c): c is ReactElement<PartProps> => isValidElement(c) && c.type === Part,
-	);
-	const settled =
-		parts.length > 0 &&
-		parts.every((part) => partSettled(code, part.props, ids));
+	const settled = tileSettled(code, children, ids);
 
 	return (
 		<Collapsible
@@ -1613,6 +1663,55 @@ function Tile({
 		>
 			<TileCode.Provider value={code}>{children}</TileCode.Provider>
 		</Collapsible>
+	);
+}
+
+/**
+ * tileSettled returns true if every part of the tile with the given code and
+ * children is settled. See [partSettled].
+ */
+function tileSettled(
+	code: string,
+	children: ReactNode,
+	ids: ReadonlySet<string>,
+): boolean {
+	const parts = Children.toArray(children).filter(
+		(c): c is ReactElement<PartProps> => isValidElement(c) && c.type === Part,
+	);
+
+	return (
+		parts.length > 0 &&
+		parts.every((part) => partSettled(code, part.props, ids))
+	);
+}
+
+/**
+ * Sequence is tiles that are reviewed one at a time, in order, because each
+ * depends on the decisions about those before it. It shows the settled tiles and
+ * the first that isn't, and names the ones still to come, so that nothing is
+ * reviewed on top of something that may change.
+ */
+function Sequence({ children }: { children: ReactNode }) {
+	const { ids } = useContext(Accepted);
+	const tiles = Children.toArray(children).filter(
+		(c): c is ReactElement<TileProps> => isValidElement(c) && c.type === Tile,
+	);
+	const first = tiles.findIndex(
+		(t) => !tileSettled(t.props.code, t.props.children, ids),
+	);
+	const count = first === -1 ? tiles.length : first + 1;
+	const later = tiles.slice(count);
+
+	return (
+		<>
+			{tiles.slice(0, count)}
+			{later.length > 0 && (
+				<p className="text-sm text-muted">
+					Still to come, each once the one before it is decided:{" "}
+					{later.map((t) => `${t.props.code}, ${t.props.title}`).join("; ")}.
+				</p>
+			)}
+		</>
 	);
 }
 

@@ -175,3 +175,24 @@ test("a part that is fully decided is collapsed once the decisions are read, and
 	fireEvent.click(decided.querySelector("summary") as HTMLElement);
 	expect(decided.open).toBe(true);
 });
+
+test("the tiles of a sequence are shown one at a time, each once the one before it is decided", async () => {
+	const decisions = [
+		{ id: "SL 0", decision: "accepted" },
+		{ id: "SL 1A", decision: "accepted" },
+	];
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(() => Promise.resolve({ json: () => Promise.resolve(decisions) })),
+	);
+	render(<ReviewPage />);
+
+	expect(screen.getByRole("button", { name: "Copy SL" })).toBeDefined();
+	expect(screen.queryByRole("button", { name: "Copy SS" })).toBeNull();
+	expect(screen.getByText(/^Still to come/).textContent).toContain(
+		"SS, Site view: states",
+	);
+
+	expect(await screen.findByRole("button", { name: "Copy SS" })).toBeDefined();
+	expect(screen.queryByRole("button", { name: "Copy SW" })).toBeNull();
+});
