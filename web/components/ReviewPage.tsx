@@ -17,6 +17,7 @@ import {
 	WorkloadsCard,
 } from "./ClusterCards.tsx";
 import { EngineCard, engineOutText } from "./EngineCard.tsx";
+import { handlerKindAbout } from "./HandlerKindCard.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { messagesWaitingText } from "./MessagesWaitingCard.tsx";
@@ -371,7 +372,22 @@ export function ReviewPage() {
 						recommendation="Approve, with this wording. It is the engine card's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
 						precedents={[
 							{
-								where: "On the cluster view, the status of the engine card",
+								where:
+									"On the cluster view, the card of a handler card's kind icon, for its shape",
+								status: "settled",
+								words: (
+									<>
+										{handlerKindAbout(atSite, "account", "aggregate")}
+										<p>
+											With a status, while only some nodes report it:{" "}
+											{partialStatus.text}
+										</p>
+									</>
+								),
+							},
+							{
+								where:
+									"On the cluster view, the status of the engine card, for its words",
 								status: { underReview: "WD 5" },
 								words: <p>{engineOutText}</p>,
 							},

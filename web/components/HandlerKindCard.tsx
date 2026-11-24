@@ -51,12 +51,28 @@ export function HandlerKindCard({
 			kind={kind}
 			status={partial ? partialStatus : undefined}
 		>
+			{handlerKindAbout(application, name, kind)}
+		</InfoCard>
+	);
+}
+
+/**
+ * handlerKindAbout returns the paragraphs of a [HandlerKindCard]: which handler
+ * the card is about, and a reminder of what its kind of handler does.
+ */
+export function handlerKindAbout(
+	application: Application,
+	name: string,
+	kind: HandlerKind,
+) {
+	return (
+		<>
 			<p>
 				This section shows information about the{" "}
 				<span className="font-semibold text-fg">{name}</span> {kind} in the{" "}
 				<ApplicationName application={application} />.
 			</p>
 			<p>{reminders[kind]}</p>
-		</InfoCard>
+		</>
 	);
 }
