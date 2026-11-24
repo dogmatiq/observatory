@@ -5,7 +5,6 @@ import {
 	storedThemeMode,
 	type ThemeMode,
 } from "../lib/theme.ts";
-import { Popover } from "./Popover.tsx";
 
 /**
  * ThemeToggle is the button that cycles the page through automatic, light and
@@ -24,23 +23,21 @@ export function ThemeToggle() {
 	const title = `Color mode: ${mode === "auto" ? "automatic" : mode}`;
 
 	return (
-		<Popover content={title}>
-			<button
-				type="button"
-				className="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-panel px-[9px] py-[5px] text-xs text-fg-soft hover:border-line-strong"
-				aria-label={title}
-				onClick={cycle}
+		<button
+			type="button"
+			className="inline-flex cursor-pointer items-center gap-1.5 rounded-control border border-line bg-panel px-[9px] py-[5px] text-xs text-fg-soft hover:border-line-strong"
+			aria-label={title}
+			onClick={cycle}
+		>
+			<svg
+				viewBox="0 0 24 24"
+				className="size-3.5 fill-current stroke-current [stroke-width:2]"
+				aria-hidden="true"
 			>
-				<svg
-					viewBox="0 0 24 24"
-					className="size-3.5 fill-current stroke-current [stroke-width:2]"
-					aria-hidden="true"
-				>
-					<circle className="fill-none" cx="12" cy="12" r="9" />
-					<path d="M12 3a9 9 0 0 0 0 18z" />
-				</svg>
-				<span>{mode}</span>
-			</button>
-		</Popover>
+				<circle className="fill-none" cx="12" cy="12" r="9" />
+				<path d="M12 3a9 9 0 0 0 0 18z" />
+			</svg>
+			<span>{mode}</span>
+		</button>
 	);
 }

@@ -959,6 +959,12 @@ Tick each item when it is done, and write the pull request or commit that did it
 - Which reading to show when a metric appears in both `WatchNodeMetrics` and `WatchClusterMetrics`, which the spec
   allows. For now the cluster call wins, and the sums of the node calls stand in while no cluster call is open. What
   gives the reader the best experience is for the Observatory to work out.
+- For the design review: the kinds of hovercard. First the kinds are worked out, and then each is written into the
+  design doc with what it must have. Then, as decided: the application's name in the title bar, and each cluster in the
+  list of clusters, gets a hovercard with its identity in place of a tooltip, once the kinds are settled; every segment
+  of a bar gets a segment hovercard in place of its line of text, including the bars of a handler digest and the merged
+  segment of every bar; and the minimize-concurrency icon and the labels of a handler digest's figures get hovercards
+  that explain them. A tooltip is only for text that is cut short. Done: the color mode control has no tooltip.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
