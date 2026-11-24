@@ -980,21 +980,19 @@ Tick each item when it is done, and write the pull request or commit that did it
   of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
   Text that is true of this application only is drawn apart, on a sunken ground, with the icon of what it is about.
   It names the application, in bold. The events card's reads "The statements application spreads its events across
-  several event streams. An even spread is better; events on a stream are processed in order, so a stream that holds
-  more than its fair share limits throughput." and "Each aggregate instance's events are written to a single event
-  stream, so their order is kept.", shown whenever the card shows its bar of streams, which an engine that reports the
+  several event streams. An even spread is better; a stream that holds more than its fair share limits parallel
+  throughput." and "Each aggregate instance is bound to a single stream so that its events can be read in order.", shown whenever the card shows its bar of streams, which an engine that reports the
   multiple-streams model shows even while only one stream has been seen. In a window too narrow for the annotations beside the card at full
   size, each is a numbered marker on the card, and their words are listed under it, by number.
   The rules for every explainer, drawn from the events card's, are in docs/ui-design.md under Explainers, and the
   queues, cluster, handler digest and compact digest explainers are built from them at `/-/annotations`, for review.
-  When the events card shows its streams, its explainer says "Each event that the application records is written to a
-  single event stream. An event stream keeps its events in the order they were written, so they can be read in that
-  order." Each bar's advice, such
+  When the events card shows its streams, its explainer says "Each event that the application records is written to an
+  event stream. Streams store events in the order they are written, so they can be read in that order." Each bar's advice, such
   as "An even spread is better", is in the explainer of its card, only when the card has the bar, and leaves the
   hovercards of the bar's segments, which then only drill down; that move is made when the explainer is built. A bar's
   amounts are a spread: "distribution" and "shared among" are not used. In the explainer the advice
-  names what is spread: "An even spread across the streams is better. Events on a
-  stream are processed in order, so a stream that holds more than its fair share limits throughput." Done: the segment hovercards' advice says
+  names what is spread: "An even spread is better; a stream that holds more than its fair share limits parallel
+  throughput." Done: the segment hovercards' advice says
   "An even spread is better".
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
