@@ -341,11 +341,11 @@ this list up to date as the plan evolves: add each new difference when it is fou
   its own, such as "commands", "events", "deadlines" or "messages", is the ones that are pending, and its popover says "pending". The prototype said "command backlog", "event backlog" and "deadlines". Spelling "pending" out on
   every label made the process card's stats too wide for one row. "In progress" is the spec's word too. A process's
   instances that are bound to no queue are the last segment of its bar and are counted in "in progress".
-- Failing messages are the red "+N" after the number that waits, such as "24 +1", on the queues tile and on a handler
+- Failing messages are the orange "+N" after the number that waits, such as "24 +1", on the queues tile and on a handler
   card, where the prototype had the number in red and the count in a line of its own along the bottom of the card. The
-  failing messages are part of the ones that wait, so the number that is not red is those that are not failing. A line of
-  its own made the card taller when messages began to fail, and moved the page. The red accent along the top of the card is
-  unchanged.
+  failing messages are part of the ones that wait, so the number that is not orange is those that are not failing. A
+  line of its own made the card taller when messages began to fail, and moved the page. The accent along the top of the
+  card is orange, as the count is.
 - The cluster is teal-green where the prototype's was green, because green is for what is healthy on the site and universe
   views, and the cluster's own tile must not look healthy when its cluster isn't. The icon of each kind of handler has
   the color of the sticky note of the kind in event storming, where the prototype colored it by the messages that the

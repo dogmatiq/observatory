@@ -162,7 +162,7 @@ export function ReviewPage() {
 							>
 								<State
 									label="Three applications with failing messages"
-									note="checkout, mailer and regulatory-reports have the orange accent and the red &quot;+N&quot;, as a handler card does, and so does the queues tile."
+									note="checkout, mailer and regulatory-reports have the orange accent and the orange &quot;+N&quot;, as a handler card does, and so does the queues tile."
 									recommendation="Approve, as the cluster view does it."
 									wide
 								>

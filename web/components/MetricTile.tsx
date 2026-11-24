@@ -226,7 +226,7 @@ const holdTime = 1000;
 
 /**
  * Failing is the number of messages that are pending and failing, which comes
- * after the number of those that are not, such as "24 +1". It is red, and
+ * after the number of those that are not, such as "24 +1". It is orange, and
  * smaller than the number it follows.
  *
  * It is spoken in full, because "+1" says little to a screen reader.
