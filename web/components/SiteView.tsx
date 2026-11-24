@@ -128,12 +128,13 @@ export function SiteTotals({ data }: { data: SiteData }) {
 
 /**
  * TheApplications names the applications that the site view is of, in a
- * sentence: "the applications at the **eu-west** site", or "the applications
- * that run at no site". The word "the" is its own.
+ * sentence: "the applications at the **eu-west** site", or, for the
+ * applications at no site, "the applications", because an operator who has no
+ * sites never meets the word "site". The word "the" is its own.
  */
 function TheApplications({ site }: { site: SiteData["site"] }) {
 	return site === undefined ? (
-		<>the applications that run at no site</>
+		<>the applications</>
 	) : (
 		<>
 			the applications at the{" "}
@@ -168,11 +169,12 @@ export const siteAbout = {
 
 /**
  * AtTheSite says where the things in a sentence are: "at the **eu-west** site",
- * or "of the applications that run at no site".
+ * or, for the applications at no site, "of the applications", as
+ * [TheApplications] does.
  */
 function AtTheSite({ site }: { site: SiteData["site"] }) {
 	return site === undefined ? (
-		<>of the applications that run at no site</>
+		<>of the applications</>
 	) : (
 		<>
 			at the <span className="font-semibold text-fg">{site.name}</span> site

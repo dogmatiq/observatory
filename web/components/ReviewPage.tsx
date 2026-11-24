@@ -293,7 +293,7 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="At no site"
-						note="The same cards, for the applications that run at no site, which have no site to name, so they name the applications."
+						note="The same cards, for the applications that run at no site. They say only &quot;the applications&quot;, so that an operator who has no sites never meets the word &quot;site&quot;."
 						recommendation="Approve, with this wording."
 					>
 						<div className="grid gap-3">
