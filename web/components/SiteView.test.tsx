@@ -8,7 +8,7 @@ import {
 } from "../fixtures/site.ts";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { stubBrowser } from "../test-support.ts";
-import { SiteBreakdown, SiteOverview } from "./SiteView.tsx";
+import { outOfContactWords, SiteBreakdown, SiteOverview } from "./SiteView.tsx";
 
 beforeEach(stubBrowser);
 afterEach(() => {
@@ -45,7 +45,7 @@ test("an application that is out of contact says so in place of its figures", ()
 	const grid = screen.getByRole("region", { name: "Applications" });
 	const link = within(grid).getByRole("link", { name: new RegExp(`^${name}`) });
 
-	expect(link.textContent).toBe(`${name}out of contact`);
+	expect(link.textContent).toBe(`${name}${outOfContactWords}`);
 });
 
 test("the applications tile counts those in contact, and those out of contact", () => {

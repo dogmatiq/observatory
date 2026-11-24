@@ -71,7 +71,7 @@ export function SiteBreakdown({
 	return (
 		<section aria-label="Applications">
 			{breakdown === "cells" ? (
-				<ApplicationCells data={data} />
+				<ApplicationCells data={data} outOfContact={outOfContactWords} />
 			) : (
 				<ApplicationSquares data={data} />
 			)}
@@ -461,13 +461,31 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
  * its application and gives its events per minute and its messages waiting, or
  * says that it is out of contact, and links to its application view.
  */
-function ApplicationCells({ data }: { data: SiteData }) {
+/**
+ * outOfContactWords is what the card of an application in [ApplicationCells]
+ * says in place of its figures while the application is out of contact.
+ */
+export const outOfContactWords = "Contact lost";
+
+export function ApplicationCells({
+	data,
+	outOfContact,
+}: {
+	data: SiteData;
+
+	/** What a card says in place of its figures while out of contact. */
+	outOfContact: string;
+}) {
 	return (
 		<ul className="grid grid-cols-[repeat(auto-fill,minmax(176px,1fr))] gap-3">
 			{data.applications.map((a) => (
 				<li key={a.application.key} className="min-w-0">
 					<ErrorBoundary>
-						<ApplicationCell site={data.site} app={a} />
+						<ApplicationCell
+							site={data.site}
+							app={a}
+							outOfContact={outOfContact}
+						/>
 					</ErrorBoundary>
 				</li>
 			))}
@@ -485,9 +503,11 @@ function ApplicationCells({ data }: { data: SiteData }) {
 function ApplicationCell({
 	site,
 	app,
+	outOfContact,
 }: {
 	site: SiteData["site"];
 	app: SiteApplication;
+	outOfContact: string;
 }) {
 	const out = app.nodes === 0;
 	const failing = app.queues?.failing ?? 0;
@@ -507,7 +527,7 @@ function ApplicationCell({
 				{app.application.name}
 			</span>
 			{out ? (
-				<span className="text-sm text-bad">out of contact</span>
+				<span className="text-sm text-bad">{outOfContact}</span>
 			) : (
 				<Covered coverage={app.coverage ?? 1}>
 					<ApplicationFigures app={app} explained />
@@ -595,11 +615,7 @@ function ApplicationFigures({
 								number={app.queues.messages - app.queues.failing}
 								format={formatCompact}
 							/>
-							{/* A cell has a count of failing messages only while it has some,
-							so that a hundred cells don't each keep a count of none. */}
-							{app.queues.failing > 0 && (
-								<Failing count={app.queues.failing} size="stat" />
-							)}
+							<Failing count={app.queues.failing} size="stat" />
 						</span>
 					</span>,
 				)}

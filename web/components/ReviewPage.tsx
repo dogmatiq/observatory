@@ -44,6 +44,7 @@ import { Ramped } from "./Ramped.tsx";
 import { RateCard } from "./RateCard.tsx";
 import { SegmentCard } from "./SegmentCard.tsx";
 import {
+	ApplicationCells,
 	ApplicationsCard,
 	ApplicationsTile,
 	SiteBreakdown,
@@ -157,7 +158,7 @@ export function ReviewPage() {
 								step={0}
 								title="The view in each state"
 								notDeciding={
-									"The layout (SL); what the tiles and their cards say (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
+									"The layout (SL); what the tiles and their cards say, including the applications tile's detail line, such as \u201c2 out of contact\u201d (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
 								}
 							>
 								<State
@@ -170,8 +171,8 @@ export function ReviewPage() {
 								</State>
 								<State
 									label="Two applications out of contact, and two with only some nodes in contact"
-									note="The two out of contact, kyc and payroll, have the red accent, and say so in place of their figures. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile counts the two out of contact in its detail line."
-									recommendation="Approve. The red accent and the words mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
+									note="The two out of contact, kyc and payroll, have the red accent, and say &quot;Contact lost&quot; in place of their figures, because a card of the grid has no popover to carry a status, which is an exception to the rule that a figure that isn't working keeps its place as a blurry zero. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile counts the two out of contact in its detail line."
+									recommendation="Approve, with &quot;Contact lost&quot;. It says what happened, as a status, in two words. The red accent and the words mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 									wide
 								>
 									<SiteDemo data={siteOf(someOut, euWest)} />
@@ -212,6 +213,25 @@ export function ReviewPage() {
 										data={siteOf(siteApplications.slice(40, 52), undefined)}
 									/>
 								</State>
+								<Choices
+									of="B"
+									title="the words in place of the figures"
+									framed={false}
+									choices={(
+										[
+											["No contact", "No contact"],
+											["Offline, as the engine tile says", "Offline"],
+											["Out of contact, as before", "out of contact"],
+										] as const
+									).map(([label, words]) => [
+										label,
+										<ApplicationCells
+											key={label}
+											data={siteOf(someOut.slice(44, 50), euWest)}
+											outOfContact={words}
+										/>,
+									])}
+								/>
 							</Part>
 						</Tile>
 

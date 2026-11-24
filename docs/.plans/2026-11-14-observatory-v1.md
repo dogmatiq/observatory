@@ -932,6 +932,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   heading "Clusters" of the root list, whose entries are now applications at sites, are placeholders until then, and
   are settled as those pages are designed on `/-/review`. Every page that waits
   for something to become known asks again every second.
+- Decided, to build next: a member of a cluster that is out of contact counts toward a figure's coverage as a node that
+  doesn't report, on every view, so the cluster view's figures blur while some nodes are out of contact, as the site
+  view's do, rather than shrinking with no sign. Today `Coverage` counts only the nodes that are reporting. Its new
+  state is reviewed under the cluster tile.
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with a bar of which applications record the most; the messages waiting, with those
   that are failing, and a bar of which applications have the most; and the number of applications in contact, with the

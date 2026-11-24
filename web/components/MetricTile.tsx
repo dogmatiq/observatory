@@ -253,33 +253,31 @@ export function Failing({
 		count > 0 ? "steady" : "gone",
 	);
 
-	// Whether the time that it stays at zero is up.
-	const [expired, setExpired] = useState(false);
-
-	useEffect(() => {
+	// The phase follows the count as it changes, as the count is drawn, rather
+	// than in an effect afterwards, so that a count that is gone and stays at
+	// none does no work at all, however many of them a view has.
+	const [last, setLast] = useState(count);
+	if (count !== last) {
+		setLast(count);
 		if (count > 0) {
-			setExpired(false);
-			setPhase((p) =>
-				p === "steady" || p === "in" ? p : p === "zero" ? "steady" : "in",
-			);
-			return;
+			setPhase(phase === "zero" ? "steady" : phase === "steady" ? phase : "in");
+		} else if (phase !== "gone" && phase !== "out") {
+			setPhase("zero");
 		}
+	}
 
-		setPhase((p) => (p === "gone" || p === "out" ? p : "zero"));
-		const timer = window.setTimeout(() => setExpired(true), holdTime);
-		return () => window.clearTimeout(timer);
-	}, [count]);
-
-	// It shrinks away once its time is up.
+	// It stays at zero for a while, and then shrinks away.
 	useEffect(() => {
-		if (!expired) {
+		if (phase !== "zero") {
 			return;
 		}
 
-		setPhase((p) =>
-			p === "zero" ? (prefersReducedMotion() ? "gone" : "out") : p,
+		const timer = window.setTimeout(
+			() => setPhase(prefersReducedMotion() ? "gone" : "out"),
+			holdTime,
 		);
-	}, [expired]);
+		return () => window.clearTimeout(timer);
+	}, [phase]);
 
 	if (phase === "gone") {
 		return null;
