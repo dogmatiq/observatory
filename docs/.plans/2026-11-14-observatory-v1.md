@@ -1021,7 +1021,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   segment.
   The process digest's explainer is approved. Under the card it has only the reminder of what a process does, and its
   box, "The statements application's engine spreads this process's instances across several deadline queues. Each
-  instance is bound to the queue that holds its deadlines.", is there only when the bar has more than one segment. Done: the segment hovercards' advice says
+  instance is bound to the queue that holds its deadlines.", is there only when the bar has more than one segment.
+  The integration digest's explainer is approved. Its annotations include "the handler prefers to handle messages one
+  at a time", on the flag of a handler that asks to minimize concurrency, which is Lucide's "merge" turned to point
+  right, and "how recent commands were spread across the nodes", on its bar of nodes. Its chart's annotation follows
+  what the chart counts: "events recorded over the last minute", or, for an integration that records no events,
+  "commands handled over the last minute". A flag is an icon beside a card's label that is shown only while something
+  is true of what the card is about. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
