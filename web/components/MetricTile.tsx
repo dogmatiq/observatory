@@ -219,15 +219,56 @@ export function Noun({ children }: { children: ReactNode }) {
 }
 
 /**
- * How long a count of failing messages that has fallen to zero stays, in
- * milliseconds, before it shrinks away.
+ * How long a count set apart that has fallen to zero stays, in milliseconds,
+ * before it shrinks away.
  */
 const holdTime = 1000;
 
 /**
+ * What each kind of count set apart is: the color that it has, and what a screen
+ * reader says of it.
+ */
+const setApart = {
+	failing: {
+		ink: "text-failing",
+		spoken: (n: number) => ` and ${countOf(n, "message", "messages")} failing`,
+	},
+	"out-of-contact": {
+		ink: "text-bad",
+		spoken: (n: number) =>
+			` and ${countOf(n, "application", "applications")} out of contact`,
+	},
+} as const;
+
+/**
  * Failing is the number of messages that are pending and failing, which comes
- * after the number of those that are not, such as "24 +1". It is orange, and
- * smaller than the number it follows.
+ * after the number of those that are not, such as "24 +1", in orange. See
+ * [SetApart].
+ */
+export function Failing({
+	count,
+	size,
+}: {
+	count: number;
+	size: "headline" | "stat";
+}) {
+	return <SetApart kind="failing" count={count} size={size} />;
+}
+
+/**
+ * OutOfContact is the number of applications that are out of contact, which
+ * comes after the number of those that are in contact, such as "94 +2", in red.
+ * See [SetApart].
+ */
+export function OutOfContact({ count }: { count: number }) {
+	return <SetApart kind="out-of-contact" count={count} size="headline" />;
+}
+
+/**
+ * SetApart is the part of a number that needs attention, which comes after the
+ * rest of the number, such as the failing messages of "24 +1". It is smaller
+ * than the number it follows, and has the color of its kind: orange for failing
+ * messages, and red for what is out of contact.
  *
  * It is spoken in full, because "+1" says little to a screen reader.
  *
@@ -239,10 +280,12 @@ const holdTime = 1000;
  * neither of the others when the page loads with it in place, nor for a viewer
  * who asks for less motion.
  */
-export function Failing({
+function SetApart({
+	kind,
 	count,
 	size,
 }: {
+	kind: keyof typeof setApart;
 	count: number;
 	size: "headline" | "stat";
 }) {
@@ -304,15 +347,18 @@ export function Failing({
 				setPhase((p) => (p === "out" ? "gone" : p === "in" ? "steady" : p))
 			}
 		>
-			<span className="min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap text-failing">
+			<span
+				className={cn(
+					"min-w-0 origin-left overflow-hidden font-semibold whitespace-nowrap",
+					setApart[kind].ink,
+				)}
+			>
 				<span className={cn("block", size === "headline" ? "pl-1.5" : "pl-1")}>
 					<span aria-hidden="true">
 						+<Ramped value={count} format={formatCompact} />
 					</span>
 					{count > 0 && (
-						<span className="sr-only">
-							{` and ${countOf(count, "message", "messages")} failing`}
-						</span>
+						<span className="sr-only">{setApart[kind].spoken(count)}</span>
 					)}
 				</span>
 			</span>

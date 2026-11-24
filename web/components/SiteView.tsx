@@ -12,7 +12,10 @@ import { Figure } from "./Figure.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
 import { Icon } from "./Icon.tsx";
 import { InfoCard } from "./InfoCard.tsx";
-import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
+import {
+	MessagesWaitingCard,
+	SetApartExample,
+} from "./MessagesWaitingCard.tsx";
 import {
 	Alarm,
 	accentClasses,
@@ -21,6 +24,7 @@ import {
 	linkedCardClasses,
 	MetricTile,
 	Noun,
+	OutOfContact,
 	raisedClasses,
 } from "./MetricTile.tsx";
 import { eventRateWords } from "./Overview.tsx";
@@ -386,20 +390,26 @@ export function ApplicationsCard({ live }: { live: number }) {
 		>
 			<p>
 				The number of applications that are in contact now. An application is in
-				contact while its engine, or any node of its cluster, is in contact.
+				contact while its engine, or any node of its cluster, is in contact. If
+				any applications are out of contact, they are shown separately.
 			</p>
+			<SetApartExample
+				rest="in contact"
+				part="out of contact"
+				partInk="text-bad"
+			/>
 		</InfoCard>
 	);
 }
 
 /**
  * ApplicationsTile is the site's applications tile, whose headline is the number
- * of applications in contact, and whose detail line gives the number out of
- * contact, if any are. Its chart is the heartbeat of each application in
+ * of applications in contact, followed by the number out of contact, set apart
+ * in red, such as "94 +2", as the queues tile sets apart its failing messages. Its chart is the heartbeat of each application in
  * contact, from the node that sent the latest. It has no bar.
  *
- * While any application is out of contact, the tile has the red accent, and the
- * number out of contact is red, because an application out of contact is one
+ * While any application is out of contact, the tile has the red accent,
+ * because an application out of contact is one
  * that nothing shows to be working, unlike a node, whose cluster's other nodes
  * carry on.
  */
@@ -437,6 +447,7 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 						) : (
 							<Ramped value={live.length} format={String} />
 						)}
+						<OutOfContact count={out} />
 					</span>
 				</Popover>
 			}
@@ -444,17 +455,8 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 				<Popover card content={card}>
 					<span className={describedClasses}>
 						<Noun>
-							{nounFor(live.length, "application", "applications")} in contact
+							{nounFor(data.applications.length, "application", "applications")}
 						</Noun>
-						{out > 0 && (
-							<>
-								{", "}
-								<Alarm>
-									<Ramped value={out} format={String} />
-								</Alarm>{" "}
-								out of contact
-							</>
-						)}
 					</span>
 				</Popover>
 			}

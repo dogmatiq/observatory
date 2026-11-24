@@ -51,15 +51,16 @@ test("an application that is out of contact says so by an icon beside its name, 
 	).toBeGreaterThan(0);
 });
 
-test("the applications tile counts those in contact, and those out of contact", () => {
-	const names = apps.slice(0, 2).map((a) => a.application.name);
-	const { container } = render(
+test("the applications tile counts those in contact, with those out of contact set apart", () => {
+	const names = apps.slice(0, 1).map((a) => a.application.name);
+	render(
 		<SiteOverview data={siteOf(withContact(apps, { out: names }), euWest)} />,
 	);
 
-	expect(container.textContent).toContain(
-		"applications in contact, 2 out of contact",
-	);
+	const tile = screen.getByRole("article", { name: "Applications" });
+
+	expect(tile.textContent).toMatch(/^3\+1 and 1 application out of contact/);
+	expect(tile.textContent).toMatch(/out of contactapplications$/);
 });
 
 test("the applications at no site link to the site whose key is the nil UUID", () => {

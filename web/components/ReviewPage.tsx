@@ -158,7 +158,7 @@ export function ReviewPage() {
 								step={0}
 								title="The view in each state"
 								notDeciding={
-									"The layout (SL); what the tiles and their cards say, including the applications tile's detail line, such as \u201c2 out of contact\u201d (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
+									"The layout (SL); what the tiles and their cards say, including the card that explains the applications tile's headline (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
 								}
 							>
 								<State
@@ -171,7 +171,7 @@ export function ReviewPage() {
 								</State>
 								<State
 									label="Two applications out of contact, and two with only some nodes in contact"
-									note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as the other cards have their icon there, and pointing at the icon shows a card that says contact with the application has been lost. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile has the red accent while any application is out of contact, and the number out of contact in its detail line is red, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
+									note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as the other cards have their icon there, and pointing at the icon shows a card that says contact with the application has been lost. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
 									recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its card gives the words, as the status of a card does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 									wide
 								>
@@ -315,12 +315,12 @@ export function ReviewPage() {
 								notDeciding={
 									"The card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW 1); the cards of the bars' segments (SB)."
 								}
-								note="The events tile's headline is the events per minute, and its detail line counts the applications that recorded any. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, and its detail line gives the number out of contact, if any are."
+								note="The events tile's headline is the events per minute, and its detail line counts the applications that recorded any. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, as in &quot;94 +2&quot;, and its detail line is the word &quot;applications&quot;."
 							>
 								<State
 									label="The card of the applications in contact"
 									note="Its status is there only while every application is out of contact."
-									recommendation="Approve, with this wording. It covers an engine that clusters and one that doesn't, so it says &quot;its engine, or any node of its cluster&quot;. The status follows the cluster's &quot;Every node is out of contact, so it's unknown whether the application is working&quot;."
+									recommendation="Approve, with this wording and example. It covers an engine that clusters and one that doesn't, so it says &quot;its engine, or any node of its cluster&quot;, and its example is the messages waiting card's, with red in place of orange. The status follows the cluster's &quot;Every node is out of contact, so it's unknown whether the application is working&quot;."
 								>
 									<Panel>
 										<ApplicationsCard live={0} />
