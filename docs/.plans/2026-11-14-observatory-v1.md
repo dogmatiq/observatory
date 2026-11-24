@@ -972,8 +972,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   shows while the card is pointed at or focused, and always on a touch screen, which can't point. The copy has
   made-up figures, fixed for each layout, chosen so that every state worth explaining is shown, such as a "+N", an
   accent and blur, and it shows only what this card can show, by the rules for how what the nodes support shapes the
-  layout. It is subtly labelled as example figures, and is in shades of gray, except for the part that the reader
-  points at, or whose annotation the reader points at, which is in its own colors, blending into the gray. Every
+  layout. It is in its own colors, with a small caption under it, "Example data only". Pointing at an
+  annotation, or at the part that it is about, fades the rest of the card back, with a soft edge around the part,
+  and draws focused text in the most prominent color. Every
   explainer has a title, which says what the card is about and where, in place of "This section shows information
   about…"; then the annotated card, whose annotations say what each part is; and then a paragraph of the definitions
   of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
