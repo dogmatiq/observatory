@@ -980,8 +980,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   of terms that aren't Dogma's and of advice, such as that fewer messages waiting is better.
   Text that is true of this application only is drawn apart, on a sunken ground, with the icon of what it is about.
   The events card's is "This application can spread its events across several event streams; the order of the
-  events of each aggregate instance is kept, but not the order of events from different instances.", shown only when
-  the engine reports the multiple-streams model. In a window too narrow for the annotations beside the card at full
+  events of each aggregate instance is kept, but not the order of events from different instances.", shown whenever
+  the card shows its bar of streams, with its wording chosen by whether the engine reports the multiple-streams model;
+  the bar's advice is in the same box. In a window too narrow for the annotations beside the card at full
   size, each is a numbered marker on the card, and their words are listed under it, by number.
   The events card's explainer defines an event stream only when the card shows its streams. Each bar's advice, such
   as "An even spread is better", is in the explainer of its card, only when the card has the bar, and leaves the
