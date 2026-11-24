@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dogmatiq/protobuf/configpb"
+	"github.com/dogmatiq/protobuf/enginegrpc"
 	"github.com/dogmatiq/protobuf/metricsgrpc"
 	"github.com/dogmatiq/protobuf/uuidpb"
 	"google.golang.org/protobuf/proto"
@@ -22,7 +23,8 @@ const chartSpan = 70 * time.Second
 // ClusterSummary is one cluster in the list of the clusters that the Observatory
 // knows.
 type ClusterSummary struct {
-	// ID is the ID of the cluster, as a UUID.
+	// ID is the ID of the cluster, as a UUID. For an engine that doesn't run as
+	// a cluster, it is the ID of the engine. See [Observer].
 	ID string `json:"id"`
 
 	Application Application `json:"application"`
@@ -97,28 +99,48 @@ func (o *Observer) Clusters(now time.Time) []ClusterSummary {
 }
 
 // DownView returns the cluster view of a cluster that the Observatory remembers
-// and has no node of: its application and site, a cluster with no live nodes, and
-// nothing else, because nothing about it is current.
+// and has no node of: its application and site, a cluster with no live nodes, or
+// an engine that isn't reporting, and nothing else, because nothing about it is
+// current.
 func DownView(rec ClusterRecord) ClusterView {
+	o := Overview{Handlers: []HandlerCard{}}
+	if rec.Clustered {
+		o.Cluster = &ClusterTile{Nodes: []Member{}}
+	} else {
+		o.Engine = &EngineTile{}
+	}
+
 	return ClusterView{
 		Application: rec.Application,
 		Site:        rec.Site,
 		Down:        true,
-		Overview: Overview{
-			Cluster:  ClusterTile{Nodes: []Member{}},
-			Handlers: []HandlerCard{},
-		},
+		Overview:    o,
 	}
 }
 
-// clustersOf groups nodes by the ID of their cluster.
+// clustersOf groups nodes by the ID of their cluster. See [Observer].
 func clustersOf(nodes []Node) map[string][]Node {
 	clusters := map[string][]Node{}
 	for _, n := range nodes {
-		id := n.Preamble.GetClusterId().AsString()
+		id := clusterOf(n.Preamble)
 		clusters[id] = append(clusters[id], n)
 	}
 	return clusters
+}
+
+// clustered returns true if the engine of a cluster's nodes runs as a cluster.
+func clustered(nodes []Node) bool {
+	return slices.ContainsFunc(nodes, func(n Node) bool {
+		return n.Preamble.HasCluster()
+	})
+}
+
+// everyNode returns true if the preamble of every one of the nodes satisfies
+// the predicate, and there is at least one node.
+func everyNode(nodes []Node, pred func(*enginegrpc.WatchEngineResponse_Preamble) bool) bool {
+	return len(nodes) > 0 && !slices.ContainsFunc(nodes, func(n Node) bool {
+		return !pred(n.Preamble)
+	})
 }
 
 // applicationOf returns the application that a cluster's nodes run, at the
@@ -126,16 +148,25 @@ func clustersOf(nodes []Node) map[string][]Node {
 // from.
 //
 // The nodes of a cluster may run different versions of an application, such as
-// during a deploy. The application is the one that the nodes that [Combine]
-// reads describe, and the first of them to begin its call to the metrics API
-// decides, because the keys of handlers in the samples are those of that
-// node's application. Without such a node, it is the application of a node
-// that is reporting, or of any node, whichever has the lowest ID.
+// during a deploy. The application is the one that the calls that [Combine]
+// reads describe, and the first of them to begin decides, because the keys of
+// handlers in the samples are those of that call's application. Without such a
+// call, it is the application of a node that is reporting, or of any node,
+// whichever has the lowest ID.
 func applicationOf(now time.Time, nodes []Node) (Application, *configpb.Application) {
 	var config *configpb.Application
 
-	if readers := contributors(now, nodes); len(readers) > 0 {
-		config = readers[0].Metrics.Preamble.GetApplication()
+	r := readingOf(now, nodes)
+	var first *Metrics
+	if r.cluster != nil {
+		first = r.cluster.ClusterMetrics
+	}
+	if len(r.nodes) > 0 && (first == nil || r.nodes[0].Metrics.Call < first.Call) {
+		first = r.nodes[0].Metrics
+	}
+
+	if first != nil {
+		config = first.Preamble.GetApplication()
 	} else {
 		sorted := slices.Clone(nodes)
 		slices.SortFunc(sorted, func(a, b Node) int {
@@ -146,8 +177,8 @@ func applicationOf(now time.Time, nodes []Node) (Application, *configpb.Applicat
 				return 1
 			}
 			return cmp.Compare(
-				a.Preamble.GetNodeId().AsString(),
-				b.Preamble.GetNodeId().AsString(),
+				a.Preamble.GetId().AsString(),
+				b.Preamble.GetId().AsString(),
 			)
 		})
 		if len(sorted) > 0 {
@@ -169,7 +200,7 @@ func siteOf(nodes []Node) string {
 	site, from := "", ""
 	for _, n := range nodes {
 		name := n.Preamble.GetSite().GetName()
-		id := n.Preamble.GetNodeId().AsString()
+		id := n.Preamble.GetId().AsString()
 		if name != "" && (from == "" || id < from) {
 			site, from = name, id
 		}
@@ -208,7 +239,13 @@ type Overview struct {
 	// is derived from.
 	Queues *QueuesTile `json:"queues,omitempty"`
 
-	Cluster ClusterTile `json:"cluster"`
+	// Cluster is the cluster tile. It is nil if the engine doesn't run as a
+	// cluster, which has Engine instead.
+	Cluster *ClusterTile `json:"cluster,omitempty"`
+
+	// Engine is the engine tile, of an engine that doesn't run as a cluster. It
+	// is nil if the engine runs as a cluster, which has Cluster instead.
+	Engine *EngineTile `json:"engine,omitempty"`
 
 	// Handlers is a card for each handler of the application, aggregates first,
 	// then processes, integrations and projections, each by name.
@@ -235,6 +272,11 @@ type EventsTile struct {
 	// no node supports the length of event streams.
 	Streams []Spread `json:"streams"`
 
+	// OneStream is true if every node of the cluster says that its engine
+	// appends every event to one event stream, so that a stream in Streams is
+	// the only one there is.
+	OneStream bool `json:"oneStream,omitempty"`
+
 	// History is how Rate changed over the last minute. It is nil if Rate is.
 	History *Chart `json:"history,omitempty"`
 }
@@ -249,6 +291,11 @@ type QueuesTile struct {
 	// commands and deadlines together. It is nil if no node supports the number
 	// of messages in queues.
 	Queues []Spread `json:"queues"`
+
+	// OneQueue is true if every node of the cluster says that its engine
+	// delivers every message through one queue, so that a queue in Queues is
+	// the only one there is.
+	OneQueue bool `json:"oneQueue,omitempty"`
 
 	// Failing is the number of messages whose latest delivery attempt failed. It
 	// is zero if no node reports it.
@@ -275,7 +322,7 @@ type QueuesTile struct {
 }
 
 // Rate is how often something happens, which the Observatory derives from the
-// running totals that the nodes report.
+// cumulative counts that the nodes report.
 type Rate struct {
 	// PerSecond is the number of times per second. It is nil until the
 	// Observatory can give it.
@@ -291,10 +338,23 @@ type Spread struct {
 	Size uint64 `json:"size"`
 }
 
-// ClusterTile is the cluster tile.
+// ClusterTile is the cluster tile, of an engine that runs as a cluster.
 type ClusterTile struct {
 	// Nodes is the cluster's members, sorted by node ID.
 	Nodes []Member `json:"nodes"`
+
+	// ReportsWorkloads is true if any node of the cluster says that it reports
+	// the workloads that it owns. A cluster whose engine divides its work into
+	// workloads, and whose nodes don't report them, is shown as one whose
+	// engine doesn't divide its work.
+	ReportsWorkloads bool `json:"reportsWorkloads,omitempty"`
+}
+
+// EngineTile is the engine tile, of an engine that doesn't run as a cluster.
+type EngineTile struct {
+	// Node is the engine, which the Observer has as its only node, while it is
+	// reporting. It is nil while it isn't.
+	Node *Member `json:"node,omitempty"`
 }
 
 // Member is one of the nodes that make up a cluster. See [Members].
@@ -303,8 +363,9 @@ type Member struct {
 	ID string `json:"id"`
 
 	// Workloads is the number of workloads that the node says it owns. It is nil
-	// for a node whose engine doesn't divide its work into workloads, and for a
-	// node that the Observatory isn't connected to.
+	// for a node that doesn't say that it reports its workloads, for one that
+	// hasn't reported them yet, and for one that the Observatory isn't connected
+	// to.
 	Workloads *int `json:"workloads,omitempty"`
 
 	// Heartbeats is when the node's heartbeats arrived in the last ten minutes,
@@ -407,7 +468,7 @@ type HandlerSummary struct {
 	QueuedMessages *uint64 `json:"queuedMessages,omitempty"`
 
 	// UnhandledEvents is the number of events that a process or a projection has
-	// yet to handle.
+	// yet to handle or skip, which is its lag summed over the event streams.
 	UnhandledEvents *uint64 `json:"unhandledEvents,omitempty"`
 
 	// SchedulesDeadlines is true for a process that schedules deadlines.
@@ -532,8 +593,14 @@ func figuresOf(samples []ClusterSample) figures {
 			handler(m.GetHandlerKey()).commandsPending = &v
 		case *metricsgrpc.HandlerDeadlinesPending:
 			handler(m.GetHandlerKey()).deadlinesPending = &v
-		case *metricsgrpc.HandlerEventsPending:
-			handler(m.GetHandlerKey()).eventsPending = &v
+		case *metricsgrpc.HandlerEventStreamLag:
+			// The events that the handler has yet to reach are its lag on each
+			// stream, added up.
+			h := handler(m.GetHandlerKey())
+			if h.eventsPending == nil {
+				h.eventsPending = new(uint64)
+			}
+			*h.eventsPending += v
 		case *metricsgrpc.HandlerCommandsFailing:
 			handler(m.GetHandlerKey()).failing += v
 		case *metricsgrpc.HandlerDeadlinesFailing:
@@ -614,6 +681,9 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 			o.Events.History = &Chart{Points: []ChartPoint{}}
 		}
 
+		o.Events.OneStream = everyNode(nodes, func(p *enginegrpc.WatchEngineResponse_Preamble) bool {
+			return p.GetEventStreamModel().HasSingleEventStream()
+		})
 		o.Events.Coverage = coverageOf(
 			new(metricsgrpc.HandlerEventsRecorded),
 			new(metricsgrpc.EventStreamLength),
@@ -635,6 +705,9 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		if pending {
 			o.Queues.Queues = spreadOf(f.pendingInQueue)
 		}
+		o.Queues.OneQueue = everyNode(nodes, func(p *enginegrpc.WatchEngineResponse_Preamble) bool {
+			return p.GetQueueModel().HasSingleQueue()
+		})
 
 		// The messages that have been handled are the throughput, if all kinds of
 		// them are reported, and, if not, those that are removed from the queues
@@ -669,7 +742,25 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		}
 	}
 
-	o.Cluster.Nodes = membersOf(now, nodes)
+	if clustered(nodes) {
+		o.Cluster = &ClusterTile{
+			Nodes: membersOf(now, nodes),
+			ReportsWorkloads: slices.ContainsFunc(nodes, func(n Node) bool {
+				return n.Preamble.GetCluster().GetReportsWorkloads()
+			}),
+		}
+	} else {
+		// An engine that doesn't run as a cluster is the only node that the
+		// Observer has of it.
+		o.Engine = &EngineTile{}
+		for _, n := range nodes {
+			if n.Reporting(now) {
+				m := memberOf(now, n)
+				o.Engine.Node = &m
+			}
+		}
+	}
+
 	o.Handlers = handlerCards(config, supported, f, r.handlers)
 
 	// A metric of handlers that only some of the nodes support lowers the coverage
@@ -719,26 +810,16 @@ func spreadOf(sizes map[string]uint64) []Spread {
 func membersOf(now time.Time, nodes []Node) []Member {
 	byID := map[string]Node{}
 	for _, n := range nodes {
-		byID[n.Preamble.GetNodeId().AsString()] = n
+		byID[n.Preamble.GetId().AsString()] = n
 	}
 
 	out := []Member{}
 	for _, id := range Members(now, nodes) {
 		key := id.AsString()
 		live := Member{ID: key, Heartbeats: []float64{}}
-
 		if n, ok := byID[key]; ok {
-			if dividesWork(n) {
-				owned := len(n.Workloads.GetWorkloads())
-				live.Workloads = &owned
-			}
-			if n.Connected {
-				for _, at := range n.Heartbeats {
-					live.Heartbeats = append(live.Heartbeats, millisecondsBefore(now, at))
-				}
-			}
+			live = memberOf(now, n)
 		}
-
 		out = append(out, live)
 	}
 
@@ -746,15 +827,26 @@ func membersOf(now time.Time, nodes []Node) []Member {
 	return out
 }
 
-// dividesWork returns true if the engine of a node divides its work into
-// workloads, which the node reports.
-//
-// The node's preamble doesn't say so yet, and dogmatiq/protobuf#45 proposes a
-// field that does, with which only a node whose engine divides its work sends
-// its workloads. Until there is one, an engine divides its work if its node has
-// sent its workloads.
-func dividesWork(n Node) bool {
-	return n.Workloads != nil
+// memberOf returns what the cluster view shows of a node that the Observer
+// has.
+func memberOf(now time.Time, n Node) Member {
+	m := Member{
+		ID:         n.Preamble.GetId().AsString(),
+		Heartbeats: []float64{},
+	}
+
+	if n.Preamble.GetCluster().GetReportsWorkloads() && n.Workloads != nil {
+		owned := len(n.Workloads.GetWorkloads())
+		m.Workloads = &owned
+	}
+
+	if n.Connected {
+		for _, at := range n.Heartbeats {
+			m.Heartbeats = append(m.Heartbeats, millisecondsBefore(now, at))
+		}
+	}
+
+	return m
 }
 
 // millisecondsBefore returns how long before now the time at was, in
@@ -956,7 +1048,7 @@ func (r *Recorder) Record(now time.Time, nodes []Node) {
 			r.clusters[id] = h
 		}
 
-		if len(contributors(now, members)) > 0 {
+		if readingOf(now, members).reads() {
 			last := o
 			h.last = &last
 			h.lastAt = now
@@ -1038,24 +1130,16 @@ func (h *history) smoothNodeRates(now time.Time, nodes []Node, cards []HandlerCa
 // node handles for each handler, by the key of the handler and then the ID of
 // the node. A node whose rate isn't known yet is left out.
 //
-// The totals that the nodes report are their own, so the rates are too. See
-// [Combine], which adds them up.
+// The counts that the nodes report through WatchNodeMetrics are their own, so
+// the rates are too. See [Combine], which adds them up.
 func handledByNode(now time.Time, nodes []Node) (commands, events map[string]map[string]float64) {
 	commands = map[string]map[string]float64{}
 	events = map[string]map[string]float64{}
 
-	readers := contributors(now, nodes)
-	decisions := decide(readers)
-
-	for _, n := range readers {
-		id := n.Preamble.GetNodeId().AsString()
+	for _, n := range contributors(now, nodes) {
+		id := n.Preamble.GetId().AsString()
 
 		for _, s := range n.Metrics.Samples {
-			d := decisions[s.Metric]
-			if s.Reach != metricsgrpc.Reach_REACH_NODE || d.reach != metricsgrpc.Reach_REACH_NODE {
-				continue
-			}
-
 			rate, ok := s.perSecond(now)
 			if !ok {
 				continue
@@ -1108,7 +1192,7 @@ func (r *Recorder) View(now time.Time, nodes []Node, cluster string) (ClusterVie
 	// unless the cluster is down. A cluster that is down has charts that stand still,
 	// as they were when a node last reported, so that they don't scroll away.
 	chartAt := now
-	if h.last != nil && len(contributors(now, members)) == 0 {
+	if h.last != nil && !readingOf(now, members).reads() {
 		o, down = downOf(*h.last), true
 		chartAt = h.lastAt
 	}
@@ -1173,7 +1257,15 @@ func downOf(last Overview) Overview {
 		last.Queues = &q
 	}
 
-	last.Cluster = ClusterTile{Nodes: []Member{}}
+	if last.Cluster != nil {
+		last.Cluster = &ClusterTile{
+			Nodes:            []Member{},
+			ReportsWorkloads: last.Cluster.ReportsWorkloads,
+		}
+	}
+	if last.Engine != nil {
+		last.Engine = &EngineTile{}
+	}
 	last.Handlers = slices.Clone(last.Handlers)
 
 	return last

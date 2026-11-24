@@ -117,11 +117,71 @@ export function ReviewPage() {
 							note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The card of the icon says why, as a status. The queues tile and the kind icon of a handler card show the same status in the same case."
 						>
 							<State
-								label="Pointing at the icon while only some nodes report what the tile shows"
+								label="A version is unknown"
 								recommendation="Approve, with this wording. It says what the nodes do, then what follows for the numbers, as the user sees them, and then the likely cause."
 							>
 								<Panel>
 									<EventsIconCard status={partialStatus.text} />
+								</Panel>
+							</State>
+							<State
+								label={"The nodes run different versions of the engine"}
+								note={
+									"The nodes' preambles show the versions, so the status says what they show."
+								}
+								recommendation="Approve, with this wording."
+							>
+								<Panel>
+									<EventsIconCard
+										status={
+											"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes. The cluster's nodes are running different versions of the engine."
+										}
+									/>
+								</Panel>
+							</State>
+							<State
+								label={"The nodes run different versions of the application"}
+								note={
+									"The nodes' preambles show the versions, so the status says what they show."
+								}
+								recommendation="Approve, with this wording."
+							>
+								<Panel>
+									<EventsIconCard
+										status={
+											"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes. The cluster's nodes are running different versions of the application."
+										}
+									/>
+								</Panel>
+							</State>
+							<State
+								label={"The nodes run different versions of both"}
+								note={
+									"The nodes' preambles show the versions, so the status says what they show."
+								}
+								recommendation="Approve, with this wording."
+							>
+								<Panel>
+									<EventsIconCard
+										status={
+											"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes. The cluster's nodes are running different versions of the engine and of the application."
+										}
+									/>
+								</Panel>
+							</State>
+							<State
+								label={"The versions are the same"}
+								note={
+									"Every node runs the same versions, so the status doesn't blame the version."
+								}
+								recommendation="Approve, with this wording."
+							>
+								<Panel>
+									<EventsIconCard
+										status={
+											"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes."
+										}
+									/>
 								</Panel>
 							</State>
 							<Choices
@@ -289,6 +349,7 @@ export function ReviewPage() {
 								<ClusterTile
 									application={application}
 									data={{
+										...overview.cluster,
 										nodes: overview.cluster.nodes.map((n, i) =>
 											i === 1 ? { id: n.id, heartbeats: n.heartbeats } : n,
 										),
@@ -1115,6 +1176,7 @@ function Nodes({ application }: { application: Application }) {
 				<ClusterTile
 					application={application}
 					data={{
+						reportsWorkloads: true,
 						nodes: nodes.current.map((n) => ({
 							id: n.id,
 							workloads: n.workloads,
@@ -1157,7 +1219,10 @@ function Nodes({ application }: { application: Application }) {
 /** The application, at a site. */
 /** The data of the cluster tile, with the given number of the fixture's nodes. */
 function clusterTile(nodes: number): NonNullable<OverviewData["cluster"]> {
-	return { nodes: overview.cluster.nodes.slice(0, nodes) };
+	return {
+		...overview.cluster,
+		nodes: overview.cluster.nodes.slice(0, nodes),
+	};
 }
 
 /** The data of the events tile, with the given rate, or without one. */

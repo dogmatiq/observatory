@@ -106,8 +106,8 @@ export interface LiveNode {
 	id: string;
 
 	/**
-	 * The number of workloads that the node owns. Absent for a node whose engine
-	 * doesn't divide its work into workloads, and for one that isn't connected.
+	 * The number of workloads that the node owns. Absent for a node that doesn't
+	 * report its workloads or hasn't yet, and for one that isn't connected.
 	 */
 	workloads?: number;
 
@@ -151,8 +151,8 @@ export interface OverviewData {
 		streams?: SpreadPart[];
 
 		/**
-		 * True if the engine appends every event to one event stream, as it says
-		 * it does, so that the one stream in `streams` is the only one there is.
+		 * True if the engine appends every event to one event stream, as every
+		 * node says, so that the one stream in `streams` is the only one there is.
 		 */
 		oneStream?: boolean;
 
@@ -181,7 +181,7 @@ export interface OverviewData {
 		queues?: SpreadPart[];
 
 		/**
-		 * True if the engine keeps every message in one queue, as it says it does,
+		 * True if the engine keeps every message in one queue, as every node says,
 		 * so that the one queue in `queues` is the only one there is.
 		 */
 		oneQueue?: boolean;
@@ -216,6 +216,13 @@ export interface OverviewData {
 	cluster?: {
 		/** The nodes that are live, with the workloads that each owns. */
 		nodes: LiveNode[];
+
+		/**
+		 * True if any node says that it reports the workloads that it owns. An
+		 * engine whose nodes don't report them is shown as one that doesn't divide
+		 * its work into workloads.
+		 */
+		reportsWorkloads?: boolean;
 	};
 
 	/**
@@ -370,7 +377,19 @@ export interface Binding {
 export interface ClusterDocument {
 	application: Application;
 
-	/** The cluster's members, by node ID. */
+	/**
+	 * The cluster, if the engine runs as one. Absent for an engine that doesn't,
+	 * which has only itself in `nodes`.
+	 */
+	cluster?: {
+		/** True if any node says that it reports the workloads that it owns. */
+		reportsWorkloads?: boolean;
+	};
+
+	/**
+	 * The cluster's members, by node ID, or, for an engine that doesn't run as a
+	 * cluster, the engine itself while it is reporting.
+	 */
 	nodes: Record<string, { workloads?: number }>;
 
 	/**
@@ -378,10 +397,16 @@ export interface ClusterDocument {
 	 */
 	eventStreams?: Record<string, { length: number }>;
 
+	/** True if every node says that its engine appends every event to one stream. */
+	oneStream?: boolean;
+
 	/**
 	 * The number of messages in each queue, by ID. Absent if no node supports it.
 	 */
 	queues?: Record<string, { messages: number }>;
+
+	/** True if every node says that its engine keeps every message in one queue. */
+	oneQueue?: boolean;
 
 	/** The number of messages whose delivery is failing, across the queues. */
 	failing?: number;

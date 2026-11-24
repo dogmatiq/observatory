@@ -24,21 +24,25 @@ type (
 )
 
 // connection is a call to [Observer.Serve], the feed of the engine API call
-// that it makes, and the feed of each call that it makes to the metrics API.
+// that it makes, and the feed of each call that it makes to WatchNodeMetrics, in
+// Calls, and to WatchClusterMetrics, in ClusterCalls.
 type connection struct {
-	Feed  *feed
-	Done  <-chan error
-	Calls <-chan *metricsFeed
+	Feed         *feed
+	Done         <-chan error
+	Calls        <-chan *metricsFeed
+	ClusterCalls <-chan *metricsFeed
 }
 
 // connect starts serving a node whose engine API call is fed by the returned
 // connection, and returns once the call has been made.
 //
 // The Observer calls the node's metrics API after the engine API's preamble
-// has arrived. Each call is available from the connection's Calls.
+// has arrived. Each call is available from the connection's Calls or
+// ClusterCalls.
 func connect(ctx context.Context, o *Observer) connection {
 	feeds := make(chan *feed, 1)
 	calls := make(chan *metricsFeed, 16)
+	clusterCalls := make(chan *metricsFeed, 16)
 
 	clients := &Clients{
 		Engine: &enginegrpc.EngineAPIClientStub{
@@ -53,13 +57,22 @@ func connect(ctx context.Context, o *Observer) connection {
 			},
 		},
 		Metrics: &metricsgrpc.MetricsAPIClientStub{
-			WatchMetricsFunc: func(
+			WatchNodeMetricsFunc: func(
 				ctx context.Context,
-				_ *metricsgrpc.WatchMetricsRequest,
+				_ *metricsgrpc.WatchNodeMetricsRequest,
 				_ ...grpc.CallOption,
-			) (metricsgrpc.MetricsAPI_WatchMetricsClient, error) {
+			) (metricsgrpc.MetricsAPI_WatchNodeMetricsClient, error) {
 				f := stubs.NewFeed[metricsgrpc.WatchMetricsResponse](ctx)
 				calls <- f
+				return f, nil
+			},
+			WatchClusterMetricsFunc: func(
+				ctx context.Context,
+				_ *metricsgrpc.WatchClusterMetricsRequest,
+				_ ...grpc.CallOption,
+			) (metricsgrpc.MetricsAPI_WatchClusterMetricsClient, error) {
+				f := stubs.NewFeed[metricsgrpc.WatchMetricsResponse](ctx)
+				clusterCalls <- f
 				return f, nil
 			},
 		},
@@ -68,7 +81,7 @@ func connect(ctx context.Context, o *Observer) connection {
 	done := make(chan error, 1)
 	go func() { done <- o.Serve(ctx, clients) }()
 
-	return connection{<-feeds, done, calls}
+	return connection{<-feeds, done, calls, clusterCalls}
 }
 
 // send feeds a response to the connection, and waits for the Observer to
@@ -82,16 +95,18 @@ func send(t *testing.T, c connection, b enginegrpc.WatchEngineResponse_builder) 
 	synctest.Wait()
 }
 
-func preamble(node, cluster *uuidpb.UUID, interval, timeout time.Duration) enginegrpc.WatchEngineResponse_builder {
-	b := enginegrpc.WatchEngineResponse_Preamble_builder{
-		NodeId:    node,
-		ClusterId: cluster,
+// preamble returns the preamble of a node whose engine runs as the cluster with
+// the given ID, or, if cluster is nil, of an engine that doesn't run as a
+// cluster.
+func preamble(node, cluster *uuidpb.UUID, interval time.Duration) enginegrpc.WatchEngineResponse_builder {
+	b := enginegrpc.WatchEngineResponse_Preamble_builder{Id: node}
+	if cluster != nil {
+		b.Cluster = enginegrpc.WatchEngineResponse_Preamble_Cluster_builder{
+			Id: cluster,
+		}.Build()
 	}
 	if interval > 0 {
 		b.HeartbeatInterval = durationpb.New(interval)
-	}
-	if timeout > 0 {
-		b.HeartbeatTimeout = durationpb.New(timeout)
 	}
 	return enginegrpc.WatchEngineResponse_builder{Preamble: b.Build()}
 }
@@ -122,7 +137,7 @@ func byID(t *testing.T, o *Observer, id *uuidpb.UUID) Node {
 	t.Helper()
 
 	for _, n := range o.Nodes() {
-		if n.Preamble.GetNodeId().Equal(id) {
+		if n.Preamble.GetId().Equal(id) {
 			return n
 		}
 	}
@@ -148,11 +163,11 @@ func TestObserver(t *testing.T) {
 				nodeID, clusterID := uuidpb.Generate(), uuidpb.Generate()
 
 				c := connect(ctx, o)
-				send(t, c, preamble(nodeID, clusterID, 0, 0))
+				send(t, c, preamble(nodeID, clusterID, 0))
 
 				n := only(t, o)
-				if !n.Preamble.GetNodeId().Equal(nodeID) {
-					t.Fatalf("unexpected node ID: got %s, want %s", n.Preamble.GetNodeId(), nodeID)
+				if !n.Preamble.GetId().Equal(nodeID) {
+					t.Fatalf("unexpected node ID: got %s, want %s", n.Preamble.GetId(), nodeID)
 				}
 				if !n.Connected {
 					t.Fatal("expected the node to be connected")
@@ -170,29 +185,21 @@ func TestObserver(t *testing.T) {
 				nodeID := uuidpb.Generate()
 
 				c := connect(ctx, o)
-				send(t, c, preamble(nodeID, uuidpb.Generate(), 0, 0))
+				send(t, c, preamble(nodeID, uuidpb.Generate(), 0))
 
 				other := uuidpb.Generate()
+				send(t, c, liveNodes(nodeID, other))
+				send(t, c, liveNodes(nodeID))
 				send(t, c, enginegrpc.WatchEngineResponse_builder{
-					LiveNodes: enginegrpc.LiveNodes_builder{
-						NodeIds: []*uuidpb.UUID{nodeID, other},
-					}.Build(),
-				})
-				send(t, c, enginegrpc.WatchEngineResponse_builder{
-					LiveNodes: enginegrpc.LiveNodes_builder{
-						NodeIds: []*uuidpb.UUID{nodeID},
-					}.Build(),
-				})
-				send(t, c, enginegrpc.WatchEngineResponse_builder{
-					Workloads: enginegrpc.Workloads_builder{
-						Workloads: []*enginegrpc.Workload{
-							enginegrpc.Workload_builder{Key: uuidpb.Generate()}.Build(),
+					ClusterWorkloads: enginegrpc.ClusterWorkloads_builder{
+						Workloads: []*enginegrpc.ClusterWorkload{
+							enginegrpc.ClusterWorkload_builder{Key: uuidpb.Generate()}.Build(),
 						},
 					}.Build(),
 				})
 
 				n := only(t, o)
-				if got := len(n.LiveNodes.GetNodeIds()); got != 1 {
+				if got := len(n.LiveNodes.GetNodes()); got != 1 {
 					t.Fatalf("unexpected number of live nodes: got %d, want 1", got)
 				}
 				if got := len(n.Workloads.GetWorkloads()); got != 1 {
@@ -210,7 +217,7 @@ func TestObserver(t *testing.T) {
 				o := NewObserver()
 
 				c := connect(ctx, o)
-				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 
 				first := time.Now()
 				send(t, c, heartbeat(time.Second))
@@ -244,11 +251,11 @@ func TestObserver(t *testing.T) {
 				nodeID, clusterID := uuidpb.Generate(), uuidpb.Generate()
 
 				first := connect(ctx, o)
-				send(t, first, preamble(nodeID, clusterID, 0, 0))
+				send(t, first, preamble(nodeID, clusterID, 0))
 				send(t, first, heartbeat(time.Second))
 
 				second := connect(ctx, o)
-				send(t, second, preamble(nodeID, clusterID, 0, 0))
+				send(t, second, preamble(nodeID, clusterID, 0))
 				<-first.Done
 
 				if got := len(only(t, o).Heartbeats); got != 1 {
@@ -266,7 +273,7 @@ func TestObserver(t *testing.T) {
 					o := NewObserver()
 
 					c := connect(t.Context(), o)
-					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 					c.Feed.End(nil)
 
 					if err := <-c.Done; err != nil {
@@ -286,7 +293,7 @@ func TestObserver(t *testing.T) {
 					o := NewObserver()
 
 					c := connect(t.Context(), o)
-					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 					c.Feed.End(want)
 
 					if got := <-c.Done; got != want {
@@ -341,7 +348,7 @@ func TestObserver(t *testing.T) {
 
 					c := connect(ctx, o)
 					time.Sleep(9 * time.Second)
-					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 
 					// Long after the time for the preamble, the node is still connected.
 					time.Sleep(time.Minute)
@@ -356,6 +363,29 @@ func TestObserver(t *testing.T) {
 			})
 		})
 
+		t.Run("when the preamble says that the engine runs as a cluster, and gives no cluster ID", func(t *testing.T) {
+			t.Run("it returns an error", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					o := NewObserver()
+
+					c := connect(t.Context(), o)
+					send(t, c, enginegrpc.WatchEngineResponse_builder{
+						Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
+							Id:      uuidpb.Generate(),
+							Cluster: &enginegrpc.WatchEngineResponse_Preamble_Cluster{},
+						}.Build(),
+					})
+
+					if err := <-c.Done; err == nil {
+						t.Fatal("expected an error")
+					}
+					if got := len(o.Nodes()); got != 0 {
+						t.Fatalf("unexpected number of nodes: got %d, want 0", got)
+					}
+				})
+			})
+		})
+
 		t.Run("when the node sends a second preamble", func(t *testing.T) {
 			t.Run("it returns an error", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
@@ -363,8 +393,8 @@ func TestObserver(t *testing.T) {
 					nodeID, clusterID := uuidpb.Generate(), uuidpb.Generate()
 
 					c := connect(t.Context(), o)
-					send(t, c, preamble(nodeID, clusterID, 0, 0))
-					send(t, c, preamble(nodeID, clusterID, 0, 0))
+					send(t, c, preamble(nodeID, clusterID, 0))
+					send(t, c, preamble(nodeID, clusterID, 0))
 
 					if err := <-c.Done; err == nil {
 						t.Fatal("expected an error")
@@ -381,10 +411,10 @@ func TestObserver(t *testing.T) {
 					nodeID, clusterID := uuidpb.Generate(), uuidpb.Generate()
 
 					first := connect(ctx, o)
-					send(t, first, preamble(nodeID, clusterID, 0, 0))
+					send(t, first, preamble(nodeID, clusterID, 0))
 
 					second := connect(ctx, o)
-					send(t, second, preamble(nodeID, clusterID, 0, 0))
+					send(t, second, preamble(nodeID, clusterID, 0))
 
 					if err := <-first.Done; !errors.Is(err, ErrSuperseded) {
 						t.Fatalf("unexpected error: got %v, want %v", err, ErrSuperseded)
@@ -408,7 +438,7 @@ func TestObserver(t *testing.T) {
 				o := NewObserver()
 
 				c := connect(t.Context(), o)
-				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 				c.Feed.End(nil)
 				<-c.Done
 
@@ -433,7 +463,7 @@ func TestObserver(t *testing.T) {
 				o := NewObserver()
 
 				c := connect(t.Context(), o)
-				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 				send(t, c, heartbeat(time.Hour))
 				c.Feed.End(nil)
 				<-c.Done
@@ -457,12 +487,12 @@ func TestObserver(t *testing.T) {
 				cluster := uuidpb.Generate()
 
 				gone := connect(ctx, o)
-				send(t, gone, preamble(uuidpb.Generate(), cluster, 0, 0))
+				send(t, gone, preamble(uuidpb.Generate(), cluster, 0))
 				gone.Feed.End(nil)
 				<-gone.Done
 
 				staying := connect(ctx, o)
-				send(t, staying, preamble(uuidpb.Generate(), cluster, 0, 0))
+				send(t, staying, preamble(uuidpb.Generate(), cluster, 0))
 
 				time.Sleep(4 * 24 * time.Hour)
 				o.ForgetIdle(time.Now())
@@ -481,7 +511,7 @@ func TestObserver(t *testing.T) {
 				o := NewObserver()
 
 				c := connect(t.Context(), o)
-				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 				send(t, c, heartbeat(time.Second))
 
 				time.Sleep(3*24*time.Hour + time.Second)
@@ -504,11 +534,11 @@ func TestObserver(t *testing.T) {
 				cluster := uuidpb.Generate()
 
 				gone := connect(t.Context(), o)
-				send(t, gone, preamble(uuidpb.Generate(), cluster, 0, 0))
+				send(t, gone, preamble(uuidpb.Generate(), cluster, 0))
 				connected := connect(t.Context(), o)
-				send(t, connected, preamble(uuidpb.Generate(), cluster, 0, 0))
+				send(t, connected, preamble(uuidpb.Generate(), cluster, 0))
 				other := connect(t.Context(), o)
-				send(t, other, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+				send(t, other, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 
 				o.Forget(cluster)
 
@@ -533,13 +563,13 @@ func TestObserver(t *testing.T) {
 				node, cluster := uuidpb.Generate(), uuidpb.Generate()
 
 				first := connect(ctx, o)
-				send(t, first, preamble(node, cluster, 0, 0))
+				send(t, first, preamble(node, cluster, 0))
 				send(t, first, heartbeat(time.Hour))
 				o.Forget(cluster)
 				<-first.Done
 
 				second := connect(ctx, o)
-				send(t, second, preamble(node, cluster, 0, 0))
+				send(t, second, preamble(node, cluster, 0))
 
 				n := only(t, o)
 				if !n.Connected || n.Heartbeat != nil || len(n.Heartbeats) != 0 {
@@ -559,7 +589,7 @@ func TestObserver(t *testing.T) {
 					o := NewObserver()
 
 					c := connect(t.Context(), o)
-					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 
 					if !only(t, o).Reporting(time.Now()) {
 						t.Fatal("expected the node to be reporting while connected")
@@ -581,7 +611,7 @@ func TestObserver(t *testing.T) {
 					o := NewObserver()
 
 					c := connect(t.Context(), o)
-					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 5*time.Second, 0))
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 5*time.Second))
 					send(t, c, heartbeat(10*time.Second))
 					c.Feed.End(nil)
 					<-c.Done
@@ -607,7 +637,7 @@ func TestObserver(t *testing.T) {
 					sentAt := time.Now().Add(-24 * time.Hour)
 
 					c := connect(t.Context(), o)
-					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 5*time.Second, 0))
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 5*time.Second))
 					send(t, c, enginegrpc.WatchEngineResponse_builder{
 						Heartbeat: enginegrpc.WatchEngineResponse_Heartbeat_builder{
 							SentAt:    timestamppb.New(sentAt),
@@ -632,39 +662,46 @@ func TestObserver(t *testing.T) {
 		})
 
 		t.Run("when a heartbeat doesn't say when it expires", func(t *testing.T) {
-			t.Run("it uses the shortest timeout of the nodes in its cluster", func(t *testing.T) {
+			t.Run("it reports for three of the node's heartbeat intervals, even while the connection is open", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
-					ctx, cancel := context.WithCancel(t.Context())
 					o := NewObserver()
-					clusterID := uuidpb.Generate()
 
-					aID := uuidpb.Generate()
-					a := connect(ctx, o)
-					send(t, a, preamble(aID, clusterID, 5*time.Second, 8*time.Second))
+					c := connect(t.Context(), o)
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 5*time.Second))
+					send(t, c, heartbeat(0))
 
-					b := connect(ctx, o)
-					send(t, b, preamble(uuidpb.Generate(), clusterID, 5*time.Second, 3*time.Second))
-
-					// A node of another cluster mustn't affect these.
-					other := connect(ctx, o)
-					send(t, other, preamble(uuidpb.Generate(), uuidpb.Generate(), 5*time.Second, time.Second))
-
-					send(t, a, heartbeat(0))
-
-					time.Sleep(2 * time.Second)
-					if !byID(t, o, aID).Reporting(time.Now()) {
-						t.Fatal("expected the node to be reporting before the shortest timeout")
+					time.Sleep(14 * time.Second)
+					if !only(t, o).Reporting(time.Now()) {
+						t.Fatal("expected the node to be reporting before three intervals have passed")
 					}
 
 					time.Sleep(2 * time.Second)
-					if byID(t, o, aID).Reporting(time.Now()) {
-						t.Fatal("expected the node not to be reporting after the shortest timeout")
+					if only(t, o).Reporting(time.Now()) {
+						t.Fatal("expected the node not to be reporting after three intervals")
+					}
+				})
+			})
+
+			t.Run("it reports only while its connection is open, if the node gives no interval", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					o := NewObserver()
+
+					c := connect(t.Context(), o)
+					send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
+					send(t, c, heartbeat(0))
+
+					// Long after the heartbeat, the node is still reporting.
+					time.Sleep(time.Hour)
+					if !only(t, o).Reporting(time.Now()) {
+						t.Fatal("expected the node to be reporting while connected")
 					}
 
-					cancel()
-					<-a.Done
-					<-b.Done
-					<-other.Done
+					c.Feed.End(nil)
+					<-c.Done
+
+					if only(t, o).Reporting(time.Now()) {
+						t.Fatal("expected the node not to be reporting once disconnected")
+					}
 				})
 			})
 		})
@@ -681,8 +718,8 @@ func TestWatchHeartbeats(t *testing.T) {
 			a, b := uuidpb.Generate(), uuidpb.Generate()
 			na, nb := uuidpb.Generate(), uuidpb.Generate()
 			ca, cb := connect(ctx, o), connect(ctx, o)
-			send(t, ca, preamble(na, a, 0, 0))
-			send(t, cb, preamble(nb, b, 0, 0))
+			send(t, ca, preamble(na, a, 0))
+			send(t, cb, preamble(nb, b, 0))
 
 			if len(watch) != 0 {
 				t.Fatal("unexpected notification before any heartbeat")
@@ -713,6 +750,27 @@ func TestWatchHeartbeats(t *testing.T) {
 		})
 	})
 
+	t.Run("it gives the engine's own ID as the cluster of an engine that doesn't run as a cluster", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			watch := o.WatchHeartbeats(ctx)
+
+			engine := uuidpb.Generate()
+			c := connect(ctx, o)
+			send(t, c, preamble(engine, nil, 0))
+			send(t, c, heartbeat(0))
+
+			want := Heartbeat{engine.AsString(), engine.AsString()}
+			if got := <-watch; got != want {
+				t.Fatalf("unexpected heartbeat: got %v, want %v", got, want)
+			}
+
+			cancel()
+			<-c.Done
+		})
+	})
+
 	t.Run("it closes the channel when ctx ends, and sends nothing more", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
@@ -722,7 +780,7 @@ func TestWatchHeartbeats(t *testing.T) {
 			watch := o.WatchHeartbeats(watchCtx)
 
 			c := connect(ctx, o)
-			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 
 			stop()
 			synctest.Wait()
@@ -746,7 +804,7 @@ func TestWatchHeartbeats(t *testing.T) {
 			o.WatchHeartbeats(ctx)
 
 			c := connect(ctx, o)
-			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0, 0))
+			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
 
 			for range 100 {
 				send(t, c, heartbeat(0))

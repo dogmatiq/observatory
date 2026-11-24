@@ -125,7 +125,7 @@ func (s *stream) burst(now time.Time, view observe.ClusterView, series observe.S
 	}
 
 	// A node's heartbeats are sent oldest first.
-	for _, n := range view.Overview.Cluster.Nodes {
+	for _, n := range membersOf(view.Overview) {
 		for _, ms := range n.Heartbeats {
 			if err := s.write("heartbeat", heartbeat{n.ID, ms}); err != nil {
 				return err
@@ -271,6 +271,19 @@ func chartsOf(view observe.ClusterView, series observe.Series) map[string][]obse
 	return charts
 }
 
+// membersOf returns the nodes that the document lists: the members of a
+// cluster, or the engine, while it is reporting, if it doesn't run as a cluster.
+func membersOf(o observe.Overview) []observe.Member {
+	switch {
+	case o.Cluster != nil:
+		return o.Cluster.Nodes
+	case o.Engine != nil && o.Engine.Node != nil:
+		return []observe.Member{*o.Engine.Node}
+	default:
+		return nil
+	}
+}
+
 // documentOf returns the state document of a cluster, as the stream describes
 // it, from its view.
 func documentOf(view observe.ClusterView) map[string]any {
@@ -289,9 +302,17 @@ func documentOf(view observe.ClusterView) map[string]any {
 		doc["down"] = true
 	}
 
+	if c := o.Cluster; c != nil {
+		cluster := map[string]any{}
+		if c.ReportsWorkloads {
+			cluster["reportsWorkloads"] = true
+		}
+		doc["cluster"] = cluster
+	}
+
 	nodes := map[string]any{}
-	for _, n := range o.Cluster.Nodes {
-		// A node whose engine doesn't divide its work into workloads has none.
+	for _, n := range membersOf(o) {
+		// A node that doesn't report its workloads has none.
 		node := map[string]any{}
 		if n.Workloads != nil {
 			node["workloads"] = *n.Workloads
@@ -318,6 +339,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 		if e.Coverage != nil {
 			coverage["events"] = *e.Coverage
 		}
+		if e.OneStream {
+			doc["oneStream"] = true
+		}
 		if e.Streams != nil {
 			streams := map[string]any{}
 			for _, s := range e.Streams {
@@ -334,6 +358,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 	if q := o.Queues; q != nil {
 		if q.Coverage != nil {
 			coverage["queues"] = *q.Coverage
+		}
+		if q.OneQueue {
+			doc["oneQueue"] = true
 		}
 		if q.Queues != nil {
 			queues := map[string]any{}

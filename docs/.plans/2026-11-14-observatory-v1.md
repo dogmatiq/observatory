@@ -26,8 +26,10 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
   doesn't show that a node has stopped, so the page says that whether the application is working is
   unknown, and doesn't say why.
 - The page says "node" only where there is a cluster. An engine that doesn't cluster has no nodes: its one process is
-  "the engine", with the engine's ID and heartbeat, and the engine is online or offline. The spec calls that process a
-  node, of a cluster of one, and the page doesn't.
+  "the engine", with the engine's ID and heartbeat, and the engine is online or offline. The spec says the same: an
+  engine runs as a cluster or as a single instance, and only the instances of a cluster are nodes. The Observatory's
+  backend keeps an engine that doesn't cluster as the only node of a cluster whose ID is the engine's own ID, so that it
+  has a page, as a cluster does.
 - **Site**: the set of applications, or the clusters that run them, that are deployed to one place. It is the same thing
   as the `site` identity in a Dogma envelope.
 - **Universe**: every site and cluster connected to one Observatory.
@@ -75,9 +77,9 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
   own. Trust comes from the gRPC connections inside the tunnel, which must eventually use mutual TLS: the engine accepts
   only an Observatory whose client certificate the cluster trusts, and the Observatory accepts only an engine whose
   server certificate it trusts. Until then, a client that isn't an engine can open a tunnel and send invented data.
-- The Observatory picks the node that answers cluster-wide questions: it reads one connected node, the one whose
-  `WatchMetrics` call began first, and moves to the next if that call ends. It calls every node, because metrics whose
-  reach is the node need every node. The engine chooses no node. Every node answers questions about itself.
+- The Observatory picks the node that answers cluster-wide questions: it calls `WatchClusterMetrics` on one connected
+  node of a cluster at a time, and calls another at once if that call ends. It calls `WatchNodeMetrics` on every node,
+  because the nodes' own metrics need every node. The engine chooses no node. Every node answers questions about itself.
 - One Observatory process in v1.
 
 ### Shape of the Observatory
@@ -120,65 +122,81 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
   These may differ between the nodes of one cluster. The Observatory never assumes that a cluster has one configuration.
 - Each `Sample` is one metric of one thing: the commands or the deadlines of one queue that are pending, that are due,
   that are failing, or that it has removed, the length of one event stream, or one of the metrics of one handler. The
-  node chooses how often it measures each metric, and the spec promises that once it has sent a sample on a stream, it
-  sends a new one each time the value changes, including to zero. The spec has no signal that a subject no longer
-  exists, because no v1 view or rule needs one. The Observatory can't know that it has seen every queue, so it never
-  treats the queues that it knows as the complete set.
+  node chooses how often it measures each metric, and the spec promises that it sends a new sample each time the value
+  differs from the last one that it sent on the stream, including when it is zero. A `Tombstone` says that the node has
+  stopped reporting one metric of one subject, such as the current count of work that has moved to another node, and the
+  Observatory discards the sample that it has of it. The Observatory can't know that it has seen every queue, so it never
+  treats the queues that it knows as the complete set, unless the engine says that it uses one queue.
 - A heartbeat is one concept. When an engine heartbeats, it tells every relevant listener: its cluster, through the
   database notification it sends today, and the Observatory, through the `EngineAPI`. In v1 of the spec a node sends
   only its own heartbeats and does not relay heartbeats received from other nodes.
 - Each node sends the workloads that it believes it owns, and the set of nodes that it believes are live.
-- Each `Sample` carries a `revision`: opaque bytes, compared byte by byte, that put the samples of one subject from a
-  cluster's nodes in order. The node chooses what it holds, such as a timestamp or a logical clock. The ordering is a
-  best effort with no promise, and a revision doesn't give how much time has passed. The Observatory shows the sample
-  with the greatest revision, and tolerates revisions that are out of order.
+- Each `Sample` and `Tombstone` carries a `revision`: opaque bytes, compared byte by byte, that put the messages of one
+  subject from one node and one method in order. The node chooses what it holds, such as a timestamp or a logical
+  clock. Revisions from different nodes are not comparable, and a revision doesn't give how much time has passed. The
+  Observatory keeps the message with the greatest revision within each call, and tolerates revisions that are out of
+  order.
 - The Observatory measures every duration, such as the backlog rule's 5 minutes and the time between counters for a
   rate, with its own clock, at the moment each answer arrives.
-- Each `WatchMetrics` call starts with a preamble that holds the node and cluster IDs, the node's own copy of the
-  application and the metrics that the engine supports, so that no call depends on another reaching the same node. The
-  Observatory interprets each stream's handler metrics with that stream's application. Each supported metric has a
-  reach, and its position in the list is the number that its samples give for the call, in place of the full name of its
-  message. When a metric's reach is the cluster, any node's samples of it describe the whole cluster, and the
-  Observatory reads one node. When it is the node, each node's samples describe only the work that node owns, and the
-  Observatory reads every node, which it must reach directly, and combines their samples. A part of the cluster that no
-  node can read is missing, and the membership rule shows why.
-- Dogma doesn't promise that an engine has nodes or clusters, so the spec defines them as its own model: a node is one
-  process, and a cluster is the nodes that share the work of one application between them. An engine that runs as one
-  process reports a cluster of one node. The spec never names an engine or the Observatory.
-- An engine says what it supports in the simplest way. Every node serves `EngineAPI`, and a node that reports no metrics
-  doesn't serve `MetricsAPI`, so a call to it ends with `UNIMPLEMENTED`. A node's metrics preamble lists the metrics
-  that it reports, each with its reach. A metric that the Observatory doesn't know has no meaning to it, which lets an
-  engine add metrics of its own. A metric that the preamble doesn't list is one that the engine doesn't support, and the
-  Observatory hides its section. A richer declaration of what an engine supports is not designed for now.
-- `EngineAPI.WatchEngine` sends a preamble once (the node and cluster IDs, the site, a description of the node for
-  people, the application, and the heartbeat interval and the heartbeat timeout if the node has them, none of which
-  change during the call), then `LiveNodes` (the nodes it believes are live) and `Workloads` (the workloads it believes
-  it owns), each whenever it changes, and its heartbeats. `MetricsAPI.WatchMetrics` sends metrics that the node measures
-  from the state that it can see. A node that can't read that state at all ends `WatchMetrics` with `UNAVAILABLE`, which
-  is the Observatory's signal to ask another node for the metrics whose reach is the cluster.
-- The preamble holds the node's heartbeat interval, and the timeout that the node applies to the heartbeats of the nodes
-  of its cluster, each only if the node has one. Each heartbeat carries the node's own clock reading from when it was
-  sent. A heartbeat may also say when it expires, as a time by that clock or as a length of time, for an engine whose
-  nodes say when their own heartbeats expire, which is where runkit is heading. A node is reporting while each heartbeat
-  arrives before the one before it expires. When its heartbeats don't say when they expire, it is reporting while each
-  arrives within the shortest heartbeat timeout among the nodes of its cluster that the Observatory has a preamble from.
-  So the Observatory needs no margin of its own. A node that doesn't heartbeat is reporting while its `WatchEngine` call
-  is open.
+- `MetricsAPI` has two methods. `WatchNodeMetrics` reports the metrics of the node that serves the call, which are only
+  its own share of the work if the engine runs as a cluster, and all of the engine's metrics if it doesn't.
+  `WatchClusterMetrics` reports the metrics of the whole cluster, and any node can serve it. An engine that doesn't run
+  as a cluster fails it with `UNIMPLEMENTED`, and the Observatory calls it only on a node whose engine runs as a cluster.
+  Each call starts with a preamble that holds the engine's ID and, for a cluster, the cluster's ID, the node's own copy
+  of the application, and the names of the metrics that the call reports, so that no call depends on another reaching
+  the same node. The Observatory interprets each stream's handler metrics with that stream's application. A metric's
+  position in the list is the number that its samples give for the call, in place of the full name of its message. A
+  metric that the call to `WatchClusterMetrics` reports is read from that call alone. Every other metric is read from
+  the calls to `WatchNodeMetrics` of every node, which the Observatory must reach directly, and combined as the spec says
+  for the metric: the sum of a `current_count` or a `cumulative_count`, with a node that sent a `Tombstone` adding
+  nothing, and the greatest `watermark` of an event stream. A metric that the spec gives no rule for combining, such as
+  the `gauge` of `HandlerEventStreamLag`, is read only from `WatchClusterMetrics`, or from the one node of an engine that
+  doesn't run as a cluster. A part of the cluster that no node can read is missing, and the membership rule shows why.
+- Dogma doesn't promise that an engine has nodes or clusters, so the spec defines them as its own model: an engine may
+  run as a cluster, which is a set of running instances that share the work of one application between them, and each
+  instance is a node. An engine that runs as a single instance has no cluster and no nodes. The spec never names an
+  engine or the Observatory.
+- An engine says what it is and what it supports in the preamble of `WatchEngine`. Every node serves `EngineAPI`, and a
+  node that reports no metrics doesn't serve `MetricsAPI`, so a call to it ends with `UNIMPLEMENTED`. The preamble says
+  whether the engine runs as a cluster, and if it does, how the nodes share the work (`ClusterModel`: competing for
+  each unit of work, or each assigning itself workloads), and whether each node reports the live nodes and the
+  workloads that it owns. It also says whether the engine appends every event to one event stream
+  (`EventStreamModel`), and whether it delivers every message through one queue (`QueueModel`). A model that a node
+  doesn't give is unknown, and the Observatory assumes nothing about it. A metrics preamble lists the metrics that the
+  call reports. A metric that the Observatory doesn't know has no meaning to it, which lets an engine add metrics of its
+  own. A metric that no preamble lists is one that the engine doesn't support, and the Observatory hides its section.
+- `EngineAPI.WatchEngine` sends a preamble once (the engine's ID, a description of it for people, the name and version
+  of the engine's software, the site, the application with its version, the heartbeat interval if it heartbeats, the
+  cluster if it runs as one, its models of queues and event streams, and which messages about projections it sends,
+  none of which change during the call), then, from a node of a cluster that reports them, `LiveClusterNodes` (the nodes
+  it believes are live) and `ClusterWorkloads` (the workloads it believes it owns), each whenever it changes, and its
+  heartbeats. `MetricsAPI` sends metrics that the node measures from the state that it can see. A node that can't read
+  that state at all ends its call with `UNAVAILABLE`, which, for `WatchClusterMetrics`, is the Observatory's signal to
+  call another node.
+- The preamble holds the engine's heartbeat interval, if it has one. Each heartbeat carries the engine's own clock
+  reading from when it was sent. A heartbeat may also say when it expires, as a time by that clock or as a length of
+  time, which is where runkit is heading. A node is reporting while each heartbeat arrives before the one before it
+  expires. When its heartbeats don't say when they expire, the spec gives no deadline, so the Observatory has a rule of
+  its own: such a heartbeat expires after three of the engine's heartbeat intervals, so that a node that hangs with its
+  connection open stops counting as reporting. An engine that gives no interval either, and a node that doesn't
+  heartbeat, is reporting while its `WatchEngine` call is open.
 - Each metric is read on its own, and a node sends its `Sample` when it chooses. A series is the samples of one metric
-  for one subject. A node that can't measure a metric that it lists ends the `WatchMetrics` call with `UNAVAILABLE`, and
-  the Observatory asks another node for the metrics whose reach is the cluster. The message of the status is for people
-  and must hold no secrets. When a call ends, the Observatory discards its values, and shows a series again once the
-  next call sends a sample of it, so it never takes a value from an ended call for a current one. A node that is over
-  the observation budget measures less often, and sends no signal, because the engine is responsible for how often
-  metrics arrive.
-- A running total is comparable only with values of the same running total from the same call, so the Observatory
-  derives rates only within one call. Event stream lengths are not running totals, and are comparable across calls and
+  for one subject. A node that can't measure a metric that the call reports ends the call with `UNAVAILABLE`, and the
+  Observatory calls it again after 5 seconds, or, for `WatchClusterMetrics`, calls another node at once. The message
+  of the status is for people and must hold no secrets. When a call ends, the Observatory discards its values, and shows
+  a series again once the next call sends a sample of it, so it never takes a value from an ended call for a current
+  one. A node that is over the observation budget measures less often, and sends no signal, because the engine is
+  responsible for how often metrics arrive.
+- A cumulative count is comparable only with values of the same count from the same call, so the Observatory derives
+  rates only within one call. Event stream lengths are not cumulative counts, and are comparable across calls and
   nodes.
-- The spec carries only the metrics that the cluster view and the health rules use, with one exception: the handler
-  metrics for messages that are due, `HandlerCommandsDue` and `HandlerDeadlinesDue`, complete the set of handler metrics
-  by request, and no v1 view reads them. A handler's pending events are one total across the cluster's own event
-  streams, not a checkpoint per stream, and a workload is only its key, with a description for people. The prototype's
-  other metrics are added, compatibly, when a view needs them.
+- The spec carries the metrics that the cluster view and the health rules use, and some that no v1 view reads: the
+  handler metrics for messages that are due, `HandlerCommandsDue` and `HandlerDeadlinesDue`, the failing events of a
+  handler, `HandlerEventsFailing`, and the outcomes of a projection's compactions. A handler's pending events are its
+  lag on each event stream, `HandlerEventStreamLag`, which counts the events of any type after the offset that it has
+  reached, including those that it will skip, and the handler's card adds up its lag over the streams. A workload is
+  only its key, with a description for people. The prototype's other metrics are added, compatibly, when a view needs
+  them.
 - Every count is exact. A metric that an engine can't count exactly within its budget is one that it doesn't support,
   and doesn't list in the preamble. The prototype's counts that stop at a limit and say "at least" are not carried over.
 - The prototype's active aggregate instances, which had recorded an event within a window, are replaced by the aggregate
@@ -305,9 +323,9 @@ this list up to date as the plan evolves: add each new difference when it is fou
   the name of the application and then "inspector". The prototype had one application, and the Observatory has many
   sites, clusters and applications, so the name is where the page is, not the name of the tool's subject. How the title
   bar shows where the page is will change, as the site and universe views come.
-- The footer shows no versions of Dogma, runkit or the application. The Observatory never loads application code, and the
-  spec has no place for them: neither the engine API's preamble nor the metrics API's carries a version of anything. They
-  return when the spec does.
+- The footer shows no versions of Dogma, runkit or the application. The Observatory never loads application code. The
+  engine API's preamble now gives the name and version of the engine's software and the version of the application,
+  which the Observatory doesn't show yet, and nothing in the spec gives the version of Dogma.
 - The three tiles and the handler cards are links in the prototype, to the streams, queues, cluster-nodes and handler
   pages. Those pages are not in v1.
 - The prototype's navigation bar links to the streams, queues, cluster-nodes and per-type handler pages, which are not in
@@ -316,7 +334,9 @@ this list up to date as the plan evolves: add each new difference when it is fou
   that a node holds in memory, which runkit doesn't support yet.
 - A section of the cluster view whose metric the engine doesn't list in its preamble is hidden. In v1 that may include
   the aggregate instances per event stream and the unhandled events of each handler, if runkit can't count them within
-  its budget.
+  its budget. The unhandled events of a handler are shown only when the whole cluster's lag is reported through
+  `WatchClusterMetrics`, or the engine doesn't run as a cluster, because the spec gives no rule for adding up the lags
+  that several nodes report.
 - The cards and the queues tile use the spec's words, which keep their meaning though the grammar bends. A message kind on
   its own, such as "commands", "events", "deadlines" or "messages", is the ones that are pending, and its popover says "pending". The prototype said "command backlog", "event backlog" and "deadlines". Spelling "pending" out on
   every label made the process card's stats too wide for one row. "In progress" is the spec's word too. A process's
@@ -430,7 +450,7 @@ parts. An item that says "Done" is built.
   deadlines are all messages, and each chart counts one kind of them per minute. The verb differs: events recorded,
   events handled, commands handled, messages removed. The cluster tile's wave is not a sparkline. The queues tile's chart
   was the number of messages waiting, which is a level, and which sits at zero in a healthy system, so it is now the rate
-  at which messages are removed from the queues, from the running totals of commands and deadlines removed. Done. The throughput is chosen by what the nodes report, as James decided on 2026-11-19: if
+  at which messages are removed from the queues, from the cumulative counts of commands and deadlines removed. Done. The throughput is chosen by what the nodes report, as James decided on 2026-11-19: if
   they report both the commands and the deadlines that handlers have handled, it is those, because it is what was done,
   it is complete, and it is what the handlers' cards add up to; otherwise, if they report the removal of messages from
   the queues, it is those, which are complete too, but include messages that are removed without being handled, such as
@@ -444,6 +464,13 @@ parts. An item that says "Done" is built.
   can be seen for each. The number of messages waiting stays the
   tile's headline and its bar. A level and a rate on one chart was considered and not done, because they are in different
   units and each is scaled to its own peak.
+- The events tile of an engine that appends every event to one event stream doesn't count streams, and has no bar, as
+  the cluster tile leaves out the workloads of an engine that doesn't divide its work: "347 events per minute, 1.2K
+  events". The queues tile of an engine that delivers every message through one queue doesn't count queues, and has no
+  bar: "19 messages, 442/min". Each is shown when every node of the cluster says so in its preamble, in
+  `EventStreamModel` and `QueueModel`, and not otherwise, because nothing in the spec promises that a node reports every
+  stream or queue, or by when, so a stream or a queue that is the only one reported may not be the only one. Decided on
+  `/review` (EV 0B, QU 0B).
 - The cluster tile, in progress: its headline is the number of live nodes with the workloads that they own, and "0 cluster
   nodes" with the number in red (`Alarm`), and not the words, so that they still make a sentence, with a red accent along the top of the tile, and the heartbeat chart drawn as a flat gray line in the
   middle of its room, because the accent and the words already say what is wrong. It is not the moon's sky, because that
@@ -455,19 +482,19 @@ parts. An item that says "Done" is built.
   describes the bar: as on the other tiles, only the card of a segment of the bar does. Each card keeps to about forty words, as the others do. A segment of the bar has the card of its node, with the node's ID, the
   workloads that it owns and its share of them. If no node's engine divides its work into workloads, the tile leaves the
   workloads out, and has no bar, because a bar of the nodes alone would say only how many there are, which the
-  headline says (decided on `/review`, CL 0D). What one node is, and how it beats, is for the hover of the chart. The page tells four kinds of engine apart, which a node says in its preamble, as dogmatiq/protobuf#45 proposes:
-  one that doesn't cluster, which has an engine tile in place of the cluster tile, and is not drawn as a cluster of
-  one; one that clusters and doesn't divide its work into workloads; one
-  that divides its work and can't report the workloads, which is shown as the one before it, because the page can't give
-  the number; and one that reports them, as above. Until the spec says so, the Observatory takes a node that has sent its
-  workloads to be one whose engine reports them, and any other to be one that clusters and doesn't divide its work, which
-  the spec as it is doesn't promise. The engine tile's headline says whether the engine is online, which is while it is in contact:
+  headline says (decided on `/review`, CL 0D). What one node is, and how it beats, is for the hover of the chart. The page tells four kinds of engine apart, which a node says in its preamble:
+  one that doesn't cluster, whose preamble has no `cluster`, which has an engine tile in place of the cluster tile, and
+  is not drawn as a cluster of one; one that clusters and doesn't divide its work into workloads, whose nodes compete
+  for work; one that divides its work and doesn't report the workloads, whose nodes assign themselves workloads and say
+  that they don't report them, which is shown as the one before it, because the page can't give the number; and one
+  whose nodes say that they report them, as above. The state document says whether the engine runs as a cluster, and
+  whether any node says that it reports its workloads, and a node's workloads are absent until it sends them. The engine tile's headline says whether the engine is online, which is while it is in contact:
   "Online" or, in red with the red accent, "Offline", with no detail line, because the engine never changes from one
   process to several. Its card says that online means in contact, with contact being lost, and so whether the application is working being unknown, as a status, both in words still to be settled at `/review`, and mentions
   neither nodes nor clusters. A page says "offline", and not "down" or "stopped", for an engine or a cluster that isn't reporting, because it
   can't tell a process that has stopped from one that it can't reach. The code and the state document call it `down`. Its chart is the process's
-  heartbeat, and it has no bar. Its icon has a card that says what the tile is about, with the engine's ID. The state
-  document doesn't tell the two apart until the spec does, so the engine tile is only at `/review` for now. Decided there: its place in the row of tiles (EN 0C) and the card of its icon (EN 1). Still to do: the popover and hover rule of the heartbeat wave.
+  heartbeat, and it has no bar. Its icon has a card that says what the tile is about, with the engine's ID. The page
+  of such an engine is at the engine's ID, as a cluster's is at the cluster's. Decided at `/review`: its place in the row of tiles (EN 0C) and the card of its icon (EN 1). Still to do: the popover and hover rule of the heartbeat wave.
 - Wherever the page names the application, it names the site as well, if the cluster has one ("the statements application at the
   eu-west site"; the title bar says "statements at eu-west"), because an application may run at several sites and a site
   may have several clusters. The site comes from the nodes' preambles, in `ClusterView.Site`, and the state document
@@ -607,13 +634,13 @@ parts. An item that says "Done" is built.
   goes up and down doesn't come and go. A stream's card keeps the explanation of the bar however few events there are, and its figures say how many
   the stream has.
 - A metric that only some of the nodes report: decided by the rule that a cluster supports everything that any of its
-  nodes supports, and by the coverage rule. A part of a tile is shown if any node supports its metrics. A metric whose
-  reach is the node is summed over the nodes, and while only some nodes support it, the sum is of those nodes, which is
-  too small. Its coverage is the share of the nodes that support it, which `Coverage` gives, and a tile or a handler's
-  card has the lowest coverage of the metrics it is made from. A figure's trust is its freshness times its coverage: it
-  is blurrier the less it is trusted, it glitches for a moment each time its trust falls in a step, and its bars and
-  charts stay live. The card of its icon says why, as a status. A metric whose reach is the cluster doesn't have the
-  problem, because one node describes the whole cluster. The workloads follow the same rule: a node that doesn't report
+  nodes supports, and by the coverage rule. A part of a tile is shown if any node supports its metrics. A metric that
+  is read from the nodes' calls to `WatchNodeMetrics` is combined over the nodes, and while only some nodes support it,
+  the result is of those nodes, which is too small. Its coverage is the share of the nodes that support it, which
+  `Coverage` gives, and a tile or a handler's card has the lowest coverage of the metrics it is made from. A figure's
+  trust is its freshness times its coverage: it is blurrier the less it is trusted, it glitches for a moment each time
+  its trust falls in a step, and its bars and charts stay live. The card of its icon says why, as a status. A metric
+  that is read from `WatchClusterMetrics` doesn't have the problem, because one node describes the whole cluster. The workloads follow the same rule: a node that doesn't report
   its workloads, while others do, is a faint square, with a card that says so as a status, and the number of workloads
   counts the nodes that report them, blurred by their coverage. Done.
 - A lost rate, undecided. A node joins or reconnects often in some clusters, and the rate pauses for a few seconds each
@@ -738,7 +765,12 @@ but isn't shown, and decide towards the end which of them to show and where.
 | The Issues that the health rules find | `Health.Assess` | No view shows them, and nothing calls `Assess` yet. |
 | Removing a cluster | `Observer.Forget` | The "remove" action has no control. |
 | A node's description, its heartbeat timing, its call's error | `Node` | Only the heartbeat levels are drawn. |
-| A workload's description | `Workload` in the engine API | The cluster tile shows only the number of workloads. |
+| A workload's description | `ClusterWorkload` in the engine API | The cluster tile shows only the number of workloads. |
+| The name and version of the engine's software, and the version of the application | `implementation` and `application.version` in the engine API's preamble | Nothing shows them yet. The footer and the statuses about versions are where they would go. |
+| How the nodes of a cluster share its work | `ClusterModel` in the engine API's preamble | The page shows a cluster whose nodes compete for work as one whose nodes assign themselves workloads and don't report them. |
+| A handler's failing events | `HandlerEventsFailing` | The card's failing messages are its commands and deadlines. |
+| The compactions and reset operations of a projection, and whether a projection supports them | `ProjectionCompactions*`, the messages about projections of `WatchEngine`, `ProjectionAPI`, and `configpb` | No view reads them. |
+| A handler's lag on each event stream | `HandlerEventStreamLag` | The card shows the total over the streams. |
 | A handler's and an application's Go type, and the messages that a handler uses | `configpb` | Only a handler's name, type and key are used. |
 | A handler's failing messages split into commands and deadlines | `HandlerCommandsFailing`, `HandlerDeadlinesFailing` | The card shows one total. |
 | Which nodes handled a handler's messages, and how many each | the per-node samples that `Combine` adds up | Only the sums are used. |
@@ -793,24 +825,28 @@ Tick each item when it is done, and write the pull request or commit that did it
     tell when one expires, it is reporting while its call is open. A newer connection from a node ends the older one's
     `WatchEngine` call at once, and the node keeps its latest heartbeat across connections. `Serve` closes the older
     connection's clients only once every call that it made through them has ended.
-  - [x] **Metrics**: `Serve` also calls each node's `WatchMetrics`, and `Node.Metrics` holds what the node's current call
-    has reported: its preamble, and the latest sample of each series, where a series is one metric of one subject.
-    Of two samples of a series, the one with the greater revision is kept, and a later one wins a tie. Only metrics that
-    the spec defines are kept. A sample's message is decoded, so that code that uses it reads typed fields. A call that
-    ends leaves no values and `Node.MetricsErr`, and is made again after 5 seconds, except when the node answers
-    UNIMPLEMENTED, which means that it reports no metrics. `Combine` turns the nodes of one cluster into what the
-    cluster as a whole reports: for a metric whose reach is the cluster, the samples of one node, the one whose call
-    began first; for a metric whose reach is the node, the sums over the nodes that are reporting, matched by their
-    subject, which the spec now makes comparable among the nodes of one cluster. A call is made to every node, because the
-    metrics whose reach is the node need every node. The cluster-reach samples of the nodes that aren't chosen are
-    ignored, so a result never mixes values from different calls.
-  - [x] **Rates and history**: rates from running totals within one call, and the history kept in memory for the
+  - [x] **Metrics**: `Serve` also calls each node's `WatchNodeMetrics`, and `Node.Metrics` holds what the node's current
+    call has reported: its preamble, and the latest sample of each series, where a series is one metric of one subject.
+    For a node whose engine runs as a cluster, `Serve` also calls `WatchClusterMetrics`, on one node of the cluster at a
+    time, and `Node.ClusterMetrics` holds what that call has reported. When that call ends, another node of the cluster
+    is called at once, and the node whose call ended is called again only after 5 seconds, if no other node is being
+    called by then. Of two messages of a series, the one with the greater revision is kept, and a later one wins a tie.
+    A `Tombstone` discards the series' sample. Only metrics that the spec defines are kept. A sample's message is
+    decoded, so that code that uses it reads typed fields. A call that ends leaves no values and `Node.MetricsErr` or
+    `Node.ClusterMetricsErr`, and is made again after 5 seconds, except when the node answers UNIMPLEMENTED, which
+    means that it doesn't report those metrics. `Combine` turns the nodes of one cluster into what the cluster as a
+    whole reports: for a metric that the call to `WatchClusterMetrics` reports, that call's samples, from the node
+    whose call began first if there are several; for any other metric, the nodes' own samples, combined by the rule
+    that the spec gives for the metric's field and matched by their subject, which the spec makes comparable among the
+    nodes of one cluster. A node's own samples of a metric that the cluster's call reports are ignored, so a result
+    never mixes values from different calls.
+  - [x] **Rates and history**: rates from cumulative counts within one call, and the history kept in memory for the
     sparklines and the heartbeat chart. A node sends a sample only when a value changes, so the Observatory takes a
-    running total to stay the same until the next sample, and averages its growth over the last minute, or over the time
-    it has been observed if that is shorter, with no rate before 5 seconds. A total that falls means that the node
+    cumulative count to stay the same until the next sample, and averages its growth over the last minute, or over the
+    time it has been observed if that is shorter, with no rate before 5 seconds. A count that falls means that the node
     started again from zero, so the rate starts again too. Each call's rates are its own, and `Combine` adds the rates
-    of nodes whose reach is the node, as it adds their values. A rate that any contributor can't give yet is none.
-    The metrics that are running totals are a list in the Observatory, from the docs of the spec. The Observer keeps
+    of the nodes' own calls, as it adds their values. A rate that any contributor can't give yet is none. The metrics
+    that are cumulative counts are those whose field is `cumulative_count`, as the spec names it. The Observer keeps
     when each node's heartbeats arrived, for 10 minutes, and `Trail` is the bounded history of one number that the
     cluster view adds to for each sparkline.
   - [x] **Health rules**: failed deliveries, backlog and membership, and forgetting a cluster after 3 days. What a rule
@@ -850,32 +886,48 @@ Tick each item when it is done, and write the pull request or commit that did it
   it.
 
 ## Open
+- Decided, to build: a person browses by the application at a site. Its page's address is the application's key and the
+  site, and it is what the clusters page links to. Each cluster that runs it is a drill-down beneath it, by the
+  cluster's ID, so two clusters of one application at one site, as in a blue/green deploy, are side by side and not
+  merged; with one cluster, the application's page can show it directly. An engine that doesn't run as a cluster gets a
+  new ID each time it starts, so each run is a drill-down beneath the application's page by that ID, and a restart is
+  a new run under the same page, not a new page that leaves the old one out of contact until it is forgotten.
+- Decided: the permalinks, by keys and IDs, which never change, with singular words. An application nests under a site,
+  because a site is always bigger than an application. `/` is the universe; `/site/{site key}` a site, with every
+  application at it; `/site/{site key}/app/{app key}` the application at that site, which is the view designed so far;
+  `/app/{app key}` an application across every site that it runs at, an aggregate, which with only one site shows
+  the same as that site's view, so that it covers the common case of one application with no site; and `/cluster/{cluster id}` a cluster, which keeps its own address because a cluster can be replaced
+  while its application and site stay the same. The current `/clusters/{id}` addresses redirect. An engine that doesn't
+  run as a cluster has no permalink of its own, because its ID changes when it restarts; it is seen through its
+  application. An application with no site is at the site whose key is the nil UUID,
+  `/site/00000000-0000-0000-0000-000000000000/app/{app key}`: Dogma rejects the nil UUID as a key, so it can't be a
+  real site, though the Observatory's addresses may use it. The Observatory's own routes, the permalinks above, the review pages, the API and the
+  page's static files, all sit under `/-/`, so that `/-/site/{site key}` and so on, and the root belongs to names
+  learned at runtime: `/{name}` is the site or the application with that name, and `/{site name}/{app name}` is the
+  application at that site. A name address resolves on each visit: it shows the one match, lists the permalinks of the
+  candidates when there are several, and waits for the name to become known when there are none. This relies on
+  dogmatiq/dogma#233, accepted for Dogma 1.0.0, which makes every identity name start with a letter or a digit, so
+  that no name can be `-`.
+- What a cluster's page shows of `HandlerEventStreamLag`. The spec gives no rule for combining it across nodes, on
+  purpose: what makes sense to show is for the Observatory to work out. Until then a cluster shows it only if
+  `WatchClusterMetrics` reports it.
+- Which reading to show when a metric appears in both `WatchNodeMetrics` and `WatchClusterMetrics`, which the spec
+  allows. For now the cluster call wins, and the sums of the node calls stand in while no cluster call is open. What
+  gives the reader the best experience is for the Observatory to work out.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
   against its published text, with a link to where it can be read, and a quote in another language has a published
   translation, with its translator.
-- Whether an engine can spread its events over more than one event stream. Nothing in the spec promises that a node
-  reports every stream, or by when, so the events tile's bar is of the streams that the nodes have reported, and a
-  stream that is the only one reported may not be the only one. dogmatiq/protobuf#45 now proposes that a node also says
-  whether its engine uses more than one stream. The events tile of an engine that appends every event to one stream
-  doesn't count streams, and has no bar, as the cluster tile leaves out the workloads of an engine that doesn't divide its
-  work: "347 events per minute, 1.2K events". The state document doesn't say it until the spec does, so only `/review`
-  shows it for now. Decided on `/review` (EV 0B), to build once the spec says so.
-- Whether an engine uses queues, and whether it can spread its messages over more than one queue, for the same reason:
-  nothing promises that a node reports every queue. dogmatiq/protobuf#45 proposes that a node says both. An engine that
-  doesn't use queues has the queues tile that it has when no node supports the messages in queues, whose headline is the
-  rate. The queues tile of an engine that keeps every message in one queue doesn't count queues, and has no bar: "19
-  messages, 442/min". As for event streams, only `/review` shows it until the spec says so. Decided on `/review` (QU 0B).
-- Later, once a node says which engine and version it runs, and which version of the application
-  (dogmatiq/protobuf#46): tighten the statuses that say "may be running a different version of the engine", on the
-  card of a node that doesn't report its workloads and on a section that only some nodes report. With the versions
-  known, a card can say which nodes run which version, or that the versions are the same, and so whether a version is
-  the likely cause at all. The design assumes that the versions will be known.
+- Later: tighten the statuses that say "may be running a different version of the engine", on the card of a node that
+  doesn't report its workloads and on a section that only some nodes report. The engine API's preamble now says which
+  engine software and version a node runs, and which version of the application, so a card can say which nodes run
+  which version, or that the versions are the same, and so whether a version is the likely cause at all. The
+  Observatory doesn't read the versions yet.
 - A node that joins, or comes back, makes the cluster-wide rate of anything that nodes count unknown for five seconds,
   because a rate that any contributor can't give yet is none, so a `?` shows for that long. The demo does this now, because
   its nodes go down and come back. It belongs to the rule for what an unknown figure does, which is parked.
-- Which node owns the workload of which handler. A workload is `{key, description}` and `Workloads` is the set that a node
+- Which node owns the workload of which handler. A workload is `{key, description}` and `ClusterWorkloads` is the set that a node
   owns, so the Observatory can say how many workloads a node owns and not what they are for. A bar of the nodes that run
   an integration or a projection needs the spec to link a workload to a handler, or to the queue or event stream that it
   works on.
@@ -885,15 +937,15 @@ Tick each item when it is done, and write the pull request or commit that did it
   glitch or a fade on the text, which doesn't change the layout. The rules would differ for the large figures of a tile
   and for the figures that sit inside a line of prose. Come back to it with the site and universe views, which have the
   same figures in smaller places.
-- The versions that the prototype's footer showed, of Dogma, the engine and the application, have no place in the spec.
-  The engine API's preamble has a description for people and the application's identity, and neither the engine API nor
-  the metrics API says what software a node runs. Whether the preamble gets a general list of named versions, or the
-  facts are metrics, or the application's description carries its own version, is a spec decision.
+- The versions that the prototype's footer showed. The engine API's preamble gives the name and version of the engine's
+  software and the version of the application, and nothing in the spec gives the version of Dogma. Whether the footer
+  shows the versions that the spec gives, and what it shows when the nodes of a cluster give different ones, is still
+  to decide.
 - The observation budget's actual limits. They are set before the prototype's queries are ported.
 - Where runkit keeps its counters of removed commands and deadlines: in memory on each node, which makes them
   node-scoped and restart from zero with the node, or in counter rows kept by triggers, which adds contention to the
   write path. A cluster has tens of queues, spread across its nodes, so the number of counters on each node is small.
-- Whether `WatchMetrics` should signal a partial failure, so that one unreadable metric doesn't end every metric on the
+- Whether `WatchNodeMetrics` and `WatchClusterMetrics` should signal a partial failure, so that one unreadable metric doesn't end every metric on the
   call. In v1 it does, and a persistent failure of one metric ends every call, unless the node leaves that metric out of
   its preamble. The design to add when a view needs it is an `Outage` message: one cause, with an id chosen by the node,
   the text for people, and scopes that each list some metrics and some subjects, or every subject. A later outage with
@@ -902,7 +954,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   node should send an outage only for series that it has already sent a sample for. An outage may also say whether the
   series are stalled or only delayed. Observatory would then list current outages by cause, and show a stalled series
   differently from one that may be out of date.
-- Whether `WatchMetrics` takes a filter of the metrics that the client wants, so that an engine doesn't measure the
+- Whether `WatchNodeMetrics` and `WatchClusterMetrics` take a filter of the metrics that the client wants, so that an engine doesn't measure the
   rest. It is added only when an engine defines metrics that the Observatory doesn't use, or when measuring every metric
   costs too much. A server that doesn't know the filter sends every metric, so adding it is safe.
 - Which commits on the prototype branch go upstream to dogmatiq/runkit, other than those about the inspector.

@@ -3,7 +3,7 @@ module github.com/dogmatiq/observatory
 go 1.27.0
 
 require (
-	github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf
+	github.com/dogmatiq/protobuf v0.12.0
 	github.com/dogmatiq/tenet v0.1.0
 	google.golang.org/grpc v1.85.0
 	google.golang.org/protobuf v1.36.12

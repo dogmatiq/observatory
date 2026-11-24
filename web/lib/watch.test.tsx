@@ -127,6 +127,7 @@ test("the times in the data are measured from the time that it last changed", as
 		s?.open();
 		s?.send("changed", {
 			application: { name: "a", key: "k" },
+			cluster: { reportsWorkloads: true },
 			nodes: { n: { workloads: 1 } },
 		});
 		s?.send("synced");

@@ -39,7 +39,7 @@ func TestFeed(t *testing.T) {
 		go feed.Send(
 			enginegrpc.WatchEngineResponse_builder{
 				Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
-					NodeId: nodeID,
+					Id: nodeID,
 				}.Build(),
 			}.Build(),
 		)
@@ -49,8 +49,8 @@ func TestFeed(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if !res.GetPreamble().GetNodeId().Equal(nodeID) {
-			t.Fatalf("unexpected node ID: got %s, want %s", res.GetPreamble().GetNodeId(), nodeID)
+		if !res.GetPreamble().GetId().Equal(nodeID) {
+			t.Fatalf("unexpected node ID: got %s, want %s", res.GetPreamble().GetId(), nodeID)
 		}
 	})
 

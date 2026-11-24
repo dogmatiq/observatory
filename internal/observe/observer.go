@@ -36,8 +36,14 @@ const historySpan = 10 * time.Minute
 
 // Observer holds what the nodes of engines report about themselves.
 //
-// It learns who each connection is from the node ID in the preamble of the
-// node's engine API, and keeps one entry for each node ID.
+// It learns who each connection is from the ID in the preamble of the node's
+// engine API, and keeps one entry for each ID.
+//
+// The Observer groups nodes by their cluster. An engine that runs as a cluster
+// gives the ID of its cluster in its preamble. An engine that doesn't run as a
+// cluster is one node, which the Observer treats as the only node of a cluster
+// whose ID is the engine's own ID. Wherever the Observatory gives the ID of a
+// cluster, it is that ID for such an engine.
 type Observer struct {
 	m     sync.Mutex
 	nodes map[string]*entry
@@ -49,6 +55,15 @@ type Observer struct {
 	// calls is the number of calls to the metrics API that have begun.
 	calls uint64
 
+	// readers is the connection of the node that the Observer calls
+	// WatchClusterMetrics on, for each cluster that has one, by the ID of the
+	// cluster. See [Observer.watchClusterMetrics].
+	readers map[string]*connection
+
+	// released is closed, and replaced, each time that a cluster loses its
+	// reader.
+	released chan struct{}
+
 	// heartbeats are the channels that [Observer.WatchHeartbeats] returned.
 	heartbeats map[chan Heartbeat]struct{}
 }
@@ -58,13 +73,31 @@ func NewObserver() *Observer {
 	return &Observer{
 		nodes:      map[string]*entry{},
 		records:    map[string]ClusterRecord{},
+		readers:    map[string]*connection{},
+		released:   make(chan struct{}),
 		heartbeats: map[chan Heartbeat]struct{}{},
 	}
 }
 
+// clusterIDOf returns the ID of the cluster of a node that sent the preamble p.
+// It is the ID of the engine's cluster if the engine runs as a cluster, and
+// otherwise the ID of the engine itself. See [Observer].
+func clusterIDOf(p *enginegrpc.WatchEngineResponse_Preamble) *uuidpb.UUID {
+	if p.HasCluster() {
+		return p.GetCluster().GetId()
+	}
+	return p.GetId()
+}
+
+// clusterOf returns the ID of the cluster of a node that sent the preamble p,
+// as a UUID. See [clusterIDOf].
+func clusterOf(p *enginegrpc.WatchEngineResponse_Preamble) string {
+	return clusterIDOf(p).AsString()
+}
+
 // Heartbeat is a heartbeat that a node sent.
 type Heartbeat struct {
-	// Cluster is the ID of the node's cluster, as a UUID.
+	// Cluster is the ID of the node's cluster, as a UUID. See [Observer].
 	Cluster string
 
 	// Node is the ID of the node, as a UUID.
@@ -106,12 +139,14 @@ type Node struct {
 	Preamble *enginegrpc.WatchEngineResponse_Preamble
 
 	// LiveNodes is the latest set of nodes that the node believes are live. It
-	// is nil until the node sends one on its latest connection.
-	LiveNodes *enginegrpc.LiveNodes
+	// is nil until the node sends one on its latest connection, and stays nil
+	// for a node that doesn't report the live nodes of its cluster.
+	LiveNodes *enginegrpc.LiveClusterNodes
 
 	// Workloads is the latest set of workloads that the node believes it owns.
-	// It is nil until the node sends one on its latest connection.
-	Workloads *enginegrpc.Workloads
+	// It is nil until the node sends one on its latest connection, and stays nil
+	// for a node that doesn't report its workloads.
+	Workloads *enginegrpc.ClusterWorkloads
 
 	// Heartbeat is the latest heartbeat that the node sent. It is nil if the
 	// node hasn't sent one.
@@ -140,29 +175,47 @@ type Node struct {
 	// heartbeats give no way to calculate one. See [Node.Reporting].
 	Deadline time.Time
 
-	// Metrics is what the node has reported in its current call to the metrics
-	// API. It is nil while there is no such call: before the first one begins,
-	// between calls, and once the node's connection has ended. The values of an
-	// ended call are never kept.
+	// Metrics is what the node has reported in its current call to
+	// WatchNodeMetrics, which describes only the node's own work, unless the
+	// engine doesn't run as a cluster. It is nil while there is no such call:
+	// before the first one begins, between calls, and once the node's connection
+	// has ended. The values of an ended call are never kept.
 	Metrics *Metrics
 
-	// MetricsErr is why the node's latest call to the metrics API ended. It is
+	// MetricsErr is why the node's latest call to WatchNodeMetrics ended. It is
 	// nil until a call ends, and again once the next call begins. The status
 	// code is UNIMPLEMENTED if the node doesn't report metrics, in which case
 	// the Observer doesn't call it again on the same connection.
 	MetricsErr error
+
+	// ClusterMetrics is what the node has reported in its current call to
+	// WatchClusterMetrics, which describes the whole cluster. It is nil while
+	// there is no such call, in the same way as Metrics. The Observer makes
+	// that call to only one node of a cluster at a time, and never to a node
+	// whose engine doesn't run as a cluster.
+	ClusterMetrics *Metrics
+
+	// ClusterMetricsErr is why the node's latest call to WatchClusterMetrics
+	// ended, in the same way as MetricsErr.
+	ClusterMetricsErr error
 }
+
+// missedHeartbeats is how many heartbeat intervals may pass after a heartbeat
+// that doesn't say when it expires, before the node is taken to have stopped
+// reporting.
+const missedHeartbeats = 3
 
 // Reporting returns true if the node is reporting at the time now.
 //
 // A node is reporting until the heartbeat that it last sent has expired. A
-// heartbeat expires after the length of time that it gives, or, if it gives
-// none, after the shortest heartbeat timeout that any node of the node's
-// cluster gave in its preamble. Both are measured from the time that the
-// heartbeat arrived.
+// heartbeat expires after the length of time that it gives, measured from the
+// time that the heartbeat arrived. A heartbeat that gives none expires after
+// [missedHeartbeats] of the node's heartbeat intervals, if the node gives an
+// interval.
 //
 // A node is reporting for as long as its connection is open if it has sent no
-// heartbeat, or if its heartbeats give no way to tell when one expires.
+// heartbeat, or if neither its heartbeats nor its preamble give a way to tell
+// when one expires.
 func (n Node) Reporting(now time.Time) bool {
 	if n.Deadline.IsZero() {
 		return n.Connected
@@ -188,32 +241,15 @@ func (o *Observer) Nodes() []Node {
 // snapshot returns every node that the Observer knows, by node ID. o.m must be
 // held.
 func (o *Observer) snapshot() map[string]Node {
-	timeouts := map[string]time.Duration{}
-	for _, e := range o.nodes {
-		timeout := e.node.Preamble.GetHeartbeatTimeout().AsDuration()
-		if timeout <= 0 {
-			continue
-		}
-		cluster := e.node.Preamble.GetClusterId().AsString()
-		if shortest, ok := timeouts[cluster]; !ok || timeout < shortest {
-			timeouts[cluster] = timeout
-		}
-	}
-
 	nodes := make(map[string]Node, len(o.nodes))
 	for id, e := range o.nodes {
 		n := e.node
 		n.Metrics = e.metrics.snapshot()
+		n.ClusterMetrics = e.clusterMetrics.snapshot()
 		n.Heartbeats = slices.Clone(e.heartbeats)
 
-		if n.Heartbeat != nil {
-			expiry := e.expiry
-			if expiry <= 0 {
-				expiry = timeouts[n.Preamble.GetClusterId().AsString()]
-			}
-			if expiry > 0 {
-				n.Deadline = n.HeartbeatAt.Add(expiry)
-			}
+		if n.Heartbeat != nil && e.expiry > 0 {
+			n.Deadline = n.HeartbeatAt.Add(e.expiry)
 		}
 
 		nodes[id] = n
@@ -237,14 +273,14 @@ func (o *Observer) ForgetIdle(now time.Time) {
 
 	latest := map[string]time.Time{}
 	for _, n := range nodes {
-		cluster := n.Preamble.GetClusterId().AsString()
+		cluster := clusterOf(n.Preamble)
 		if t := n.reportedAt(now); t.After(latest[cluster]) {
 			latest[cluster] = t
 		}
 	}
 
 	for id, n := range nodes {
-		if now.Sub(latest[n.Preamble.GetClusterId().AsString()]) >= idleLimit {
+		if now.Sub(latest[clusterOf(n.Preamble)]) >= idleLimit {
 			o.forget(id)
 		}
 	}
@@ -254,8 +290,12 @@ func (o *Observer) ForgetIdle(now time.Time) {
 // a node of, which it keeps after it has forgotten the nodes, so that the
 // cluster still has a page, and shows as down, until the Observer is stopped.
 type ClusterRecord struct {
-	// ID is the ID of the cluster, as a UUID.
+	// ID is the ID of the cluster, as a UUID. See [Observer].
 	ID string
+
+	// Clustered is true if the engine runs as a cluster, and false for an engine
+	// that doesn't, whose ID is ID.
+	Clustered bool
 
 	Application Application
 
@@ -267,9 +307,10 @@ type ClusterRecord struct {
 // remember updates what the Observer remembers about the cluster of a node that
 // has sent the preamble p. The latest node to connect decides. o.m must be held.
 func (o *Observer) remember(p *enginegrpc.WatchEngineResponse_Preamble) {
-	id := p.GetClusterId().AsString()
+	id := clusterOf(p)
 	rec := o.records[id]
 	rec.ID = id
+	rec.Clustered = p.HasCluster()
 
 	if identity := p.GetApplication().GetIdentity(); identity != nil {
 		rec.Application = Application{
@@ -322,7 +363,7 @@ func (o *Observer) Forget(cluster *uuidpb.UUID) {
 	delete(o.records, cluster.AsString())
 
 	for id, e := range o.nodes {
-		if e.node.Preamble.GetClusterId().Equal(cluster) {
+		if clusterOf(e.node.Preamble) == cluster.AsString() {
 			o.forget(id)
 		}
 	}
@@ -353,9 +394,11 @@ func (n Node) reportedAt(now time.Time) time.Time {
 // ends or ctx ends. It takes ownership of clients, and closes them before it
 // returns, once every call that it made through them has ended.
 //
-// It also watches the node's metrics, for as long as the engine API call lasts.
-// A call to the metrics API that ends is made again after a delay, unless the
-// node doesn't report metrics.
+// It also watches the node's metrics, for as long as the engine API call lasts:
+// the node's own, through WatchNodeMetrics, and, if its engine runs as a
+// cluster and no other node of the cluster is being called for them, the
+// cluster's, through WatchClusterMetrics. A call to the metrics API that ends
+// is made again after a delay, unless the node fails it with UNIMPLEMENTED.
 //
 // It returns nil if the node ended its call with an OK status, and otherwise it
 // returns why the call ended. It returns [ErrSuperseded] if a newer connection
@@ -383,18 +426,26 @@ func (o *Observer) Serve(ctx context.Context, clients *Clients) error {
 	if !ok {
 		return errors.New("the first response wasn't a preamble")
 	}
-	if !preamble.HasNodeId() {
-		return errors.New("the preamble has no node ID")
+	if !preamble.HasId() {
+		return errors.New("the preamble has no engine ID")
+	}
+	if preamble.HasCluster() && !preamble.GetCluster().HasId() {
+		return errors.New("the preamble has no cluster ID")
 	}
 
-	id := preamble.GetNodeId().AsString()
+	id := preamble.GetId().AsString()
 	c := &connection{cancel}
 	o.attach(id, preamble, c)
 
 	var metrics sync.WaitGroup
 	metrics.Go(func() {
-		o.watchMetrics(ctx, id, preamble.GetClusterId().AsString(), c, clients.Metrics)
+		o.watchNodeMetrics(ctx, id, preamble, c, clients.Metrics)
 	})
+	if preamble.HasCluster() {
+		metrics.Go(func() {
+			o.watchClusterMetrics(ctx, id, preamble, c, clients.Metrics)
+		})
+	}
 
 	defer func() {
 		cancel(nil)
@@ -451,9 +502,10 @@ type entry struct {
 	// heartbeats is the value of [Node.Heartbeats].
 	heartbeats []time.Time
 
-	// metrics is the node's current call to the metrics API. It is nil if there
-	// is none.
-	metrics *metricsCall
+	// metrics is the node's current call to WatchNodeMetrics, and
+	// clusterMetrics its current call to WatchClusterMetrics. Each is nil if
+	// there is none.
+	metrics, clusterMetrics *metricsCall
 }
 
 // attach records the preamble of a new connection from a node. It ends the
@@ -483,8 +535,8 @@ func (o *Observer) attach(id string, p *enginegrpc.WatchEngineResponse_Preamble,
 	e.node.DisconnectedAt = time.Time{}
 
 	// Nothing that the earlier connection's calls reported is current.
-	e.metrics = nil
-	e.node.MetricsErr = nil
+	e.metrics, e.clusterMetrics = nil, nil
+	e.node.MetricsErr, e.node.ClusterMetricsErr = nil, nil
 }
 
 // live returns the entry of the node, if the connection c is still the node's
@@ -507,7 +559,7 @@ func (o *Observer) detach(id string, c *connection) {
 		e.conn = nil
 		e.node.Connected = false
 		e.node.DisconnectedAt = time.Now()
-		e.metrics = nil
+		e.metrics, e.clusterMetrics = nil, nil
 	}
 }
 
@@ -523,15 +575,22 @@ func (o *Observer) apply(id string, c *connection, res *enginegrpc.WatchEngineRe
 	}
 
 	switch {
-	case res.HasLiveNodes():
-		e.node.LiveNodes = res.GetLiveNodes()
-	case res.HasWorkloads():
-		e.node.Workloads = res.GetWorkloads()
+	case res.HasLiveClusterNodes():
+		e.node.LiveNodes = res.GetLiveClusterNodes()
+	case res.HasClusterWorkloads():
+		e.node.Workloads = res.GetClusterWorkloads()
 	case res.HasHeartbeat():
 		h := res.GetHeartbeat()
 		e.node.Heartbeat = h
 		e.node.HeartbeatAt = time.Now()
 		e.expiry = expiryOf(h)
+
+		// A heartbeat that doesn't say when it expires is late once the node has
+		// missed a few of the heartbeats that its interval says it aims to send.
+		// This is the Observatory's own rule, because the spec gives none.
+		if e.expiry == 0 && e.node.Preamble.GetHeartbeatInterval() != nil {
+			e.expiry = missedHeartbeats * e.node.Preamble.GetHeartbeatInterval().AsDuration()
+		}
 
 		e.heartbeats = append(e.heartbeats, e.node.HeartbeatAt)
 		for e.heartbeats[0].Before(e.node.HeartbeatAt.Add(-historySpan)) {
@@ -539,8 +598,8 @@ func (o *Observer) apply(id string, c *connection, res *enginegrpc.WatchEngineRe
 		}
 
 		beat := Heartbeat{
-			Cluster: e.node.Preamble.GetClusterId().AsString(),
-			Node:    e.node.Preamble.GetNodeId().AsString(),
+			Cluster: clusterOf(e.node.Preamble),
+			Node:    e.node.Preamble.GetId().AsString(),
 		}
 		for ch := range o.heartbeats {
 			select {

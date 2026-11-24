@@ -2,6 +2,7 @@ package observe_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"testing"
 	"testing/synctest"
@@ -52,15 +53,16 @@ func appOf(name string, key *uuidpb.UUID, handlers ...*configpb.Handler) *config
 	}.Build()
 }
 
-// startApp connects a node of the cluster that runs the application, and begins
-// its call to the metrics API.
+// startApp connects a node of the cluster that runs the application, or an
+// engine that doesn't run as a cluster if cluster is nil, and begins its call to
+// WatchNodeMetrics.
 func startApp(
 	t *testing.T,
 	ctx context.Context,
 	o *Observer,
 	cluster *uuidpb.UUID,
 	app *configpb.Application,
-	supported ...*metricsgrpc.SupportedMetric,
+	supported ...string,
 ) *metricsNode {
 	t.Helper()
 	return startAppInSite(t, ctx, o, cluster, nil, app, supported...)
@@ -75,29 +77,41 @@ func startAppInSite(
 	cluster *uuidpb.UUID,
 	site *identitypb.Identity,
 	app *configpb.Application,
-	supported ...*metricsgrpc.SupportedMetric,
+	supported ...string,
 ) *metricsNode {
 	t.Helper()
 
-	n := &metricsNode{ID: uuidpb.Generate()}
-	n.Engine = connect(ctx, o)
-
-	b := preamble(n.ID, cluster, 0, 0)
-	b.Preamble.SetApplication(app)
+	b := preamble(uuidpb.Generate(), cluster, 0)
 	if site != nil {
 		b.Preamble.SetSite(site)
 	}
+	return startEngine(t, ctx, o, b, app, supported...)
+}
+
+// startEngine is like startApp, for a node that sends the given preamble on its
+// engine API, with the application set in it.
+func startEngine(
+	t *testing.T,
+	ctx context.Context,
+	o *Observer,
+	b enginegrpc.WatchEngineResponse_builder,
+	app *configpb.Application,
+	supported ...string,
+) *metricsNode {
+	t.Helper()
+
+	n := &metricsNode{
+		ID:      b.Preamble.GetId(),
+		Cluster: b.Preamble.GetCluster().GetId(),
+		App:     app,
+	}
+	n.Engine = connect(ctx, o)
+
+	b.Preamble.SetApplication(app)
 	send(t, n.Engine, b)
 
 	n.Metrics = <-n.Engine.Calls
-	n.sendMetrics(t, metricsgrpc.WatchMetricsResponse_builder{
-		Preamble: metricsgrpc.WatchMetricsResponse_Preamble_builder{
-			NodeId:           n.ID,
-			ClusterId:        cluster,
-			Application:      app,
-			SupportedMetrics: supported,
-		}.Build(),
-	})
+	n.sendPreamble(t, n.ID, n.Cluster, supported...)
 
 	return n
 }
@@ -124,8 +138,6 @@ func expectFloat(t testing.TB, got *float64, want float64) {
 }
 
 func TestOverview(t *testing.T) {
-	const reach = metricsgrpc.Reach_REACH_CLUSTER
-
 	t.Run("func Clusters()", func(t *testing.T) {
 		t.Run("it lists each cluster once, with the name of its application", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
@@ -264,8 +276,8 @@ func TestOverview(t *testing.T) {
 
 					// Only the length of event streams, and only the removal of messages.
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.EventStreamLength)), reach),
-						supports(name(new(metricsgrpc.QueueCommandsRemoved)), metricsgrpc.Reach_REACH_NODE),
+						name(new(metricsgrpc.EventStreamLength)),
+						name(new(metricsgrpc.QueueCommandsRemoved)),
 					)
 
 					v := viewOf(t, r, o, c)
@@ -288,7 +300,7 @@ func TestOverview(t *testing.T) {
 					c := uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE),
+						name(new(metricsgrpc.HandlerEventsRecorded)),
 					)
 
 					e := viewOf(t, r, o, c).Overview.Events
@@ -311,7 +323,7 @@ func TestOverview(t *testing.T) {
 						handler("account", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_AGGREGATE, nil),
 						handler("schedule", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_PROCESS, nil),
 					),
-						supports(name(new(metricsgrpc.AggregateInstanceEventStreamBindings)), reach),
+						name(new(metricsgrpc.AggregateInstanceEventStreamBindings)),
 					)
 
 					for _, h := range viewOf(t, r, o, c).Overview.Handlers {
@@ -336,21 +348,21 @@ func TestOverview(t *testing.T) {
 					h1, h2 := uuidpb.Generate(), uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.EventStreamLength)), reach),
-						supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE),
+						name(new(metricsgrpc.EventStreamLength)),
+						name(new(metricsgrpc.HandlerEventsRecorded)),
 					)
-					n.sample(t, 0, "s1", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: s1, Value: 50}.Build())
-					n.sample(t, 0, "s2", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: s2, Value: 20}.Build())
-					n.sample(t, 1, "h1", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h1, Value: 100}.Build())
-					n.sample(t, 1, "h2", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h2, Value: 0}.Build())
+					n.sample(t, 0, "s1", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: s1, Watermark: 50}.Build())
+					n.sample(t, 0, "s2", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: s2, Watermark: 20}.Build())
+					n.sample(t, 1, "h1", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h1, CumulativeCount: 100}.Build())
+					n.sample(t, 1, "h2", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h2, CumulativeCount: 0}.Build())
 
 					if v := viewOf(t, r, o, c); v.Overview.Events.Rate == nil || v.Overview.Events.Rate.PerSecond != nil {
 						t.Fatalf("unexpected rate before five seconds: %+v", v.Overview.Events.Rate)
 					}
 
 					time.Sleep(10 * time.Second)
-					n.sample(t, 1, "h1", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h1, Value: 160}.Build())
-					n.sample(t, 1, "h2", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h2, Value: 20}.Build())
+					n.sample(t, 1, "h1", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h1, CumulativeCount: 160}.Build())
+					n.sample(t, 1, "h2", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h2, CumulativeCount: 20}.Build())
 
 					e := viewOf(t, r, o, c).Overview.Events
 					// h1 grew by 60 and h2 by 20 over 10 seconds.
@@ -379,16 +391,16 @@ func TestOverview(t *testing.T) {
 					q1, q2 := uuidpb.Generate(), uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.QueueCommandsPending)), reach),
-						supports(name(new(metricsgrpc.QueueDeadlinesPending)), reach),
-						supports(name(new(metricsgrpc.QueueCommandsFailing)), reach),
-						supports(name(new(metricsgrpc.QueueDeadlinesFailing)), reach),
+						name(new(metricsgrpc.QueueCommandsPending)),
+						name(new(metricsgrpc.QueueDeadlinesPending)),
+						name(new(metricsgrpc.QueueCommandsFailing)),
+						name(new(metricsgrpc.QueueDeadlinesFailing)),
 					)
-					n.sample(t, 0, "q1", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q1, Value: 3}.Build())
-					n.sample(t, 1, "q1", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q1, Value: 4}.Build())
-					n.sample(t, 1, "q2", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q2, Value: 5}.Build())
-					n.sample(t, 2, "q1", 1, metricsgrpc.QueueCommandsFailing_builder{QueueId: q1, Value: 1}.Build())
-					n.sample(t, 3, "q2", 1, metricsgrpc.QueueDeadlinesFailing_builder{QueueId: q2, Value: 2}.Build())
+					n.sample(t, 0, "q1", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q1, CurrentCount: 3}.Build())
+					n.sample(t, 1, "q1", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q1, CurrentCount: 4}.Build())
+					n.sample(t, 1, "q2", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q2, CurrentCount: 5}.Build())
+					n.sample(t, 2, "q1", 1, metricsgrpc.QueueCommandsFailing_builder{QueueId: q1, CurrentCount: 1}.Build())
+					n.sample(t, 3, "q2", 1, metricsgrpc.QueueDeadlinesFailing_builder{QueueId: q2, CurrentCount: 2}.Build())
 
 					q := viewOf(t, r, o, c).Overview.Queues
 					sizes := map[string]uint64{}
@@ -418,15 +430,15 @@ func TestOverview(t *testing.T) {
 					q := uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.QueueCommandsPending)), reach),
-						supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
-						supports(name(new(metricsgrpc.QueueDeadlinesRemoved)), reach),
+						name(new(metricsgrpc.QueueCommandsPending)),
+						name(new(metricsgrpc.QueueCommandsRemoved)),
+						name(new(metricsgrpc.QueueDeadlinesRemoved)),
 					)
-					n.sample(t, 1, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
-					n.sample(t, 2, "q", 1, metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: q, Value: 0}.Build())
+					n.sample(t, 1, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
+					n.sample(t, 2, "q", 1, metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
 					time.Sleep(10 * time.Second)
-					n.sample(t, 1, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
-					n.sample(t, 2, "q", 2, metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: q, Value: 10}.Build())
+					n.sample(t, 1, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 30}.Build())
+					n.sample(t, 2, "q", 2, metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: q, CumulativeCount: 10}.Build())
 
 					expectFloat(t, viewOf(t, r, o, c).Overview.Queues.Throughput.PerSecond, 40.0/10)
 
@@ -442,14 +454,14 @@ func TestOverview(t *testing.T) {
 					handler := uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.HandlerCommandsHandled)), reach),
-						supports(name(new(metricsgrpc.HandlerDeadlinesHandled)), reach),
+						name(new(metricsgrpc.HandlerCommandsHandled)),
+						name(new(metricsgrpc.HandlerDeadlinesHandled)),
 					)
-					n.sample(t, 0, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 0}.Build())
-					n.sample(t, 1, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					n.sample(t, 0, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, CumulativeCount: 0}.Build())
+					n.sample(t, 1, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, CumulativeCount: 0}.Build())
 					time.Sleep(10 * time.Second)
-					n.sample(t, 0, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 30}.Build())
-					n.sample(t, 1, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 10}.Build())
+					n.sample(t, 0, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, CumulativeCount: 30}.Build())
+					n.sample(t, 1, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, CumulativeCount: 10}.Build())
 
 					q := viewOf(t, r, o, c).Overview.Queues
 					if q == nil || q.Queues != nil || q.Counted != "handled" || q.History == nil {
@@ -471,17 +483,17 @@ func TestOverview(t *testing.T) {
 					handler := uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
-						supports(name(new(metricsgrpc.HandlerCommandsHandled)), reach),
-						supports(name(new(metricsgrpc.HandlerDeadlinesHandled)), reach),
+						name(new(metricsgrpc.QueueCommandsRemoved)),
+						name(new(metricsgrpc.HandlerCommandsHandled)),
+						name(new(metricsgrpc.HandlerDeadlinesHandled)),
 					)
-					n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
-					n.sample(t, 1, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 0}.Build())
-					n.sample(t, 2, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
+					n.sample(t, 1, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, CumulativeCount: 0}.Build())
+					n.sample(t, 2, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, CumulativeCount: 0}.Build())
 					time.Sleep(10 * time.Second)
-					n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 50}.Build())
-					n.sample(t, 1, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 20}.Build())
-					n.sample(t, 2, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 10}.Build())
+					n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 50}.Build())
+					n.sample(t, 1, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, CumulativeCount: 20}.Build())
+					n.sample(t, 2, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, CumulativeCount: 10}.Build())
 
 					tile := viewOf(t, r, o, c).Overview.Queues
 					if tile == nil || tile.Counted != "handled" {
@@ -503,14 +515,14 @@ func TestOverview(t *testing.T) {
 					handler := uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
-						supports(name(new(metricsgrpc.HandlerCommandsHandled)), reach),
+						name(new(metricsgrpc.QueueCommandsRemoved)),
+						name(new(metricsgrpc.HandlerCommandsHandled)),
 					)
-					n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
-					n.sample(t, 1, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
+					n.sample(t, 1, "c", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, CumulativeCount: 0}.Build())
 					time.Sleep(10 * time.Second)
-					n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 50}.Build())
-					n.sample(t, 1, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, Value: 30}.Build())
+					n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 50}.Build())
+					n.sample(t, 1, "c", 2, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handler, CumulativeCount: 30}.Build())
 
 					tile := viewOf(t, r, o, c).Overview.Queues
 					if tile == nil || tile.Counted != "removed" {
@@ -531,11 +543,11 @@ func TestOverview(t *testing.T) {
 					handler := uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						supports(name(new(metricsgrpc.HandlerDeadlinesHandled)), reach),
+						name(new(metricsgrpc.HandlerDeadlinesHandled)),
 					)
-					n.sample(t, 0, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 0}.Build())
+					n.sample(t, 0, "d", 1, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, CumulativeCount: 0}.Build())
 					time.Sleep(10 * time.Second)
-					n.sample(t, 0, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, Value: 20}.Build())
+					n.sample(t, 0, "d", 2, metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: handler, CumulativeCount: 20}.Build())
 
 					tile := viewOf(t, r, o, c).Overview.Queues
 					if tile == nil || tile.Counted != "deadlines handled" {
@@ -556,18 +568,13 @@ func TestOverview(t *testing.T) {
 					o, r := NewObserver(), NewRecorder()
 					c := uuidpb.Generate()
 
-					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()))
+					b := preamble(uuidpb.Generate(), c, 0)
+					b.Preamble.GetCluster().SetReportsWorkloads(true)
+					n := startEngine(t, ctx, o, b, appOf("statements", uuidpb.Generate()))
 					gone := uuidpb.Generate()
 
 					send(t, n.Engine, liveNodes(n.ID, gone))
-					send(t, n.Engine, enginegrpc.WatchEngineResponse_builder{
-						Workloads: enginegrpc.Workloads_builder{
-							Workloads: []*enginegrpc.Workload{
-								enginegrpc.Workload_builder{Key: uuidpb.Generate()}.Build(),
-								enginegrpc.Workload_builder{Key: uuidpb.Generate()}.Build(),
-							},
-						}.Build(),
-					})
+					send(t, n.Engine, workloads(2))
 
 					send(t, n.Engine, heartbeat(0))
 					time.Sleep(3 * time.Second)
@@ -582,6 +589,10 @@ func TestOverview(t *testing.T) {
 					byID := map[string]Member{}
 					for _, live := range nodes {
 						byID[live.ID] = live
+					}
+
+					if !viewOf(t, r, o, c).Overview.Cluster.ReportsWorkloads {
+						t.Fatal("expected the cluster to report its workloads")
 					}
 
 					seen := byID[n.ID.AsString()]
@@ -602,7 +613,7 @@ func TestOverview(t *testing.T) {
 				})
 			})
 
-			t.Run("it gives no workloads for a node whose engine doesn't divide its work into them", func(t *testing.T) {
+			t.Run("it gives no workloads for a node that doesn't say that it reports them", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
 					o, r := NewObserver(), NewRecorder()
@@ -610,16 +621,147 @@ func TestOverview(t *testing.T) {
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()))
 					send(t, n.Engine, liveNodes(n.ID))
+					send(t, n.Engine, workloads(2))
 					send(t, n.Engine, heartbeat(0))
 					time.Sleep(time.Second)
 
-					nodes := viewOf(t, r, o, c).Overview.Cluster.Nodes
-					if len(nodes) != 1 || nodes[0].Workloads != nil {
-						t.Fatalf("unexpected nodes: %+v", nodes)
+					tile := viewOf(t, r, o, c).Overview.Cluster
+					if tile.ReportsWorkloads {
+						t.Fatal("expected the cluster not to report its workloads")
+					}
+					if len(tile.Nodes) != 1 || tile.Nodes[0].Workloads != nil {
+						t.Fatalf("unexpected nodes: %+v", tile.Nodes)
 					}
 
 					cancel()
 					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it gives no workloads for a node that says that it reports them, until it does", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+
+					b := preamble(uuidpb.Generate(), c, 0)
+					b.Preamble.GetCluster().SetReportsWorkloads(true)
+					n := startEngine(t, ctx, o, b, appOf("statements", uuidpb.Generate()))
+
+					tile := viewOf(t, r, o, c).Overview.Cluster
+					if !tile.ReportsWorkloads {
+						t.Fatal("expected the cluster to report its workloads")
+					}
+					if len(tile.Nodes) != 1 || tile.Nodes[0].Workloads != nil {
+						t.Fatalf("unexpected nodes: %+v", tile.Nodes)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+		})
+
+		t.Run("when the engine doesn't run as a cluster", func(t *testing.T) {
+			t.Run("it has an engine tile, with the engine while it is reporting, and no cluster tile", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+
+					n := startApp(t, ctx, o, nil, appOf("statements", uuidpb.Generate()))
+					send(t, n.Engine, heartbeat(10*time.Second))
+					time.Sleep(time.Second)
+
+					// The engine is known by its own ID, in place of a cluster's.
+					o1 := viewOf(t, r, o, n.ID).Overview
+					if o1.Cluster != nil || o1.Engine == nil || o1.Engine.Node == nil {
+						t.Fatalf("unexpected tiles: %+v, %+v", o1.Cluster, o1.Engine)
+					}
+					if got := o1.Engine.Node; got.ID != n.ID.AsString() || len(got.Heartbeats) != 1 {
+						t.Fatalf("unexpected engine: %+v", got)
+					}
+
+					time.Sleep(10 * time.Second)
+					if got := viewOf(t, r, o, n.ID).Overview.Engine; got == nil || got.Node != nil {
+						t.Fatalf("unexpected engine tile of an engine that isn't reporting: %+v", got)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+		})
+
+		t.Run("when the nodes say how their engine uses event streams and queues", func(t *testing.T) {
+			// start starts a node that says that its engine uses one event stream
+			// and one queue, if one is true, and several of each if it is false.
+			start := func(t *testing.T, ctx context.Context, o *Observer, c *uuidpb.UUID, one bool) *metricsNode {
+				t.Helper()
+
+				b := preamble(uuidpb.Generate(), c, 0)
+				if one {
+					b.Preamble.SetEventStreamModel(enginegrpc.EventStreamModel_builder{
+						SingleEventStream: &enginegrpc.EventStreamModel_SingleEventStream{},
+					}.Build())
+					b.Preamble.SetQueueModel(enginegrpc.QueueModel_builder{
+						SingleQueue: &enginegrpc.QueueModel_SingleQueue{},
+					}.Build())
+				} else {
+					b.Preamble.SetEventStreamModel(enginegrpc.EventStreamModel_builder{
+						MultipleEventStreams: &enginegrpc.EventStreamModel_MultipleEventStreams{},
+					}.Build())
+					b.Preamble.SetQueueModel(enginegrpc.QueueModel_builder{
+						MultipleQueues: &enginegrpc.QueueModel_MultipleQueues{},
+					}.Build())
+				}
+
+				return startEngine(t, ctx, o, b, appOf("statements", uuidpb.Generate()),
+					name(new(metricsgrpc.EventStreamLength)),
+					name(new(metricsgrpc.QueueCommandsPending)),
+				)
+			}
+
+			t.Run("it says that there is one event stream and one queue only if every node says so", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+
+					first := start(t, ctx, o, c, true)
+					v := viewOf(t, r, o, c).Overview
+					if !v.Events.OneStream || !v.Queues.OneQueue {
+						t.Fatalf("expected one stream and one queue: %+v, %+v", v.Events, v.Queues)
+					}
+
+					second := start(t, ctx, o, c, false)
+					v = viewOf(t, r, o, c).Overview
+					if v.Events.OneStream || v.Queues.OneQueue {
+						t.Fatalf("unexpected one stream or one queue: %+v, %+v", v.Events, v.Queues)
+					}
+
+					cancel()
+					<-first.Engine.Done
+					<-second.Engine.Done
+				})
+			})
+
+			t.Run("it doesn't say so when a node doesn't say how its engine uses them", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+
+					first := start(t, ctx, o, c, true)
+					second := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()))
+
+					v := viewOf(t, r, o, c).Overview
+					if v.Events.OneStream || v.Queues.OneQueue {
+						t.Fatalf("unexpected one stream or one queue: %+v, %+v", v.Events, v.Queues)
+					}
+
+					cancel()
+					<-first.Engine.Done
+					<-second.Engine.Done
 				})
 			})
 		})
@@ -698,25 +840,25 @@ func TestOverview(t *testing.T) {
 					n := startApp(t, ctx, o, c,
 						appOf("statements", uuidpb.Generate(),
 							handler("account", key, configpb.HandlerType_HANDLER_TYPE_AGGREGATE, nil)),
-						supports(name(new(metricsgrpc.AggregateInstanceEventStreamBindings)), reach),
-						supports(name(new(metricsgrpc.HandlerCommandsPending)), reach),
-						supports(name(new(metricsgrpc.HandlerCommandsFailing)), reach),
-						supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE),
+						name(new(metricsgrpc.AggregateInstanceEventStreamBindings)),
+						name(new(metricsgrpc.HandlerCommandsPending)),
+						name(new(metricsgrpc.HandlerCommandsFailing)),
+						name(new(metricsgrpc.HandlerEventsRecorded)),
 					)
 					bind := func(i byte, stream *uuidpb.UUID, instances uint64) {
 						n.sample(t, 0, stream.AsString(), i,
 							metricsgrpc.AggregateInstanceEventStreamBindings_builder{
-								HandlerKey: key, EventStreamId: stream, Value: instances,
+								HandlerKey: key, EventStreamId: stream, CurrentCount: instances,
 							}.Build())
 					}
 					bind(1, s1, 60)
 					bind(1, s2, 40)
 					bind(1, s3, 0)
-					n.sample(t, 1, "account", 1, metricsgrpc.HandlerCommandsPending_builder{HandlerKey: key, Value: 6}.Build())
-					n.sample(t, 2, "account", 1, metricsgrpc.HandlerCommandsFailing_builder{HandlerKey: key, Value: 2}.Build())
-					n.sample(t, 3, "account", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: key, Value: 0}.Build())
+					n.sample(t, 1, "account", 1, metricsgrpc.HandlerCommandsPending_builder{HandlerKey: key, CurrentCount: 6}.Build())
+					n.sample(t, 2, "account", 1, metricsgrpc.HandlerCommandsFailing_builder{HandlerKey: key, CurrentCount: 2}.Build())
+					n.sample(t, 3, "account", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: key, CumulativeCount: 0}.Build())
 					time.Sleep(10 * time.Second)
-					n.sample(t, 3, "account", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: key, Value: 20}.Build())
+					n.sample(t, 3, "account", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: key, CumulativeCount: 20}.Build())
 
 					card := viewOf(t, r, o, c).Overview.Handlers[0]
 					s := card.Summary
@@ -756,15 +898,25 @@ func TestOverview(t *testing.T) {
 							handler("other", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_PROCESS, map[string]*configpb.MessageUsage{
 								"example.Command": configpb.MessageUsage_builder{IsProduced: true}.Build(),
 							})),
-						supports(name(new(metricsgrpc.ProcessInstanceQueueBindings)), reach),
-						supports(name(new(metricsgrpc.HandlerDeadlinesPending)), reach),
-						supports(name(new(metricsgrpc.HandlerEventsPending)), reach),
+						name(new(metricsgrpc.ProcessInstanceQueueBindings)),
+						name(new(metricsgrpc.HandlerDeadlinesPending)),
 					)
-					n.sample(t, 0, "q", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, QueueId: q, Value: 20}.Build())
+					n.sample(t, 0, "q", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, QueueId: q, CurrentCount: 20}.Build())
 					// Instances that are in progress and bound to no queue have no queue ID.
-					n.sample(t, 0, "none", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, Value: 3}.Build())
-					n.sample(t, 1, "schedule", 1, metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: key, Value: 20}.Build())
-					n.sample(t, 2, "schedule", 1, metricsgrpc.HandlerEventsPending_builder{HandlerKey: key, Value: 4}.Build())
+					n.sample(t, 0, "none", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, CurrentCount: 3}.Build())
+					n.sample(t, 1, "schedule", 1, metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: key, CurrentCount: 20}.Build())
+
+					// The events that the process has yet to reach are its lag on each
+					// stream, added up. The nodes' own lags can't be added up, so the
+					// cluster's are read.
+					call := n.startClusterCall(t, name(new(metricsgrpc.HandlerEventStreamLag)))
+					for i, lag := range []uint64{4, 3} {
+						sendSample(t, call, 0, fmt.Sprint(i), 1, metricsgrpc.HandlerEventStreamLag_builder{
+							HandlerKey:    key,
+							EventStreamId: uuidpb.Generate(),
+							Gauge:         lag,
+						}.Build())
+					}
 
 					cards := viewOf(t, r, o, c).Overview.Handlers
 					var schedule, other HandlerCard
@@ -781,7 +933,7 @@ func TestOverview(t *testing.T) {
 						t.Fatal("unexpected handlers that schedule deadlines")
 					}
 					if s.QueuedMessages == nil || *s.QueuedMessages != 20 ||
-						s.UnhandledEvents == nil || *s.UnhandledEvents != 4 {
+						s.UnhandledEvents == nil || *s.UnhandledEvents != 7 {
 						t.Fatalf("unexpected backlog: %+v", s)
 					}
 					if len(s.Bindings) != 1 || s.Bindings[0].Instances != 20 || s.Bindings[0].ID != q.AsString() {
@@ -840,12 +992,12 @@ func TestOverview(t *testing.T) {
 									"example.Command": configpb.MessageUsage_builder{IsConsumed: true}.Build(),
 								}),
 							handler("silent", silent, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil)),
-						supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE),
-						supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE),
+						name(new(metricsgrpc.HandlerEventsRecorded)),
+						name(new(metricsgrpc.HandlerCommandsHandled)),
 					)
 
-					n.sample(t, 0, "records", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: records, Value: 1}.Build())
-					n.sample(t, 1, "handles", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handles, Value: 1}.Build())
+					n.sample(t, 0, "records", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: records, CumulativeCount: 1}.Build())
+					n.sample(t, 1, "handles", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: handles, CumulativeCount: 1}.Build())
 
 					for _, h := range viewOf(t, r, o, c).Overview.Handlers {
 						if (h.Name != "silent") != (h.History != nil) {
@@ -883,12 +1035,12 @@ func TestOverview(t *testing.T) {
 					handler("mailer", key, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil),
 					handler("balances", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil),
 					handler("account", uuidpb.Generate(), configpb.HandlerType_HANDLER_TYPE_AGGREGATE, nil))
-				handled := supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE)
+				handled := name(new(metricsgrpc.HandlerCommandsHandled))
 
 				a := startApp(t, ctx, o, c, app, handled)
 				b := startApp(t, ctx, o, c, app, handled)
 				total := func(v uint64) proto.Message {
-					return metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, Value: v}.Build()
+					return metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, CumulativeCount: v}.Build()
 				}
 				a.sample(t, 0, "m", 1, total(0))
 				b.sample(t, 0, "m", 1, total(0))
@@ -934,9 +1086,9 @@ func TestOverview(t *testing.T) {
 				app := appOf("statements", uuidpb.Generate(),
 					handler("balances", key, configpb.HandlerType_HANDLER_TYPE_PROJECTION, nil))
 
-				n := startApp(t, ctx, o, c, app, supports(name(new(metricsgrpc.HandlerEventsHandled)), metricsgrpc.Reach_REACH_NODE))
+				n := startApp(t, ctx, o, c, app, name(new(metricsgrpc.HandlerEventsHandled)))
 				total := func(v uint64) proto.Message {
-					return metricsgrpc.HandlerEventsHandled_builder{HandlerKey: key, Value: v}.Build()
+					return metricsgrpc.HandlerEventsHandled_builder{HandlerKey: key, CumulativeCount: v}.Build()
 				}
 				n.sample(t, 0, "b", 1, total(0))
 				time.Sleep(10 * time.Second)
@@ -962,8 +1114,8 @@ func TestOverview(t *testing.T) {
 				app := appOf("statements", uuidpb.Generate(),
 					handler("mailer", key, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil))
 
-				n := startApp(t, ctx, o, c, app, supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE))
-				n.sample(t, 0, "m", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, Value: 1}.Build())
+				n := startApp(t, ctx, o, c, app, name(new(metricsgrpc.HandlerCommandsHandled)))
+				n.sample(t, 0, "m", 1, metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, CumulativeCount: 1}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				card := viewOf(t, r, o, c).Overview.Handlers[0]
@@ -984,12 +1136,12 @@ func TestOverview(t *testing.T) {
 				c, key := uuidpb.Generate(), uuidpb.Generate()
 				app := appOf("statements", uuidpb.Generate(),
 					handler("mailer", key, configpb.HandlerType_HANDLER_TYPE_INTEGRATION, nil))
-				handled := supports(name(new(metricsgrpc.HandlerCommandsHandled)), metricsgrpc.Reach_REACH_NODE)
+				handled := name(new(metricsgrpc.HandlerCommandsHandled))
 
 				stays := startApp(t, ctx, o, c, app, handled)
 				leaves := startApp(t, gone, o, c, app, handled)
 				total := func(v uint64) proto.Message {
-					return metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, Value: v}.Build()
+					return metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: key, CumulativeCount: v}.Build()
 				}
 				stays.sample(t, 0, "m", 1, total(0))
 				leaves.sample(t, 0, "m", 1, total(0))
@@ -1031,17 +1183,17 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
+					name(new(metricsgrpc.QueueCommandsRemoved)),
 				)
 
 				// The rate is known once the totals have been seen for long enough.
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
 				time.Sleep(10 * time.Second)
-				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
+				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 30}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				time.Sleep(2 * time.Second)
-				n.sample(t, 0, "q", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 60}.Build())
+				n.sample(t, 0, "q", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 60}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				time.Sleep(time.Second)
@@ -1073,16 +1225,16 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
+					name(new(metricsgrpc.QueueCommandsRemoved)),
 				)
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
 				time.Sleep(10 * time.Second)
-				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
+				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 30}.Build())
 
 				start := time.Now()
 				r.Record(start, o.Nodes())
 				time.Sleep(2 * time.Second)
-				n.sample(t, 0, "q", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 60}.Build())
+				n.sample(t, 0, "q", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 60}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				series := r.Series(c.AsString())
@@ -1116,14 +1268,14 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
+					name(new(metricsgrpc.QueueCommandsRemoved)),
 				)
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
 
 				// A total that keeps rising has a rate that keeps being known.
 				for i := range 200 {
 					time.Sleep(time.Second)
-					n.sample(t, 0, "q", byte(i+2), metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: uint64(3 * (i + 1))}.Build())
+					n.sample(t, 0, "q", byte(i+2), metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: uint64(3 * (i + 1))}.Build())
 					r.Record(time.Now(), o.Nodes())
 				}
 
@@ -1148,11 +1300,11 @@ func TestOverview(t *testing.T) {
 				q := uuidpb.Generate()
 
 				n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-					supports(name(new(metricsgrpc.QueueCommandsRemoved)), reach),
+					name(new(metricsgrpc.QueueCommandsRemoved)),
 				)
-				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 0}.Build())
+				n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
 				time.Sleep(10 * time.Second)
-				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, Value: 30}.Build())
+				n.sample(t, 0, "q", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 30}.Build())
 				r.Record(time.Now(), o.Nodes())
 
 				// The Recorder keeps no history for the cluster once the nodes are

@@ -42,6 +42,14 @@ const (
 	// steadyNodes is how many of the nodes never go down. The others go down and
 	// come back, one after another, so that the number of nodes changes.
 	steadyNodes = 3
+
+	// engineName and engineVersion are the name and the version of the
+	// simulated engine, as its nodes describe it.
+	engineName    = "demo"
+	engineVersion = "1.0.0"
+
+	// applicationVersion is the version of the simulated application.
+	applicationVersion = "2026.11.24"
 )
 
 // heartbeatIntervals is how often each node sends a heartbeat. They differ, as
@@ -57,9 +65,9 @@ var heartbeatIntervals = []time.Duration{
 }
 
 const (
-	// heartbeatTimeout is how long the nodes wait for a heartbeat before they
-	// stop counting on it. It exceeds the longest of the nodes' intervals.
-	heartbeatTimeout = 15 * time.Second
+	// heartbeatExpiry is how long after a node sends a heartbeat the heartbeat
+	// expires. It exceeds the longest of the nodes' intervals.
+	heartbeatExpiry = 15 * time.Second
 
 	// measureInterval is how often the cluster's numbers move, and how often a
 	// node reports them.
@@ -265,6 +273,7 @@ func newCluster(name string, nodes int, fixed []proto.Message) *cluster {
 
 	c.app = configpb.Application_builder{
 		Identity: identity(name, uuidpb.Generate()),
+		Version:  applicationVersion,
 		Handlers: []*configpb.Handler{
 			handler("account", c.account, configpb.HandlerType_HANDLER_TYPE_AGGREGATE, nil),
 			handler("statement-schedule", c.schedule, configpb.HandlerType_HANDLER_TYPE_PROCESS,
@@ -417,32 +426,33 @@ func (c *cluster) advance() {
 	}
 }
 
-// supported is the metrics that each node reports, in the order of their
-// indexes in the preamble of its call.
+// supported is the metrics that each node reports, and whether it reports each
+// one through WatchClusterMetrics, as a measure of the whole cluster, or through
+// WatchNodeMetrics, as a count of its own.
 var supported = []struct {
 	message proto.Message
-	reach   metricsgrpc.Reach
+	cluster bool
 }{
-	{new(metricsgrpc.EventStreamLength), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.QueueCommandsPending), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.QueueDeadlinesPending), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.QueueCommandsFailing), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.QueueDeadlinesFailing), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.QueueCommandsRemoved), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.QueueDeadlinesRemoved), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.HandlerCommandsPending), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.HandlerDeadlinesPending), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.HandlerEventsPending), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.HandlerCommandsFailing), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.HandlerDeadlinesFailing), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.HandlerCommandsHandled), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.HandlerDeadlinesHandled), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.HandlerDeadlinesCanceled), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.HandlerEventsRecorded), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.HandlerEventsHandled), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.ProcessInstancesEnded), metricsgrpc.Reach_REACH_NODE},
-	{new(metricsgrpc.AggregateInstanceEventStreamBindings), metricsgrpc.Reach_REACH_CLUSTER},
-	{new(metricsgrpc.ProcessInstanceQueueBindings), metricsgrpc.Reach_REACH_CLUSTER},
+	{new(metricsgrpc.EventStreamLength), true},
+	{new(metricsgrpc.QueueCommandsPending), true},
+	{new(metricsgrpc.QueueDeadlinesPending), true},
+	{new(metricsgrpc.QueueCommandsFailing), true},
+	{new(metricsgrpc.QueueDeadlinesFailing), true},
+	{new(metricsgrpc.QueueCommandsRemoved), false},
+	{new(metricsgrpc.QueueDeadlinesRemoved), false},
+	{new(metricsgrpc.HandlerCommandsPending), true},
+	{new(metricsgrpc.HandlerDeadlinesPending), true},
+	{new(metricsgrpc.HandlerEventStreamLag), true},
+	{new(metricsgrpc.HandlerCommandsFailing), true},
+	{new(metricsgrpc.HandlerDeadlinesFailing), true},
+	{new(metricsgrpc.HandlerCommandsHandled), false},
+	{new(metricsgrpc.HandlerDeadlinesHandled), false},
+	{new(metricsgrpc.HandlerDeadlinesCanceled), false},
+	{new(metricsgrpc.HandlerEventsRecorded), false},
+	{new(metricsgrpc.HandlerEventsHandled), false},
+	{new(metricsgrpc.ProcessInstancesEnded), false},
+	{new(metricsgrpc.AggregateInstanceEventStreamBindings), true},
+	{new(metricsgrpc.ProcessInstanceQueueBindings), true},
 }
 
 // A profile is what the nodes support at a time, which is every metric but the
@@ -540,9 +550,14 @@ func (c *cluster) readings(node int) []reading {
 	c.m.Lock()
 	defer c.m.Unlock()
 
+	// The subject of a sample is made of the IDs of what it describes.
 	var out []reading
-	add := func(m proto.Message, subject *uuidpb.UUID) {
-		out = append(out, reading{indexOf(m), subject.AsString(), m})
+	add := func(m proto.Message, ids ...*uuidpb.UUID) {
+		var subject strings.Builder
+		for _, id := range ids {
+			subject.WriteString(id.AsString())
+		}
+		out = append(out, reading{indexOf(m), subject.String(), m})
 	}
 	part := func(name string) uint64 {
 		if len(c.shares[name]) == 0 {
@@ -554,48 +569,48 @@ func (c *cluster) readings(node int) []reading {
 	for i, id := range c.streams {
 		add(metricsgrpc.EventStreamLength_builder{
 			EventStreamId: id,
-			Value:         c.totals[fmt.Sprintf("stream.%d", i)],
+			Watermark:     c.totals[fmt.Sprintf("stream.%d", i)],
 		}.Build(), id)
 	}
 
-	add(metricsgrpc.QueueCommandsPending_builder{QueueId: c.commandsQ, Value: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.commandsQ)
-	add(metricsgrpc.QueueDeadlinesPending_builder{QueueId: c.deadlinesQ, Value: uint64(c.state.deadlinesQueued)}.Build(), c.deadlinesQ)
-	add(metricsgrpc.QueueCommandsFailing_builder{QueueId: c.commandsQ, Value: uint64(c.state.failing)}.Build(), c.commandsQ)
-	add(metricsgrpc.QueueDeadlinesFailing_builder{QueueId: c.deadlinesQ, Value: uint64(c.state.failingDeadlines)}.Build(), c.deadlinesQ)
-	add(metricsgrpc.QueueCommandsRemoved_builder{QueueId: c.commandsQ, Value: part("removed.commands")}.Build(), c.commandsQ)
-	add(metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: c.deadlinesQ, Value: part("removed.deadlines")}.Build(), c.deadlinesQ)
+	add(metricsgrpc.QueueCommandsPending_builder{QueueId: c.commandsQ, CurrentCount: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.commandsQ)
+	add(metricsgrpc.QueueDeadlinesPending_builder{QueueId: c.deadlinesQ, CurrentCount: uint64(c.state.deadlinesQueued)}.Build(), c.deadlinesQ)
+	add(metricsgrpc.QueueCommandsFailing_builder{QueueId: c.commandsQ, CurrentCount: uint64(c.state.failing)}.Build(), c.commandsQ)
+	add(metricsgrpc.QueueDeadlinesFailing_builder{QueueId: c.deadlinesQ, CurrentCount: uint64(c.state.failingDeadlines)}.Build(), c.deadlinesQ)
+	add(metricsgrpc.QueueCommandsRemoved_builder{QueueId: c.commandsQ, CumulativeCount: part("removed.commands")}.Build(), c.commandsQ)
+	add(metricsgrpc.QueueDeadlinesRemoved_builder{QueueId: c.deadlinesQ, CumulativeCount: part("removed.deadlines")}.Build(), c.deadlinesQ)
 
-	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.account, Value: 0}.Build(), c.account)
+	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.account, CurrentCount: 0}.Build(), c.account)
 	// A message that is failing is still waiting, so there are always at least as
 	// many waiting as there are failing.
-	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.mailer, Value: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.mailer)
-	add(metricsgrpc.HandlerCommandsFailing_builder{HandlerKey: c.mailer, Value: uint64(c.state.failing)}.Build(), c.mailer)
-	add(metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: c.schedule, Value: uint64(c.state.deadlinesQueued)}.Build(), c.schedule)
-	add(metricsgrpc.HandlerDeadlinesFailing_builder{HandlerKey: c.schedule, Value: uint64(c.state.failingDeadlines)}.Build(), c.schedule)
-	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.schedule, Value: uint64(c.state.eventsPending)}.Build(), c.schedule)
-	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.balances, Value: uint64(c.state.eventsPending / 2)}.Build(), c.balances)
+	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.mailer, CurrentCount: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.mailer)
+	add(metricsgrpc.HandlerCommandsFailing_builder{HandlerKey: c.mailer, CurrentCount: uint64(c.state.failing)}.Build(), c.mailer)
+	add(metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: c.schedule, CurrentCount: uint64(c.state.deadlinesQueued)}.Build(), c.schedule)
+	add(metricsgrpc.HandlerDeadlinesFailing_builder{HandlerKey: c.schedule, CurrentCount: uint64(c.state.failingDeadlines)}.Build(), c.schedule)
+	add(metricsgrpc.HandlerEventStreamLag_builder{HandlerKey: c.schedule, EventStreamId: c.streams[0], Gauge: uint64(c.state.eventsPending)}.Build(), c.schedule, c.streams[0])
+	add(metricsgrpc.HandlerEventStreamLag_builder{HandlerKey: c.balances, EventStreamId: c.streams[0], Gauge: uint64(c.state.eventsPending / 2)}.Build(), c.balances, c.streams[0])
 
-	add(metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: c.account, Value: part("commands.account")}.Build(), c.account)
-	add(metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: c.mailer, Value: part("commands.mailer")}.Build(), c.mailer)
-	add(metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: c.schedule, Value: part("deadlines.schedule")}.Build(), c.schedule)
-	add(metricsgrpc.HandlerDeadlinesCanceled_builder{HandlerKey: c.schedule, Value: part("canceled.schedule")}.Build(), c.schedule)
-	add(metricsgrpc.ProcessInstancesEnded_builder{HandlerKey: c.schedule, Value: part("ended.schedule")}.Build(), c.schedule)
-	add(metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: c.account, Value: part("recorded.account")}.Build(), c.account)
-	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.schedule, Value: part("handled.schedule")}.Build(), c.schedule)
-	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.balances, Value: part("handled.balances")}.Build(), c.balances)
-	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.reconciliation, Value: part("handled.reconciliation")}.Build(), c.reconciliation)
-	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.reconciliation, Value: uint64(c.state.eventsPending / 3)}.Build(), c.reconciliation)
+	add(metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: c.account, CumulativeCount: part("commands.account")}.Build(), c.account)
+	add(metricsgrpc.HandlerCommandsHandled_builder{HandlerKey: c.mailer, CumulativeCount: part("commands.mailer")}.Build(), c.mailer)
+	add(metricsgrpc.HandlerDeadlinesHandled_builder{HandlerKey: c.schedule, CumulativeCount: part("deadlines.schedule")}.Build(), c.schedule)
+	add(metricsgrpc.HandlerDeadlinesCanceled_builder{HandlerKey: c.schedule, CumulativeCount: part("canceled.schedule")}.Build(), c.schedule)
+	add(metricsgrpc.ProcessInstancesEnded_builder{HandlerKey: c.schedule, CumulativeCount: part("ended.schedule")}.Build(), c.schedule)
+	add(metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: c.account, CumulativeCount: part("recorded.account")}.Build(), c.account)
+	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.schedule, CumulativeCount: part("handled.schedule")}.Build(), c.schedule)
+	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.balances, CumulativeCount: part("handled.balances")}.Build(), c.balances)
+	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.reconciliation, CumulativeCount: part("handled.reconciliation")}.Build(), c.reconciliation)
+	add(metricsgrpc.HandlerEventStreamLag_builder{HandlerKey: c.reconciliation, EventStreamId: c.streams[0], Gauge: uint64(c.state.eventsPending / 3)}.Build(), c.reconciliation, c.streams[0])
 
 	// The archive projection never has anything to do, so its chart is empty.
-	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.archive, Value: 0}.Build(), c.archive)
-	add(metricsgrpc.HandlerEventsPending_builder{HandlerKey: c.archive, Value: 0}.Build(), c.archive)
+	add(metricsgrpc.HandlerEventsHandled_builder{HandlerKey: c.archive, CumulativeCount: 0}.Build(), c.archive)
+	add(metricsgrpc.HandlerEventStreamLag_builder{HandlerKey: c.archive, EventStreamId: c.streams[0], Gauge: 0}.Build(), c.archive, c.streams[0])
 
 	for i, instances := range []uint64{63, 37} {
 		out = append(out, reading{
 			indexOf(new(metricsgrpc.AggregateInstanceEventStreamBindings)),
 			c.account.AsString() + c.streams[i].AsString(),
 			metricsgrpc.AggregateInstanceEventStreamBindings_builder{
-				HandlerKey: c.account, EventStreamId: c.streams[i], Value: instances,
+				HandlerKey: c.account, EventStreamId: c.streams[i], CurrentCount: instances,
 			}.Build(),
 		})
 	}
@@ -603,7 +618,7 @@ func (c *cluster) readings(node int) []reading {
 		indexOf(new(metricsgrpc.ProcessInstanceQueueBindings)),
 		c.schedule.AsString() + c.deadlinesQ.AsString(),
 		metricsgrpc.ProcessInstanceQueueBindings_builder{
-			HandlerKey: c.schedule, QueueId: c.deadlinesQ, Value: uint64(c.state.deadlinesQueued),
+			HandlerKey: c.schedule, QueueId: c.deadlinesQ, CurrentCount: uint64(c.state.deadlinesQueued),
 		}.Build(),
 	})
 
@@ -613,7 +628,7 @@ func (c *cluster) readings(node int) []reading {
 		indexOf(new(metricsgrpc.ProcessInstanceQueueBindings)),
 		c.reconciliation.AsString(),
 		metricsgrpc.ProcessInstanceQueueBindings_builder{
-			HandlerKey: c.reconciliation, Value: uint64(c.state.reconciling),
+			HandlerKey: c.reconciliation, CurrentCount: uint64(c.state.reconciling),
 		}.Build(),
 	})
 
@@ -662,23 +677,23 @@ func (c *cluster) setLive(node int, up bool) {
 
 // membership returns the nodes that are up, the workloads that a node owns, and a
 // channel that is closed when either changes.
-func (c *cluster) membership(node int) ([]*uuidpb.UUID, []*enginegrpc.Workload, <-chan struct{}) {
+func (c *cluster) membership(node int) ([]*enginegrpc.ClusterNode, []*enginegrpc.ClusterWorkload, <-chan struct{}) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	var live []*uuidpb.UUID
+	var live []*enginegrpc.ClusterNode
 	var up []int
 	for i, ok := range c.live {
 		if ok {
-			live = append(live, c.nodes[i])
+			live = append(live, enginegrpc.ClusterNode_builder{Id: c.nodes[i]}.Build())
 			up = append(up, i)
 		}
 	}
 
-	var owned []*enginegrpc.Workload
+	var owned []*enginegrpc.ClusterWorkload
 	for w, key := range c.workloadKeys {
 		if len(up) > 0 && up[w%len(up)] == node && c.live[node] {
-			owned = append(owned, enginegrpc.Workload_builder{Key: key}.Build())
+			owned = append(owned, enginegrpc.ClusterWorkload_builder{Key: key}.Build())
 		}
 	}
 
@@ -769,15 +784,34 @@ func (s *engineServer) WatchEngine(
 ) error {
 	c := s.c
 
+	// The simulated engine runs as a cluster whose nodes divide its work into
+	// workloads, and report them. It uses several event streams and several
+	// queues.
 	err := stream.Send(enginegrpc.WatchEngineResponse_builder{
 		Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
-			NodeId:            c.nodes[s.node],
-			ClusterId:         c.id,
-			Application:       c.app,
+			Id:          c.nodes[s.node],
+			Description: "simulated node",
+			Implementation: enginegrpc.WatchEngineResponse_Preamble_Implementation_builder{
+				Name:    engineName,
+				Version: engineVersion,
+			}.Build(),
 			Site:              c.site,
+			Application:       c.app,
 			HeartbeatInterval: durationpb.New(heartbeatIntervals[s.node]),
-			HeartbeatTimeout:  durationpb.New(heartbeatTimeout),
-			Description:       "simulated node",
+			Cluster: enginegrpc.WatchEngineResponse_Preamble_Cluster_builder{
+				Id: c.id,
+				Model: enginegrpc.ClusterModel_builder{
+					SelfAssigningNodes: &enginegrpc.ClusterModel_SelfAssigningNodes{},
+				}.Build(),
+				ReportsLiveNodes: true,
+				ReportsWorkloads: true,
+			}.Build(),
+			QueueModel: enginegrpc.QueueModel_builder{
+				MultipleQueues: &enginegrpc.QueueModel_MultipleQueues{},
+			}.Build(),
+			EventStreamModel: enginegrpc.EventStreamModel_builder{
+				MultipleEventStreams: &enginegrpc.EventStreamModel_MultipleEventStreams{},
+			}.Build(),
 		}.Build(),
 	}.Build())
 	if err != nil {
@@ -805,7 +839,8 @@ func (s *engineServer) WatchEngine(
 	for {
 		beat := enginegrpc.WatchEngineResponse_builder{
 			Heartbeat: enginegrpc.WatchEngineResponse_Heartbeat_builder{
-				SentAt: timestamppb.Now(),
+				SentAt:       timestamppb.Now(),
+				ExpiresAfter: durationpb.New(heartbeatExpiry),
 			}.Build(),
 		}.Build()
 		if err := stream.Send(beat); err != nil {
@@ -835,8 +870,8 @@ func (s *engineServer) sendMembership(
 	live, owned, changed := s.c.membership(s.node)
 
 	for _, b := range []enginegrpc.WatchEngineResponse_builder{
-		{LiveNodes: enginegrpc.LiveNodes_builder{NodeIds: live}.Build()},
-		{Workloads: enginegrpc.Workloads_builder{Workloads: owned}.Build()},
+		{LiveClusterNodes: enginegrpc.LiveClusterNodes_builder{Nodes: live}.Build()},
+		{ClusterWorkloads: enginegrpc.ClusterWorkloads_builder{Workloads: owned}.Build()},
 	} {
 		if err := stream.Send(b.Build()); err != nil {
 			return nil, err
@@ -852,9 +887,28 @@ type metricsServer struct {
 	node int
 }
 
-func (s *metricsServer) WatchMetrics(
-	_ *metricsgrpc.WatchMetricsRequest,
+// WatchNodeMetrics reports the counts that the node has made of its own work.
+func (s *metricsServer) WatchNodeMetrics(
+	_ *metricsgrpc.WatchNodeMetricsRequest,
 	stream grpc.ServerStreamingServer[metricsgrpc.WatchMetricsResponse],
+) error {
+	return s.watch(stream, false)
+}
+
+// WatchClusterMetrics reports the measures of the whole cluster.
+func (s *metricsServer) WatchClusterMetrics(
+	_ *metricsgrpc.WatchClusterMetricsRequest,
+	stream grpc.ServerStreamingServer[metricsgrpc.WatchMetricsResponse],
+) error {
+	return s.watch(stream, true)
+}
+
+// watch reports the metrics that the node supports now, of those that it
+// reports through WatchClusterMetrics if cluster is true, and through
+// WatchNodeMetrics if it is false.
+func (s *metricsServer) watch(
+	stream grpc.ServerStreamingServer[metricsgrpc.WatchMetricsResponse],
+	cluster bool,
 ) error {
 	c := s.c
 
@@ -863,23 +917,22 @@ func (s *metricsServer) WatchMetrics(
 	now := c.supportedNow()
 	c.m.Unlock()
 
-	// The metrics that the node supports now, and the index of each in the list
-	// that its preamble gives.
-	var metrics []*metricsgrpc.SupportedMetric
+	// The metrics that the call reports, and the index of each in the list that
+	// its preamble gives.
+	var metrics []string
 	indexes := map[uint32]uint32{}
 	for _, i := range now {
 		m := supported[i]
-		reach := m.reach
+		if m.cluster != cluster {
+			continue
+		}
 		indexes[uint32(i)] = uint32(len(metrics))
-		metrics = append(metrics, metricsgrpc.SupportedMetric_builder{
-			MessageName: string(proto.MessageName(m.message)),
-			Reach:       &reach,
-		}.Build())
+		metrics = append(metrics, string(proto.MessageName(m.message)))
 	}
 
 	err := stream.Send(metricsgrpc.WatchMetricsResponse_builder{
 		Preamble: metricsgrpc.WatchMetricsResponse_Preamble_builder{
-			NodeId:           c.nodes[s.node],
+			Id:               c.nodes[s.node],
 			ClusterId:        c.id,
 			Application:      c.app,
 			SupportedMetrics: metrics,

@@ -35,7 +35,22 @@ func TestRecords(t *testing.T) {
 			connected(t, o, cluster)
 
 			rec, ok := o.Record(cluster.AsString())
-			if !ok || rec.Application.Name != "statements" || rec.Site != "eu-west" {
+			if !ok || rec.Application.Name != "statements" || rec.Site != "eu-west" || !rec.Clustered {
+				t.Fatalf("unexpected record: %+v", rec)
+			}
+		})
+	})
+
+	t.Run("it remembers an engine that doesn't run as a cluster by its own ID", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			o := NewObserver()
+
+			n := startApp(t, t.Context(), o, nil, appOf("statements", uuidpb.Generate()))
+			n.Engine.Feed.End(nil)
+			<-n.Engine.Done
+
+			rec, ok := o.Record(n.ID.AsString())
+			if !ok || rec.Application.Name != "statements" || rec.Clustered {
 				t.Fatalf("unexpected record: %+v", rec)
 			}
 		})
@@ -111,6 +126,7 @@ func TestRecords(t *testing.T) {
 	t.Run("the view of a down cluster has its application and site, and no live node", func(t *testing.T) {
 		view := DownView(ClusterRecord{
 			ID:          "c",
+			Clustered:   true,
 			Application: Application{Name: "statements", Key: "k"},
 			Site:        "eu-west",
 		})
@@ -124,8 +140,22 @@ func TestRecords(t *testing.T) {
 		if !view.Down {
 			t.Fatal("expected a view that says the cluster is down")
 		}
-		if view.Overview.Events != nil || view.Overview.Queues != nil {
+		if view.Overview.Events != nil || view.Overview.Queues != nil || view.Overview.Engine != nil {
 			t.Fatalf("expected no tiles but the cluster's: %+v", view.Overview)
+		}
+	})
+
+	t.Run("the view of a down engine that doesn't run as a cluster has an engine tile with no engine", func(t *testing.T) {
+		view := DownView(ClusterRecord{
+			ID:          "e",
+			Application: Application{Name: "statements", Key: "k"},
+		})
+
+		if !view.Down || view.Overview.Cluster != nil {
+			t.Fatalf("unexpected view: %+v", view)
+		}
+		if view.Overview.Engine == nil || view.Overview.Engine.Node != nil {
+			t.Fatalf("expected an engine tile with no engine: %+v", view.Overview.Engine)
 		}
 	})
 }
@@ -141,16 +171,16 @@ func TestDown(t *testing.T) {
 			stream := uuidpb.Generate()
 
 			n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-				supports(name(new(metricsgrpc.EventStreamLength)), metricsgrpc.Reach_REACH_CLUSTER),
-				supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE),
+				name(new(metricsgrpc.EventStreamLength)),
+				name(new(metricsgrpc.HandlerEventsRecorded)),
 			)
 			h := uuidpb.Generate()
-			n.sample(t, 0, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: stream, Value: 50}.Build())
-			n.sample(t, 1, "h", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, Value: 100}.Build())
+			n.sample(t, 0, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: stream, Watermark: 50}.Build())
+			n.sample(t, 1, "h", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, CumulativeCount: 100}.Build())
 			r.Record(time.Now(), o.Nodes())
 
 			time.Sleep(10 * time.Second)
-			n.sample(t, 1, "h", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, Value: 160}.Build())
+			n.sample(t, 1, "h", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, CumulativeCount: 160}.Build())
 			r.Record(time.Now(), o.Nodes())
 
 			live := viewOf(t, r, o, c)
@@ -193,9 +223,9 @@ func TestDown(t *testing.T) {
 
 			// Another node reporting makes the cluster live again.
 			n2 := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-				supports(name(new(metricsgrpc.EventStreamLength)), metricsgrpc.Reach_REACH_CLUSTER),
+				name(new(metricsgrpc.EventStreamLength)),
 			)
-			n2.sample(t, 0, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: stream, Value: 51}.Build())
+			n2.sample(t, 0, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: stream, Watermark: 51}.Build())
 			if v := viewOf(t, r, o, c); v.Down {
 				t.Fatal("expected a view that is not down")
 			}

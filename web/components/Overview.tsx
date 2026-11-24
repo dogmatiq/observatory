@@ -524,8 +524,8 @@ export function clusterAbout(application: Application) {
 /**
  * ClusterTile is the cluster tile, whose headline is the number of nodes that are
  * live, with the workloads that they own, and a bar of how those are shared. If
- * no node's engine divides its work into workloads, the tile leaves them out, and
- * has no bar.
+ * no node says that it reports its workloads, the tile leaves them out, and has
+ * no bar.
  */
 export function ClusterTile({
 	application,
@@ -538,7 +538,7 @@ export function ClusterTile({
 	data: NonNullable<OverviewData["cluster"]>;
 	href: string | undefined;
 }) {
-	const divided = data.nodes.some((n) => n.workloads !== undefined);
+	const divided = data.reportsWorkloads === true;
 
 	// While a node doesn't report its workloads and others do, the number of
 	// workloads is of the nodes that do, which covers only some of the cluster.

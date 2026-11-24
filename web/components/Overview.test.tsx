@@ -134,6 +134,7 @@ test("one node and one workload are in the singular", () => {
 			data={{
 				...overview,
 				cluster: {
+					reportsWorkloads: true,
 					nodes: [{ id: "abcdefgh-1", workloads: 1, heartbeats: [] }],
 				},
 			}}

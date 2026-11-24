@@ -35,7 +35,8 @@ const (
 // queue with a message that keeps failing. A cluster is unhealthy when it has
 // any Issue.
 type Issue struct {
-	// Cluster is the ID of the cluster that has the Issue.
+	// Cluster is the ID of the cluster that has the Issue. For an engine that
+	// doesn't run as a cluster, it is the ID of the engine. See [Observer].
 	Cluster *uuidpb.UUID
 
 	// Rule is the rule that found the Issue.
@@ -85,7 +86,7 @@ func NewHealth() *Health {
 func (h *Health) Assess(now time.Time, nodes []Node) []Issue {
 	clusters := map[string][]Node{}
 	for _, n := range nodes {
-		id := n.Preamble.GetClusterId().AsString()
+		id := clusterOf(n.Preamble)
 		clusters[id] = append(clusters[id], n)
 	}
 
@@ -97,7 +98,7 @@ func (h *Health) Assess(now time.Time, nodes []Node) []Issue {
 
 	var issues []Issue
 	for id, members := range clusters {
-		cluster := members[0].Preamble.GetClusterId()
+		cluster := clusterIDOf(members[0].Preamble)
 		issues = append(issues, h.deliveries(now, cluster, members)...)
 		issues = append(issues, h.backlog(now, id, cluster, members)...)
 		issues = append(issues, membership(now, cluster, members)...)
@@ -113,11 +114,11 @@ func (h *Health) deliveries(now time.Time, cluster *uuidpb.UUID, nodes []Node) [
 	for _, s := range Combine(now, nodes) {
 		switch m := s.Message.(type) {
 		case *metricsgrpc.QueueCommandsFailing:
-			if m.GetValue() > 0 {
+			if m.GetCurrentCount() > 0 {
 				failing[m.GetQueueId().AsString()] = m.GetQueueId()
 			}
 		case *metricsgrpc.QueueDeadlinesFailing:
-			if m.GetValue() > 0 {
+			if m.GetCurrentCount() > 0 {
 				failing[m.GetQueueId().AsString()] = m.GetQueueId()
 			}
 		}
@@ -147,10 +148,10 @@ func (h *Health) backlog(now time.Time, id string, cluster *uuidpb.UUID, nodes [
 		switch m := s.Message.(type) {
 		case *metricsgrpc.QueueCommandsDue:
 			q := queues[m.GetQueueId().AsString()]
-			queues[m.GetQueueId().AsString()] = queue{m.GetQueueId(), q.due + m.GetValue()}
+			queues[m.GetQueueId().AsString()] = queue{m.GetQueueId(), q.due + m.GetCurrentCount()}
 		case *metricsgrpc.QueueDeadlinesDue:
 			q := queues[m.GetQueueId().AsString()]
-			queues[m.GetQueueId().AsString()] = queue{m.GetQueueId(), q.due + m.GetValue()}
+			queues[m.GetQueueId().AsString()] = queue{m.GetQueueId(), q.due + m.GetCurrentCount()}
 		}
 	}
 
@@ -203,10 +204,10 @@ func Members(now time.Time, nodes []Node) []*uuidpb.UUID {
 
 	members := map[string]*uuidpb.UUID{}
 	for _, n := range sources {
-		self := n.Preamble.GetNodeId()
+		self := n.Preamble.GetId()
 		members[self.AsString()] = self
-		for _, id := range n.LiveNodes.GetNodeIds() {
-			members[id.AsString()] = id
+		for _, live := range n.LiveNodes.GetNodes() {
+			members[live.GetId().AsString()] = live.GetId()
 		}
 	}
 
@@ -219,7 +220,7 @@ func membership(now time.Time, cluster *uuidpb.UUID, nodes []Node) []Issue {
 	reporting := map[string]bool{}
 	for _, n := range nodes {
 		if n.Reporting(now) {
-			reporting[n.Preamble.GetNodeId().AsString()] = true
+			reporting[n.Preamble.GetId().AsString()] = true
 		}
 	}
 

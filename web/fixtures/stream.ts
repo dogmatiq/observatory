@@ -4,8 +4,20 @@ import type {
 	ClusterDocument,
 	HandlerData,
 	HandlerDocument,
+	LiveNode,
 	OverviewData,
 } from "../model.ts";
+
+/**
+ * nodesOf returns the nodes that the document lists: the nodes of a cluster, or
+ * the engine, if it doesn't run as a cluster and is live.
+ */
+function nodesOf(overview: OverviewData): LiveNode[] {
+	return [
+		...(overview.cluster?.nodes ?? []),
+		...(overview.engine?.node ? [overview.engine.node] : []),
+	];
+}
 
 /**
  * documentOf returns the state document of a cluster that shows the given
@@ -20,19 +32,25 @@ function documentOf(
 	const document: ClusterDocument = {
 		application,
 		nodes: Object.fromEntries(
-			(overview.cluster?.nodes ?? []).map((n) => [
-				n.id,
-				{ workloads: n.workloads },
-			]),
+			nodesOf(overview).map((n) => [n.id, { workloads: n.workloads }]),
 		),
 		handlers: Object.fromEntries(
 			overview.handlers.map((h) => [h.key, handlerOf(h)]),
 		),
 	};
 
+	if (overview.cluster) {
+		document.cluster = overview.cluster.reportsWorkloads
+			? { reportsWorkloads: true }
+			: {};
+	}
+
 	// A part that the overview doesn't have is left out of the document, which is
 	// how the Observatory says that no node supports it.
 	if (events) {
+		if (events.oneStream) {
+			document.oneStream = true;
+		}
 		if (events.streams) {
 			document.eventStreams = Object.fromEntries(
 				events.streams.map((s) => [s.id, { length: s.size }]),
@@ -47,6 +65,9 @@ function documentOf(
 	}
 
 	if (queues) {
+		if (queues.oneQueue) {
+			document.oneQueue = true;
+		}
 		if (queues.queues) {
 			document.queues = Object.fromEntries(
 				queues.queues.map((q) => [q.id, { messages: q.size }]),
@@ -134,7 +155,7 @@ export function streamOf(
 		recorded(`handlers/${h.key}`, h.history);
 	}
 
-	for (const n of overview.cluster?.nodes ?? []) {
+	for (const n of nodesOf(overview)) {
 		for (const msBefore of n.heartbeats) {
 			messages.push(["heartbeat", { node: n.id, msBefore }]);
 		}

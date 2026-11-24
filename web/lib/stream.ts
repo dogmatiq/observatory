@@ -597,9 +597,6 @@ export function selectCluster(
 
 	if (doc.eventStreams !== undefined || rates.events !== undefined) {
 		overview.events = attempt(() => {
-			// The document doesn't yet say whether the engine appends every event to
-			// one stream, which needs the spec to say so, as dogmatiq/protobuf#45
-			// proposes, so no engine is taken to.
 			const events: NonNullable<OverviewData["events"]> = {};
 
 			if (isObject(doc.coverage) && typeof doc.coverage.events === "number") {
@@ -620,6 +617,9 @@ export function selectCluster(
 					)
 					.sort((a, b) => b.size - a.size || a.id.localeCompare(b.id));
 			}
+			if (doc.oneStream === true) {
+				events.oneStream = true;
+			}
 
 			return events;
 		});
@@ -633,9 +633,9 @@ export function selectCluster(
 			if (isObject(doc.coverage) && typeof doc.coverage.queues === "number") {
 				queues.coverage = doc.coverage.queues;
 			}
-			// The document doesn't yet say whether the engine keeps every message in
-			// one queue, which needs the spec to say so, as dogmatiq/protobuf#45
-			// proposes, so no engine is taken to.
+			if (doc.oneQueue === true) {
+				queues.oneQueue = true;
+			}
 
 			if (rates.throughput !== undefined) {
 				queues.throughput = {
@@ -660,9 +660,6 @@ export function selectCluster(
 		});
 	}
 
-	// The document doesn't yet tell an engine that doesn't cluster from one that
-	// does, which needs the spec to say which, as dogmatiq/protobuf#45 proposes, so
-	// every engine is one that clusters.
 	const nodes =
 		attempt(() =>
 			entries(doc.nodes, "nodes")
@@ -677,7 +674,19 @@ export function selectCluster(
 					}),
 				),
 		) ?? [];
-	overview.cluster = { nodes };
+
+	// An engine that runs as a cluster has the cluster tile, and one that doesn't
+	// has the engine tile, with the engine itself as its only node while it is
+	// reporting.
+	if (isObject(doc.cluster)) {
+		overview.cluster = { nodes };
+		if (doc.cluster.reportsWorkloads === true) {
+			overview.cluster.reportsWorkloads = true;
+		}
+	} else {
+		const [engine] = nodes;
+		overview.engine = engine === undefined ? {} : { node: engine };
+	}
 
 	const cards = attempt(() => entries(doc.handlers, "handlers")) ?? [];
 	for (const [key, h] of cards) {

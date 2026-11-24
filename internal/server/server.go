@@ -34,12 +34,25 @@
 // The document has these fields. Every collection is an object that is keyed by
 // the ID of what it holds, so that a patch can add, change or remove one entry:
 //
-//   - "application": {"name", "key"}.
-//   - "nodes": the members of the cluster, each {"workloads"}.
+//   - "application": {"name", "key", "site"}. "site" is absent if no node names
+//     a site.
+//   - "cluster": {"reportsWorkloads"}, if the engine runs as a cluster. It is
+//     absent for an engine that doesn't, whose ID is the ID in the address.
+//     "reportsWorkloads" is true if any node says that it reports the
+//     workloads that it owns, and is absent otherwise.
+//   - "nodes": the members of the cluster, each {"workloads"}, which is the
+//     number of workloads that the node owns, and is absent for a node that
+//     doesn't report them or hasn't yet. For an engine that doesn't run as a
+//     cluster, it holds only the engine, while the engine is reporting, and is
+//     empty otherwise.
 //   - "eventStreams": each event stream, {"length"}. It is absent if no node
 //     supports the length of event streams.
+//   - "oneStream": true if every node says that its engine appends every event
+//     to one event stream, and absent otherwise.
 //   - "queues": each queue, {"messages"}. It is absent if no node supports the
 //     number of messages in queues.
+//   - "oneQueue": true if every node says that its engine delivers every
+//     message through one queue, and absent otherwise.
 //   - "failing": the number of messages whose delivery is failing, present with
 //     "queues" or "rates.throughput".
 //   - "rates": {"events", "throughput"}, which are the events recorded and the

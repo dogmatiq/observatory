@@ -26,7 +26,7 @@ func (s *preambleServer) WatchEngine(
 	return stream.Send(
 		enginegrpc.WatchEngineResponse_builder{
 			Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
-				NodeId: s.NodeID,
+				Id: s.NodeID,
 			}.Build(),
 		}.Build(),
 	)
@@ -69,19 +69,19 @@ func TestClients(t *testing.T) {
 			t.Fatal("expected the first response to be a preamble")
 		}
 
-		if !preamble.GetNodeId().Equal(nodeID) {
+		if !preamble.GetId().Equal(nodeID) {
 			t.Fatalf(
 				"unexpected node ID: got %s, want %s",
-				preamble.GetNodeId(),
+				preamble.GetId(),
 				nodeID,
 			)
 		}
 	})
 
 	t.Run("it fails with UNIMPLEMENTED when the node doesn't serve the metrics API", func(t *testing.T) {
-		stream, err := clients.Metrics.WatchMetrics(
+		stream, err := clients.Metrics.WatchNodeMetrics(
 			t.Context(),
-			&metricsgrpc.WatchMetricsRequest{},
+			&metricsgrpc.WatchNodeMetricsRequest{},
 		)
 		if err == nil {
 			// The failure of a streaming call arrives with its first receive.

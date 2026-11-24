@@ -22,20 +22,38 @@ const (
 )
 
 func failing(queue *uuidpb.UUID, value uint64) proto.Message {
-	return metricsgrpc.QueueCommandsFailing_builder{QueueId: queue, Value: value}.Build()
+	return metricsgrpc.QueueCommandsFailing_builder{QueueId: queue, CurrentCount: value}.Build()
 }
 
 func due(queue *uuidpb.UUID, value uint64) proto.Message {
-	return metricsgrpc.QueueCommandsDue_builder{QueueId: queue, Value: value}.Build()
+	return metricsgrpc.QueueCommandsDue_builder{QueueId: queue, CurrentCount: value}.Build()
 }
 
 func dueDeadlines(queue *uuidpb.UUID, value uint64) proto.Message {
-	return metricsgrpc.QueueDeadlinesDue_builder{QueueId: queue, Value: value}.Build()
+	return metricsgrpc.QueueDeadlinesDue_builder{QueueId: queue, CurrentCount: value}.Build()
 }
 
+// liveNodes returns the set of live nodes that a node sends, which holds the
+// nodes with the given IDs.
 func liveNodes(ids ...*uuidpb.UUID) enginegrpc.WatchEngineResponse_builder {
+	var nodes []*enginegrpc.ClusterNode
+	for _, id := range ids {
+		nodes = append(nodes, enginegrpc.ClusterNode_builder{Id: id}.Build())
+	}
 	return enginegrpc.WatchEngineResponse_builder{
-		LiveNodes: enginegrpc.LiveNodes_builder{NodeIds: ids}.Build(),
+		LiveClusterNodes: enginegrpc.LiveClusterNodes_builder{Nodes: nodes}.Build(),
+	}
+}
+
+// workloads returns the set of workloads that a node sends, which holds the
+// given number of workloads.
+func workloads(n int) enginegrpc.WatchEngineResponse_builder {
+	var owned []*enginegrpc.ClusterWorkload
+	for range n {
+		owned = append(owned, enginegrpc.ClusterWorkload_builder{Key: uuidpb.Generate()}.Build())
+	}
+	return enginegrpc.WatchEngineResponse_builder{
+		ClusterWorkloads: enginegrpc.ClusterWorkloads_builder{Workloads: owned}.Build(),
 	}
 }
 
@@ -85,12 +103,12 @@ func TestHealth(t *testing.T) {
 					a, b, c := uuidpb.Generate(), uuidpb.Generate(), uuidpb.Generate()
 
 					n := startNode(t, ctx, o, cluster,
-						supports(queueFailing, metricsgrpc.Reach_REACH_CLUSTER),
-						supports("dogma.metrics.v1alpha1.QueueDeadlinesFailing", metricsgrpc.Reach_REACH_CLUSTER),
+						queueFailing,
+						"dogma.metrics.v1alpha1.QueueDeadlinesFailing",
 					)
 					n.sample(t, 0, "a", 1, failing(a, 2))
 					n.sample(t, 0, "b", 1, failing(b, 0))
-					n.sample(t, 1, "c", 1, metricsgrpc.QueueDeadlinesFailing_builder{QueueId: c, Value: 1}.Build())
+					n.sample(t, 1, "c", 1, metricsgrpc.QueueDeadlinesFailing_builder{QueueId: c, CurrentCount: 1}.Build())
 
 					issues := h.Assess(time.Now(), o.Nodes())
 					expectIssues(t, issues,
@@ -114,7 +132,7 @@ func TestHealth(t *testing.T) {
 					o, h := NewObserver(), NewHealth()
 					a := uuidpb.Generate()
 
-					n := startNode(t, ctx, o, uuidpb.Generate(), supports(queueFailing, metricsgrpc.Reach_REACH_CLUSTER))
+					n := startNode(t, ctx, o, uuidpb.Generate(), queueFailing)
 					n.sample(t, 0, "a", 1, failing(a, 2))
 					n.sample(t, 0, "a", 2, failing(a, 0))
 
@@ -133,7 +151,7 @@ func TestHealth(t *testing.T) {
 					o, h := NewObserver(), NewHealth()
 					a := uuidpb.Generate()
 
-					n := startNode(t, ctx, o, uuidpb.Generate(), supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					n := startNode(t, ctx, o, uuidpb.Generate(), queueDue)
 					n.sample(t, 0, "a", 1, due(a, 3))
 					expectIssues(t, h.Assess(time.Now(), o.Nodes()))
 
@@ -155,8 +173,8 @@ func TestHealth(t *testing.T) {
 					a := uuidpb.Generate()
 
 					n := startNode(t, ctx, o, uuidpb.Generate(),
-						supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER),
-						supports(deadlineDue, metricsgrpc.Reach_REACH_CLUSTER),
+						queueDue,
+						deadlineDue,
 					)
 					n.sample(t, 0, "a", 1, due(a, 3))
 					n.sample(t, 1, "a", 1, dueDeadlines(a, 2))
@@ -182,7 +200,7 @@ func TestHealth(t *testing.T) {
 					o, h := NewObserver(), NewHealth()
 					a := uuidpb.Generate()
 
-					n := startNode(t, ctx, o, uuidpb.Generate(), supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					n := startNode(t, ctx, o, uuidpb.Generate(), queueDue)
 					n.sample(t, 0, "a", 1, due(a, 3))
 					h.Assess(time.Now(), o.Nodes())
 
@@ -207,7 +225,7 @@ func TestHealth(t *testing.T) {
 					o, h := NewObserver(), NewHealth()
 					a := uuidpb.Generate()
 
-					n := startNode(t, ctx, o, uuidpb.Generate(), supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					n := startNode(t, ctx, o, uuidpb.Generate(), queueDue)
 					n.sample(t, 0, "a", 1, due(a, 3))
 					h.Assess(time.Now(), o.Nodes())
 
@@ -229,7 +247,7 @@ func TestHealth(t *testing.T) {
 					o, h := NewObserver(), NewHealth()
 					a := uuidpb.Generate()
 
-					n := startNode(t, ctx, o, uuidpb.Generate(), supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					n := startNode(t, ctx, o, uuidpb.Generate(), queueDue)
 					n.sample(t, 0, "a", 1, due(a, 3))
 					h.Assess(time.Now(), o.Nodes())
 
@@ -256,7 +274,7 @@ func TestHealth(t *testing.T) {
 					a := uuidpb.Generate()
 					cluster := uuidpb.Generate()
 
-					n := startNode(t, ctx, o, cluster, supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					n := startNode(t, ctx, o, cluster, queueDue)
 					n.sample(t, 0, "a", 1, due(a, 3))
 					h.Assess(time.Now(), o.Nodes())
 
@@ -267,7 +285,7 @@ func TestHealth(t *testing.T) {
 
 					time.Sleep(5 * time.Second)
 					n.Metrics = <-n.Engine.Calls
-					n.sendPreamble(t, n.ID, cluster, supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					n.sendPreamble(t, n.ID, cluster, queueDue)
 					n.sample(t, 0, "a", 1, due(a, 3))
 					h.Assess(time.Now(), o.Nodes())
 
@@ -285,18 +303,18 @@ func TestHealth(t *testing.T) {
 					o, h := NewObserver(), NewHealth()
 					a := uuidpb.Generate()
 
-					first := startNode(t, ctx, o, uuidpb.Generate(), supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					first := startNode(t, ctx, o, uuidpb.Generate(), queueDue)
 					first.sample(t, 0, "a", 1, due(a, 3))
 					h.Assess(time.Now(), o.Nodes())
 
 					time.Sleep(4 * time.Minute)
-					second := startNode(t, ctx, o, uuidpb.Generate(), supports(queueDue, metricsgrpc.Reach_REACH_CLUSTER))
+					second := startNode(t, ctx, o, uuidpb.Generate(), queueDue)
 					second.sample(t, 0, "a", 1, due(a, 3))
 					h.Assess(time.Now(), o.Nodes())
 
 					time.Sleep(time.Minute)
 					issues := h.Assess(time.Now(), o.Nodes())
-					if len(issues) != 1 || !issues[0].Cluster.Equal(byID(t, o, first.ID).Preamble.GetClusterId()) {
+					if len(issues) != 1 || !issues[0].Cluster.Equal(byID(t, o, first.ID).Preamble.GetCluster().GetId()) {
 						t.Fatalf("unexpected issues: %v", issues)
 					}
 

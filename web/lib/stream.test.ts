@@ -239,6 +239,7 @@ test("a heartbeat that the clocks put after the reference has an age of nothing"
 		[
 			changed({
 				application: { name: "a", key: "k" },
+				cluster: { reportsWorkloads: true },
 				nodes: { n: { workloads: 1 } },
 			}),
 			0,
@@ -251,18 +252,74 @@ test("a heartbeat that the clocks put after the reference has an age of nothing"
 	).toEqual([0]);
 });
 
-test("a node with no workloads in the document is one whose engine doesn't divide its work into them", () => {
+test("a node with no workloads in the document is one that doesn't report them", () => {
 	const s = applied([
 		changed({
 			application: { name: "a", key: "k" },
+			cluster: {},
 			nodes: { n: {} },
 		}),
 		0,
 	]);
 
-	expect(selectCluster(s, 0)?.overview.cluster?.nodes).toEqual([
-		{ id: "n", workloads: undefined, heartbeats: [] },
+	expect(selectCluster(s, 0)?.overview.cluster).toEqual({
+		nodes: [{ id: "n", workloads: undefined, heartbeats: [] }],
+	});
+});
+
+test("a cluster whose document says that its nodes report their workloads says so", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			cluster: { reportsWorkloads: true },
+			nodes: {},
+		}),
+		0,
 	]);
+
+	expect(selectCluster(s, 0)?.overview.cluster?.reportsWorkloads).toBe(true);
+});
+
+test("an engine that doesn't run as a cluster has the engine tile, with the engine while the document lists it", () => {
+	const s = applied(
+		[
+			changed({
+				application: { name: "a", key: "k" },
+				nodes: { e: {} },
+			}),
+			0,
+		],
+		[{ kind: "heartbeat", node: "e", msBefore: 0 }, 1000],
+	);
+
+	const live = selectCluster(s, 1000)?.overview;
+	expect(live?.cluster).toBeUndefined();
+	expect(live?.engine).toEqual({
+		node: { id: "e", workloads: undefined, heartbeats: [0] },
+	});
+
+	const offline = applied([
+		changed({ application: { name: "a", key: "k" }, nodes: {} }),
+		0,
+	]);
+	expect(selectCluster(offline, 0)?.overview.engine).toEqual({});
+});
+
+test("the tiles say that there is one event stream and one queue when the document says so", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			eventStreams: { s: { length: 3 } },
+			oneStream: true,
+			queues: { q: { messages: 1 } },
+			oneQueue: true,
+		}),
+		0,
+	]);
+
+	const overview = selectCluster(s, 0)?.overview;
+	expect(overview?.events?.oneStream).toBe(true);
+	expect(overview?.queues?.oneQueue).toBe(true);
 });
 
 test("a tile or a card that only some of the nodes report has their coverage", () => {
@@ -391,6 +448,7 @@ function full(): Snapshot {
 		[
 			changed({
 				application: { name: "statements", key: "k" },
+				cluster: { reportsWorkloads: true },
 				nodes: { n2: { workloads: 1 }, n1: { workloads: 2 } },
 				eventStreams: { s1: { length: 5 }, s2: { length: 9 } },
 				queues: { q2: { messages: 1 }, q1: { messages: 3 } },
@@ -555,7 +613,11 @@ test("a card says that its chart counts commands, and has a chart only while the
 
 test("a rate that is absent gives no figure, and an absent collection gives no tile", () => {
 	const s = applied([
-		changed({ application: { name: "a", key: "k" }, eventStreams: {} }),
+		changed({
+			application: { name: "a", key: "k" },
+			cluster: {},
+			eventStreams: {},
+		}),
 		0,
 	]);
 

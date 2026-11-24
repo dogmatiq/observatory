@@ -36,8 +36,10 @@ func (e *engine) WatchEngine(
 
 	err := stream.Send(enginegrpc.WatchEngineResponse_builder{
 		Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
-			NodeId:    e.node,
-			ClusterId: e.cluster,
+			Id: e.node,
+			Cluster: enginegrpc.WatchEngineResponse_Preamble_Cluster_builder{
+				Id: e.cluster,
+			}.Build(),
 			Application: configpb.Application_builder{
 				Identity: identitypb.Identity_builder{
 					Name: "statements",
@@ -130,7 +132,7 @@ func start(t *testing.T, ctx context.Context, o *observe.Observer) string {
 // whether its connection is open.
 func connected(o *observe.Observer, node *uuidpb.UUID) (known, open bool) {
 	for _, n := range o.Nodes() {
-		if n.Preamble.GetNodeId().AsString() == node.AsString() {
+		if n.Preamble.GetId().AsString() == node.AsString() {
 			return true, n.Connected
 		}
 	}
@@ -157,7 +159,7 @@ func TestHandler(t *testing.T) {
 		if len(nodes) != 1 {
 			t.Fatalf("unexpected number of nodes: got %d, want 1", len(nodes))
 		}
-		if got := nodes[0].Preamble.GetClusterId().AsString(); got != cluster.AsString() {
+		if got := nodes[0].Preamble.GetCluster().GetId().AsString(); got != cluster.AsString() {
 			t.Fatalf("unexpected cluster: got %s, want %s", got, cluster)
 		}
 	})

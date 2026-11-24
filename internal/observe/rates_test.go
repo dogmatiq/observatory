@@ -19,11 +19,11 @@ import (
 const queueRemoved = "dogma.metrics.v1alpha1.QueueCommandsRemoved"
 
 // removed is the value of a sample of the QueueCommandsRemoved metric, which is
-// a running total.
+// a cumulative count.
 func removed(queue *uuidpb.UUID, value uint64) proto.Message {
 	return metricsgrpc.QueueCommandsRemoved_builder{
-		QueueId: queue,
-		Value:   value,
+		QueueId:         queue,
+		CumulativeCount: value,
 	}.Build()
 }
 
@@ -68,17 +68,13 @@ func expectNoRate(t testing.TB, got *float64) {
 }
 
 func TestRates(t *testing.T) {
-	removedMetric := func(reach metricsgrpc.Reach) *metricsgrpc.SupportedMetric {
-		return supports(queueRemoved, reach)
-	}
-
-	t.Run("it averages the growth of a running total over the time that it has been observed", func(t *testing.T) {
+	t.Run("it averages the growth of a cumulative count over the time that it has been observed", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			o := NewObserver()
 			q := uuidpb.Generate()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 10))
 			time.Sleep(10 * time.Second)
 			n.sample(t, 0, "q", 2, removed(q, 40))
@@ -96,7 +92,7 @@ func TestRates(t *testing.T) {
 			o := NewObserver()
 			q := uuidpb.Generate()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 10))
 
 			time.Sleep(4 * time.Second)
@@ -116,7 +112,7 @@ func TestRates(t *testing.T) {
 			o := NewObserver()
 			q := uuidpb.Generate()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 10))
 			time.Sleep(10 * time.Second)
 			n.sample(t, 0, "q", 2, removed(q, 100))
@@ -138,7 +134,7 @@ func TestRates(t *testing.T) {
 			o := NewObserver()
 			q := uuidpb.Generate()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 10))
 			time.Sleep(50 * time.Second)
 			n.sample(t, 0, "q", 2, removed(q, 100))
@@ -159,7 +155,7 @@ func TestRates(t *testing.T) {
 			o := NewObserver()
 			q := uuidpb.Generate()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 10))
 			time.Sleep(2 * time.Minute)
 			n.sample(t, 0, "q", 2, removed(q, 100))
@@ -178,7 +174,7 @@ func TestRates(t *testing.T) {
 			o := NewObserver()
 			q := uuidpb.Generate()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 1000))
 			time.Sleep(10 * time.Second)
 			n.sample(t, 0, "q", 2, removed(q, 5))
@@ -201,7 +197,7 @@ func TestRates(t *testing.T) {
 			o := NewObserver()
 			q := uuidpb.Generate()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 10))
 			time.Sleep(10 * time.Second)
 			expectRate(t, rateOf(t, o, q), 0)
@@ -211,7 +207,7 @@ func TestRates(t *testing.T) {
 			time.Sleep(5 * time.Second)
 
 			n.Metrics = <-n.Engine.Calls
-			n.sendPreamble(t, n.ID, only(t, o).Preamble.GetClusterId(), removedMetric(metricsgrpc.Reach_REACH_CLUSTER))
+			n.sendPreamble(t, n.ID, n.Cluster, queueRemoved)
 			n.sample(t, 0, "q", 1, removed(q, 5000))
 
 			expectNoRate(t, rateOf(t, o, q))
@@ -221,12 +217,12 @@ func TestRates(t *testing.T) {
 		})
 	})
 
-	t.Run("it gives no rate for a metric that isn't a running total", func(t *testing.T) {
+	t.Run("it gives no rate for a metric that isn't a cumulative count", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
 			o := NewObserver()
 
-			n := startNode(t, ctx, o, uuidpb.Generate(), supports(queuePending, metricsgrpc.Reach_REACH_CLUSTER))
+			n := startNode(t, ctx, o, uuidpb.Generate(), queuePending)
 			n.sample(t, 0, "q", 1, pending(uuidpb.Generate(), 10))
 			time.Sleep(time.Minute)
 
@@ -241,17 +237,16 @@ func TestRates(t *testing.T) {
 		})
 	})
 
-	t.Run("when the reach is the node", func(t *testing.T) {
+	t.Run("when several nodes report the count", func(t *testing.T) {
 		t.Run("it adds the rates of the nodes", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				o := NewObserver()
 				cluster := uuidpb.Generate()
 				q := uuidpb.Generate()
-				reach := removedMetric(metricsgrpc.Reach_REACH_NODE)
 
-				first := startNode(t, ctx, o, cluster, reach)
-				second := startNode(t, ctx, o, cluster, reach)
+				first := startNode(t, ctx, o, cluster, queueRemoved)
+				second := startNode(t, ctx, o, cluster, queueRemoved)
 
 				first.sample(t, 0, "x", 1, removed(q, 0))
 				second.sample(t, 0, "x", 1, removed(q, 100))
@@ -273,10 +268,9 @@ func TestRates(t *testing.T) {
 				o := NewObserver()
 				cluster := uuidpb.Generate()
 				q := uuidpb.Generate()
-				reach := removedMetric(metricsgrpc.Reach_REACH_NODE)
 
-				first := startNode(t, ctx, o, cluster, reach)
-				second := startNode(t, ctx, o, cluster, reach)
+				first := startNode(t, ctx, o, cluster, queueRemoved)
+				second := startNode(t, ctx, o, cluster, queueRemoved)
 
 				first.sample(t, 0, "x", 1, removed(q, 0))
 				time.Sleep(10 * time.Second)
@@ -294,22 +288,22 @@ func TestRates(t *testing.T) {
 		})
 	})
 
-	t.Run("when the reach is the cluster", func(t *testing.T) {
-		t.Run("it takes the rate of the node that is read", func(t *testing.T) {
+	t.Run("when a call to WatchClusterMetrics reports the count", func(t *testing.T) {
+		t.Run("it takes the rate of that call", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				o := NewObserver()
 				cluster := uuidpb.Generate()
 				q := uuidpb.Generate()
-				reach := removedMetric(metricsgrpc.Reach_REACH_CLUSTER)
 
-				first := startNode(t, ctx, o, cluster, reach)
-				second := startNode(t, ctx, o, cluster, reach)
+				first := startNode(t, ctx, o, cluster, queueRemoved)
+				second := startNode(t, ctx, o, cluster, queueRemoved)
+				call := first.startClusterCall(t, queueRemoved)
 
-				first.sample(t, 0, "x", 1, removed(q, 0))
+				sendSample(t, call, 0, "x", 1, removed(q, 0))
 				second.sample(t, 0, "x", 1, removed(q, 500))
 				time.Sleep(10 * time.Second)
-				first.sample(t, 0, "x", 2, removed(q, 20))
+				sendSample(t, call, 0, "x", 2, removed(q, 20))
 				second.sample(t, 0, "x", 2, removed(q, 900))
 
 				expectRate(t, rateOf(t, o, q), 2)

@@ -43,9 +43,8 @@ type node struct {
 }
 
 // connectNode makes the Observer serve a node of the cluster that runs the
-// application, and sends the preambles of its engine API and its metrics API.
-// The preamble of the metrics API lists the given metrics, each with the whole
-// cluster as its reach.
+// application, and sends the preambles of its engine API and of its call to
+// WatchNodeMetrics, which lists the given metrics.
 func connectNode(
 	t *testing.T,
 	ctx context.Context,
@@ -72,8 +71,34 @@ func connectNodeAt(
 ) *node {
 	t.Helper()
 
+	return connectEngine(t, ctx, o, enginegrpc.WatchEngineResponse_Preamble_builder{
+		Id: id,
+		Cluster: enginegrpc.WatchEngineResponse_Preamble_Cluster_builder{
+			Id: cluster,
+		}.Build(),
+		Application: app,
+		Site:        site,
+	}.Build(), supported...)
+}
+
+// connectEngine is like connectNode, for a node that sends the given preamble
+// on its engine API.
+func connectEngine(
+	t *testing.T,
+	ctx context.Context,
+	o *observe.Observer,
+	p *enginegrpc.WatchEngineResponse_Preamble,
+	supported ...proto.Message,
+) *node {
+	t.Helper()
+
 	engines := make(chan *engineFeed, 1)
 	metrics := make(chan *metricsFeed, 1)
+
+	// The Observer calls WatchClusterMetrics on one node of a cluster, and these
+	// tests leave that call without a preamble, so that only the nodes' own
+	// metrics are read.
+	clusterMetrics := make(chan *metricsFeed, 16)
 
 	clients := &observe.Clients{
 		Engine: &enginegrpc.EngineAPIClientStub{
@@ -88,13 +113,22 @@ func connectNodeAt(
 			},
 		},
 		Metrics: &metricsgrpc.MetricsAPIClientStub{
-			WatchMetricsFunc: func(
+			WatchNodeMetricsFunc: func(
 				ctx context.Context,
-				_ *metricsgrpc.WatchMetricsRequest,
+				_ *metricsgrpc.WatchNodeMetricsRequest,
 				_ ...grpc.CallOption,
-			) (metricsgrpc.MetricsAPI_WatchMetricsClient, error) {
+			) (metricsgrpc.MetricsAPI_WatchNodeMetricsClient, error) {
 				f := stubs.NewFeed[metricsgrpc.WatchMetricsResponse](ctx)
 				metrics <- f
+				return f, nil
+			},
+			WatchClusterMetricsFunc: func(
+				ctx context.Context,
+				_ *metricsgrpc.WatchClusterMetricsRequest,
+				_ ...grpc.CallOption,
+			) (metricsgrpc.MetricsAPI_WatchClusterMetricsClient, error) {
+				f := stubs.NewFeed[metricsgrpc.WatchMetricsResponse](ctx)
+				clusterMetrics <- f
 				return f, nil
 			},
 		},
@@ -102,31 +136,20 @@ func connectNodeAt(
 
 	go o.Serve(ctx, clients)
 
-	n := &node{ID: id, Engine: <-engines}
-	n.sendEngine(t, enginegrpc.WatchEngineResponse_builder{
-		Preamble: enginegrpc.WatchEngineResponse_Preamble_builder{
-			NodeId:      id,
-			ClusterId:   cluster,
-			Application: app,
-			Site:        site,
-		}.Build(),
-	})
+	n := &node{ID: p.GetId(), Engine: <-engines}
+	n.sendEngine(t, enginegrpc.WatchEngineResponse_builder{Preamble: p})
 
 	n.Metrics = <-metrics
 
-	var list []*metricsgrpc.SupportedMetric
+	var list []string
 	for _, m := range supported {
-		reach := metricsgrpc.Reach_REACH_CLUSTER
-		list = append(list, metricsgrpc.SupportedMetric_builder{
-			MessageName: string(proto.MessageName(m)),
-			Reach:       &reach,
-		}.Build())
+		list = append(list, string(proto.MessageName(m)))
 	}
 	n.sendMetrics(t, metricsgrpc.WatchMetricsResponse_builder{
 		Preamble: metricsgrpc.WatchMetricsResponse_Preamble_builder{
-			NodeId:           id,
-			ClusterId:        cluster,
-			Application:      app,
+			Id:               p.GetId(),
+			ClusterId:        p.GetCluster().GetId(),
+			Application:      p.GetApplication(),
 			SupportedMetrics: list,
 		}.Build(),
 	})
@@ -472,7 +495,7 @@ func TestServerKeepsDown(t *testing.T) {
 			o, r := observe.NewObserver(), observe.NewRecorder()
 			cluster := uuidpb.Generate()
 			n := connectNode(t, ctx, o, cluster, uuidpb.Generate(), application("statements", "account"), new(metricsgrpc.EventStreamLength))
-			n.sample(t, 0, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Value: 7}.Build())
+			n.sample(t, 0, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Watermark: 7}.Build())
 			r.Record(time.Now(), o.Nodes())
 
 			n.Engine.End(nil)
@@ -542,6 +565,99 @@ func TestStream(t *testing.T) {
 		return out
 	}
 
+	t.Run("the document says what the engine declares in its preamble", func(t *testing.T) {
+		// start connects a node of an engine whose preamble is p, and gives the
+		// test the document of the stream of the node's cluster.
+		start := func(t *testing.T, p *enginegrpc.WatchEngineResponse_Preamble, test func(doc map[string]any)) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+
+				o, r := observe.NewObserver(), observe.NewRecorder()
+				p.SetApplication(application("statements", "account"))
+				connectEngine(t, ctx, o, p, supported...)
+
+				id := p.GetId()
+				if p.HasCluster() {
+					id = p.GetCluster().GetId()
+				}
+
+				w := startWatch(ctx, New(o, r), id.AsString())
+				synctest.Wait()
+
+				test(w.events(t)[0].Data)
+
+				w.Cancel()
+				<-w.Done
+			})
+		}
+
+		t.Run("it gives the cluster of an engine that runs as one, and whether any node reports its workloads", func(t *testing.T) {
+			cluster := uuidpb.Generate()
+			start(t, enginegrpc.WatchEngineResponse_Preamble_builder{
+				Id: uuidpb.Generate(),
+				Cluster: enginegrpc.WatchEngineResponse_Preamble_Cluster_builder{
+					Id:               cluster,
+					ReportsWorkloads: true,
+				}.Build(),
+			}.Build(), func(doc map[string]any) {
+				b, _ := json.Marshal(at(t, doc, "cluster"))
+				if string(b) != `{"reportsWorkloads":true}` {
+					t.Fatalf("unexpected cluster: %s", b)
+				}
+			})
+		})
+
+		t.Run("it gives no cluster for an engine that doesn't run as one, and the engine as its only node", func(t *testing.T) {
+			engine := uuidpb.Generate()
+			start(t, enginegrpc.WatchEngineResponse_Preamble_builder{
+				Id: engine,
+			}.Build(), func(doc map[string]any) {
+				if _, ok := doc["cluster"]; ok {
+					t.Fatalf("unexpected cluster in %v", doc)
+				}
+				nodes := at(t, doc, "nodes").(map[string]any)
+				if _, ok := nodes[engine.AsString()]; len(nodes) != 1 || !ok {
+					t.Fatalf("unexpected nodes: %v", nodes)
+				}
+			})
+		})
+
+		t.Run("it says that the engine uses one event stream and one queue, if it says so", func(t *testing.T) {
+			start(t, enginegrpc.WatchEngineResponse_Preamble_builder{
+				Id: uuidpb.Generate(),
+				EventStreamModel: enginegrpc.EventStreamModel_builder{
+					SingleEventStream: &enginegrpc.EventStreamModel_SingleEventStream{},
+				}.Build(),
+				QueueModel: enginegrpc.QueueModel_builder{
+					SingleQueue: &enginegrpc.QueueModel_SingleQueue{},
+				}.Build(),
+			}.Build(), func(doc map[string]any) {
+				if doc["oneStream"] != true || doc["oneQueue"] != true {
+					t.Fatalf("expected one stream and one queue: %v", doc)
+				}
+			})
+		})
+
+		t.Run("it says nothing of event streams and queues, if the engine uses several", func(t *testing.T) {
+			start(t, enginegrpc.WatchEngineResponse_Preamble_builder{
+				Id: uuidpb.Generate(),
+				EventStreamModel: enginegrpc.EventStreamModel_builder{
+					MultipleEventStreams: &enginegrpc.EventStreamModel_MultipleEventStreams{},
+				}.Build(),
+				QueueModel: enginegrpc.QueueModel_builder{
+					MultipleQueues: &enginegrpc.QueueModel_MultipleQueues{},
+				}.Build(),
+			}.Build(), func(doc map[string]any) {
+				for _, absent := range []string{"oneStream", "oneQueue"} {
+					if _, ok := doc[absent]; ok {
+						t.Fatalf("unexpected %q in %v", absent, doc)
+					}
+				}
+			})
+		})
+	})
+
 	t.Run("the document names the site of the cluster in its application, if there is one", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
@@ -582,10 +698,10 @@ func TestStream(t *testing.T) {
 
 				// The tiles need the metrics of what they show, and a handler has a
 				// chart when the node reports the events that it records.
-				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: uuidpb.Generate(), Value: 1}.Build())
-				n.sample(t, removedIndex, "r", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: uuidpb.Generate(), Value: 1}.Build())
-				n.sample(t, lengthIndex, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Value: 1}.Build())
-				n.sample(t, recordedIndex, "a", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), Value: 1}.Build())
+				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: uuidpb.Generate(), CurrentCount: 1}.Build())
+				n.sample(t, removedIndex, "r", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: uuidpb.Generate(), CumulativeCount: 1}.Build())
+				n.sample(t, lengthIndex, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Watermark: 1}.Build())
+				n.sample(t, recordedIndex, "a", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), CumulativeCount: 1}.Build())
 				n.heartbeat(t)
 
 				w := startWatch(ctx, New(o, r), cluster.AsString())
@@ -731,7 +847,10 @@ func TestStream(t *testing.T) {
 			withStream(t, func(_ *observe.Observer, _ *observe.Recorder, n *node, w *watchRequest) {
 				other := uuidpb.Generate()
 				n.sendEngine(t, enginegrpc.WatchEngineResponse_builder{
-					LiveNodes: enginegrpc.LiveNodes_builder{NodeIds: []*uuidpb.UUID{n.ID, other}}.Build(),
+					LiveClusterNodes: enginegrpc.LiveClusterNodes_builder{Nodes: []*enginegrpc.ClusterNode{
+						enginegrpc.ClusterNode_builder{Id: n.ID}.Build(),
+						enginegrpc.ClusterNode_builder{Id: other}.Build(),
+					}}.Build(),
 				})
 
 				time.Sleep(time.Second)
@@ -755,11 +874,11 @@ func TestStream(t *testing.T) {
 				queue := uuidpb.Generate()
 				// Each sample is taken in before the stream next looks, so that each
 				// makes a patch of its own.
-				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, Value: 7}.Build())
+				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, CurrentCount: 7}.Build())
 				synctest.Wait()
 				time.Sleep(time.Second)
 				synctest.Wait()
-				n.sample(t, queueIndex, "q", 2, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, Value: 9}.Build())
+				n.sample(t, queueIndex, "q", 2, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, CurrentCount: 9}.Build())
 				synctest.Wait()
 				time.Sleep(time.Second)
 				synctest.Wait()
@@ -817,10 +936,10 @@ func TestStream(t *testing.T) {
 
 	t.Run("it rounds a rate to three significant figures", func(t *testing.T) {
 		withStream(t, func(_ *observe.Observer, _ *observe.Recorder, n *node, w *watchRequest) {
-			n.sample(t, lengthIndex, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Value: 1}.Build())
-			n.sample(t, recordedIndex, "a", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), Value: 0}.Build())
+			n.sample(t, lengthIndex, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Watermark: 1}.Build())
+			n.sample(t, recordedIndex, "a", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), CumulativeCount: 0}.Build())
 			time.Sleep(30 * time.Second)
-			n.sample(t, recordedIndex, "a", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), Value: 10}.Build())
+			n.sample(t, recordedIndex, "a", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), CumulativeCount: 10}.Build())
 
 			time.Sleep(time.Second)
 			synctest.Wait()
@@ -883,11 +1002,11 @@ func TestStream(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			queue := uuidpb.Generate()
-			n.sample(t, removedIndex, "r", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, Value: 0}.Build())
+			n.sample(t, removedIndex, "r", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, CumulativeCount: 0}.Build())
 
 			// The rate is known once the total has been seen for long enough.
 			time.Sleep(10 * time.Second)
-			n.sample(t, removedIndex, "r", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, Value: 30}.Build())
+			n.sample(t, removedIndex, "r", 2, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, CumulativeCount: 30}.Build())
 
 			// The first tick after the sample is when the page learns the rate. It has
 			// the point that was recorded.
@@ -904,7 +1023,7 @@ func TestStream(t *testing.T) {
 				t.Fatalf("unexpected points: %v", got)
 			}
 
-			n.sample(t, removedIndex, "r", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, Value: 60}.Build())
+			n.sample(t, removedIndex, "r", 3, metricsgrpc.QueueCommandsRemoved_builder{QueueId: queue, CumulativeCount: 60}.Build())
 			time.Sleep(time.Second)
 			r.Record(time.Now(), o.Nodes())
 			time.Sleep(time.Second)

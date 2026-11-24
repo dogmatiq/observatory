@@ -225,6 +225,7 @@ export const overview: OverviewData & {
 	},
 
 	cluster: {
+		reportsWorkloads: true,
 		nodes: [
 			{
 				id: "113cbdc3-a2d7-4415-b428-9cdce48b5dc0",

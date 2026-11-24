@@ -8,7 +8,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/dogmatiq/protobuf/enginegrpc"
 	"github.com/dogmatiq/protobuf/metricsgrpc"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -24,13 +26,14 @@ const (
 	// rateWindow is the length of time that a rate is averaged over.
 	rateWindow = time.Minute
 
-	// minRateSpan is the shortest length of time that a running total must have
-	// been observed for, before the Observatory gives a rate for it. A shorter
-	// span would let one occurrence look like a burst.
+	// minRateSpan is the shortest length of time that a cumulative count must
+	// have been observed for, before the Observatory gives a rate for it. A
+	// shorter span would let one occurrence look like a burst.
 	minRateSpan = 5 * time.Second
 )
 
-// Metrics is what a node has reported in one call to its metrics API.
+// Metrics is what a node has reported in one call to its metrics API, which is
+// a call to WatchNodeMetrics or to WatchClusterMetrics.
 type Metrics struct {
 	// Call identifies the call. Calls that the same Observer made are numbered
 	// in the order that they began, so a later call has a greater number.
@@ -41,7 +44,8 @@ type Metrics struct {
 
 	// Samples is the latest sample of each series that the node has reported in
 	// the call, in no particular order. A series is the samples of one metric
-	// for one subject.
+	// for one subject. A series whose latest message is a Tombstone, which says
+	// that the node has stopped reporting it, has no sample here.
 	//
 	// Only metrics that the Observatory knows appear here. See [Sample].
 	Samples []Sample
@@ -53,10 +57,6 @@ type Sample struct {
 	// Metric is the full name of the Protocol Buffers message that holds the
 	// measurement, such as "dogma.metrics.v1alpha1.QueueCommandsPending".
 	Metric string
-
-	// Reach is whether the node's samples of this metric describe the whole
-	// cluster, or only the work that the node owns.
-	Reach metricsgrpc.Reach
 
 	// Message is the measurement. Its type is the one that Metric names. It is
 	// shared with the Observer, and must not be modified.
@@ -75,36 +75,20 @@ type Sample struct {
 	// what the samples of different nodes are matched by.
 	subject string
 
-	// run is the value of a running total over the last [rateWindow], in the
-	// order that the values arrived. It is nil for a metric that isn't a running
-	// total. See [runningTotals].
+	// run is the value of a cumulative count over the last [rateWindow], in the
+	// order that the values arrived. It is nil for a metric that isn't a
+	// cumulative count. See [isCumulative].
 	run []point
 }
 
-// point is the value of a running total at the time that it arrived.
+// point is the value of a cumulative count at the time that it arrived.
 type point struct {
 	at    time.Time
 	value uint64
 }
 
-// runningTotals is the metrics whose values are running totals. The doc of each
-// of their messages in [metricsgrpc] says so.
-//
-// A node lowers a running total only by starting again from zero. The node
-// sends a sample only when the value changes, so the Observatory takes the
-// value of a running total to be the same until the next sample arrives.
-var runningTotals = map[string]bool{
-	string(proto.MessageName(new(metricsgrpc.QueueCommandsRemoved))):     true,
-	string(proto.MessageName(new(metricsgrpc.QueueDeadlinesRemoved))):    true,
-	string(proto.MessageName(new(metricsgrpc.HandlerCommandsHandled))):   true,
-	string(proto.MessageName(new(metricsgrpc.HandlerDeadlinesHandled))):  true,
-	string(proto.MessageName(new(metricsgrpc.HandlerDeadlinesCanceled))): true,
-	string(proto.MessageName(new(metricsgrpc.HandlerEventsRecorded))):    true,
-	string(proto.MessageName(new(metricsgrpc.HandlerEventsHandled))):     true,
-	string(proto.MessageName(new(metricsgrpc.ProcessInstancesEnded))):    true,
-}
-
-// extend returns the run of a running total after a new value of it arrives.
+// extend returns the run of a cumulative count after a new value of it
+// arrives.
 func extend(run []point, p point) []point {
 	if n := len(run); n > 0 {
 		switch last := run[n-1].value; {
@@ -128,10 +112,10 @@ func extend(run []point, p point) []point {
 	return run
 }
 
-// perSecond returns how many times per second a running total has grown, on
+// perSecond returns how many times per second a cumulative count has grown, on
 // average, over the last [rateWindow] before the time now.
 //
-// ok is false if the sample isn't of a running total, or if the total has been
+// ok is false if the sample isn't of a cumulative count, or if the count has been
 // observed for less than [minRateSpan]. The span is shorter than the window
 // until the total has been observed for that long.
 func (s Sample) perSecond(now time.Time) (rate float64, ok bool) {
@@ -165,11 +149,27 @@ func (s Sample) perSecond(now time.Time) (rate float64, ok bool) {
 	return float64(latest.value-start.value) / span.Seconds(), true
 }
 
+// isCumulative returns true if a metric's message holds a cumulative count,
+// which is the number of times that something has happened since the engine
+// started counting. Its field is cumulative_count, as the spec names it.
+//
+// Within one call, the engine lowers a cumulative count only by starting again
+// from zero. It sends a sample only when the value changes, so the Observatory
+// takes the value to be the same until the next sample arrives.
+func isCumulative(d protoreflect.MessageDescriptor) bool {
+	f := valueField(d)
+	return f != nil && f.Name() == "cumulative_count"
+}
+
 // metricsCall is the state of one call to a node's metrics API.
 type metricsCall struct {
 	number   uint64
 	preamble *metricsgrpc.WatchMetricsResponse_Preamble
 	series   map[seriesKey]*Sample
+
+	// tombstones is the revision of the latest Tombstone of each series whose
+	// latest message was a Tombstone.
+	tombstones map[seriesKey][]byte
 }
 
 // seriesKey identifies a series within one call.
@@ -198,46 +198,181 @@ func (c *metricsCall) snapshot() *Metrics {
 	return m
 }
 
-// watchMetrics calls the metrics API of the node that api calls, and calls it
-// again whenever the call ends, until ctx ends or the node says that it doesn't
-// report metrics.
-func (o *Observer) watchMetrics(
+// metricsMethod is a method of the metrics API that the Observer calls.
+type metricsMethod int
+
+const (
+	// nodeMetrics is WatchNodeMetrics, which reports the metrics of the node
+	// that serves the call.
+	nodeMetrics metricsMethod = iota
+
+	// clusterMetrics is WatchClusterMetrics, which reports the metrics of the
+	// whole cluster.
+	clusterMetrics
+)
+
+// open begins a call to the method.
+func (m metricsMethod) open(
 	ctx context.Context,
-	id, cluster string,
+	api metricsgrpc.MetricsAPIClient,
+) (grpc.ServerStreamingClient[metricsgrpc.WatchMetricsResponse], error) {
+	if m == clusterMetrics {
+		return api.WatchClusterMetrics(ctx, &metricsgrpc.WatchClusterMetricsRequest{})
+	}
+	return api.WatchNodeMetrics(ctx, &metricsgrpc.WatchNodeMetricsRequest{})
+}
+
+// call returns where an entry keeps its current call to the method.
+func (m metricsMethod) call(e *entry) **metricsCall {
+	if m == clusterMetrics {
+		return &e.clusterMetrics
+	}
+	return &e.metrics
+}
+
+// err returns where an entry keeps why its latest call to the method ended.
+func (m metricsMethod) err(e *entry) *error {
+	if m == clusterMetrics {
+		return &e.node.ClusterMetricsErr
+	}
+	return &e.node.MetricsErr
+}
+
+// watchNodeMetrics calls WatchNodeMetrics on the node that api calls, and calls
+// it again after a delay whenever the call ends, until ctx ends or the node
+// fails the call with UNIMPLEMENTED, which means that it doesn't report
+// metrics. The node sent the preamble p on its engine API.
+func (o *Observer) watchNodeMetrics(
+	ctx context.Context,
+	id string,
+	p *enginegrpc.WatchEngineResponse_Preamble,
 	c *connection,
 	api metricsgrpc.MetricsAPIClient,
 ) {
 	for {
-		err := o.callMetrics(ctx, id, cluster, c, api)
+		err := o.callMetrics(ctx, nodeMetrics, id, p, c, api)
 		if ctx.Err() != nil {
 			return
 		}
 
-		o.endMetrics(id, c, err)
+		o.endMetrics(nodeMetrics, id, c, err)
 
-		if status.Code(err) == codes.Unimplemented {
+		if !o.retry(ctx, err) {
 			return
-		}
-
-		t := time.NewTimer(metricsRetryDelay)
-		select {
-		case <-ctx.Done():
-			t.Stop()
-			return
-		case <-t.C:
 		}
 	}
 }
 
-// callMetrics makes one call to the metrics API, and records what the node
-// reports until the call ends. It returns why the call ended.
+// watchClusterMetrics calls WatchClusterMetrics on the node that api calls,
+// whenever no other node of its cluster is being called for them, and calls it
+// again after a delay whenever the call ends, until ctx ends or the node fails
+// the call with UNIMPLEMENTED. The node sent the preamble p on its engine API,
+// and its engine runs as a cluster.
+//
+// Any node of a cluster can describe the whole cluster, so the Observer calls
+// only one node of each cluster at a time, which spares the others the cost of
+// measuring it. When that node's call ends, another node of the cluster is
+// called in its place, and the node whose call ended waits before it is called
+// again.
+func (o *Observer) watchClusterMetrics(
+	ctx context.Context,
+	id string,
+	p *enginegrpc.WatchEngineResponse_Preamble,
+	c *connection,
+	api metricsgrpc.MetricsAPIClient,
+) {
+	cluster := clusterOf(p)
+
+	for {
+		if released, ok := o.claim(cluster, c); !ok {
+			select {
+			case <-ctx.Done():
+				return
+			case <-released:
+				continue
+			}
+		}
+
+		err := o.callMetrics(ctx, clusterMetrics, id, p, c, api)
+		ended := ctx.Err() != nil
+
+		o.endClusterMetrics(cluster, id, c, err, ended)
+
+		if ended || !o.retry(ctx, err) {
+			return
+		}
+	}
+}
+
+// retry waits before a call to the metrics API is made again, after a call
+// that ended with err. It returns false if the call is not to be made again,
+// because ctx has ended, or because the node failed the call with
+// UNIMPLEMENTED.
+func (o *Observer) retry(ctx context.Context, err error) bool {
+	if status.Code(err) == codes.Unimplemented {
+		return false
+	}
+
+	t := time.NewTimer(metricsRetryDelay)
+	select {
+	case <-ctx.Done():
+		t.Stop()
+		return false
+	case <-t.C:
+		return true
+	}
+}
+
+// claim makes the connection c the one that the Observer calls
+// WatchClusterMetrics on for the cluster, if the cluster has none. If it has
+// another, claim returns false, and a channel that is closed when that may have
+// changed.
+func (o *Observer) claim(cluster string, c *connection) (<-chan struct{}, bool) {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	if r, ok := o.readers[cluster]; ok && r != c {
+		return o.released, false
+	}
+
+	o.readers[cluster] = c
+	return nil, true
+}
+
+// endClusterMetrics records that a call to WatchClusterMetrics has ended, and
+// why, as [Observer.endMetrics] does, unless the call ended because the node's
+// connection ended. Either way, the cluster can then be read through another
+// node.
+func (o *Observer) endClusterMetrics(cluster, id string, c *connection, err error, ended bool) {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	if e := o.live(id, c); e != nil {
+		e.clusterMetrics = nil
+		if !ended {
+			e.node.ClusterMetricsErr = err
+		}
+	}
+
+	if o.readers[cluster] == c {
+		delete(o.readers, cluster)
+		close(o.released)
+		o.released = make(chan struct{})
+	}
+}
+
+// callMetrics makes one call to a method of the metrics API, and records what
+// the node reports until the call ends. It returns why the call ended. The node
+// sent the preamble p on its engine API.
 func (o *Observer) callMetrics(
 	ctx context.Context,
-	id, cluster string,
+	m metricsMethod,
+	id string,
+	p *enginegrpc.WatchEngineResponse_Preamble,
 	c *connection,
 	api metricsgrpc.MetricsAPIClient,
 ) error {
-	stream, err := api.WatchMetrics(ctx, &metricsgrpc.WatchMetricsRequest{})
+	stream, err := m.open(ctx, api)
 	if err != nil {
 		return err
 	}
@@ -252,17 +387,19 @@ func (o *Observer) callMetrics(
 		return errors.New("the first response wasn't a preamble")
 	}
 
-	// A node has the same IDs in every API that it serves.
-	if preamble.GetNodeId().AsString() != id {
-		return errors.New("the preamble is from a different node than the engine API's")
+	// An engine has the same ID in every API that it serves, and so does the
+	// cluster of an engine that runs as one. An engine that doesn't gives no
+	// cluster ID in either.
+	if preamble.GetId().AsString() != id {
+		return errors.New("the preamble is from a different engine than the engine API's")
 	}
-	if preamble.GetClusterId().AsString() != cluster {
+	if preamble.GetClusterId().AsString() != p.GetCluster().GetId().AsString() {
 		return errors.New("the preamble is from a different cluster than the engine API's")
 	}
 
 	metrics := newMetricTable(preamble)
 
-	call := o.beginMetrics(id, c, preamble)
+	call := o.beginMetrics(m, id, c, preamble)
 	if call == nil {
 		return context.Cause(ctx)
 	}
@@ -273,32 +410,48 @@ func (o *Observer) callMetrics(
 			return endOf(ctx, err)
 		}
 
-		if res.HasPreamble() {
+		var recorded bool
+
+		switch {
+		case res.HasPreamble():
 			return errors.New("the node sent a second preamble")
-		}
 
-		sample, ok := res.TryGetSample()
-		if !ok {
+		case res.HasSample():
+			key, s, known, err := metrics.decode(res.GetSample(), time.Now())
+			if err != nil {
+				return err
+			}
+			if !known {
+				continue
+			}
+			recorded = o.recordSample(id, c, call, key, s)
+
+		case res.HasTombstone():
+			t := res.GetTombstone()
+			key, known, err := metrics.keyOf(t.GetMetricIndex(), t.GetSubject())
+			if err != nil {
+				return err
+			}
+			if !known {
+				continue
+			}
+			recorded = o.recordTombstone(id, c, call, key, t.GetRevision())
+
+		default:
 			continue
 		}
 
-		key, s, known, err := metrics.decode(sample, time.Now())
-		if err != nil {
-			return err
-		}
-		if !known {
-			continue
-		}
-
-		if !o.recordSample(id, c, call, key, s) {
+		if !recorded {
 			return context.Cause(ctx)
 		}
 	}
 }
 
-// beginMetrics records that a call to the metrics API has begun on the
-// connection c. It returns nil, and records nothing, if c has been replaced.
+// beginMetrics records that a call to a method of the metrics API has begun on
+// the connection c. It returns nil, and records nothing, if c has been
+// replaced.
 func (o *Observer) beginMetrics(
+	m metricsMethod,
 	id string,
 	c *connection,
 	p *metricsgrpc.WatchMetricsResponse_Preamble,
@@ -312,21 +465,23 @@ func (o *Observer) beginMetrics(
 	}
 
 	o.calls++
-	e.metrics = &metricsCall{
-		number:   o.calls,
-		preamble: p,
-		series:   map[seriesKey]*Sample{},
+	call := &metricsCall{
+		number:     o.calls,
+		preamble:   p,
+		series:     map[seriesKey]*Sample{},
+		tombstones: map[seriesKey][]byte{},
 	}
-	e.node.MetricsErr = nil
+	*m.call(e) = call
+	*m.err(e) = nil
 
-	return e.metrics
+	return call
 }
 
 // recordSample records a sample in the call. It returns false, and records
 // nothing, if the connection c has been replaced.
 //
-// It keeps the sample that it already has of the series, if that has a greater
-// revision.
+// It keeps the sample or the Tombstone that it already has of the series, if
+// that has a greater revision.
 func (o *Observer) recordSample(
 	id string,
 	c *connection,
@@ -341,12 +496,19 @@ func (o *Observer) recordSample(
 		return false
 	}
 
+	if t, ok := call.tombstones[key]; ok {
+		if metricsgrpc.CompareRevisions(s.Revision, t) < 0 {
+			return true
+		}
+		delete(call.tombstones, key)
+	}
+
 	current, ok := call.series[key]
 	if ok && metricsgrpc.CompareRevisions(s.Revision, current.Revision) < 0 {
 		return true
 	}
 
-	if runningTotals[s.Metric] {
+	if isCumulative(s.Message.ProtoReflect().Descriptor()) {
 		var run []point
 		if ok {
 			run = current.run
@@ -358,10 +520,45 @@ func (o *Observer) recordSample(
 	return true
 }
 
-// endMetrics records that a call to the metrics API has ended, and why. It
-// discards what the call reported. It does nothing if the connection c has been
-// replaced.
-func (o *Observer) endMetrics(id string, c *connection, err error) {
+// recordTombstone records in the call that the node has stopped reporting a
+// series, which discards the sample that the call has of it. It returns false,
+// and records nothing, if the connection c has been replaced.
+//
+// It keeps the sample or the Tombstone that it already has of the series, if
+// that has a greater revision.
+func (o *Observer) recordTombstone(
+	id string,
+	c *connection,
+	call *metricsCall,
+	key seriesKey,
+	revision []byte,
+) bool {
+	o.m.Lock()
+	defer o.m.Unlock()
+
+	if o.live(id, c) == nil {
+		return false
+	}
+
+	if current, ok := call.series[key]; ok {
+		if metricsgrpc.CompareRevisions(revision, current.Revision) < 0 {
+			return true
+		}
+		delete(call.series, key)
+	}
+
+	if t, ok := call.tombstones[key]; ok && metricsgrpc.CompareRevisions(revision, t) < 0 {
+		return true
+	}
+
+	call.tombstones[key] = revision
+	return true
+}
+
+// endMetrics records that a call to a method of the metrics API has ended, and
+// why. It discards what the call reported. It does nothing if the connection c
+// has been replaced.
+func (o *Observer) endMetrics(m metricsMethod, id string, c *connection, err error) {
 	o.m.Lock()
 	defer o.m.Unlock()
 
@@ -370,8 +567,8 @@ func (o *Observer) endMetrics(id string, c *connection, err error) {
 		return
 	}
 
-	e.metrics = nil
-	e.node.MetricsErr = err
+	*m.call(e) = nil
+	*m.err(e) = err
 }
 
 // metricsPackage is the Protocol Buffers package of the metrics that the
@@ -386,8 +583,8 @@ var metricsPackage = new(metricsgrpc.QueueCommandsPending).
 // metric with the given full name, or nil if the Observatory doesn't know it.
 //
 // The Observatory knows the metrics that [metricsgrpc] defines. Each of their
-// messages has a "value" field that holds the measurement, and its other
-// fields say what is measured.
+// messages has one field that holds the measurement, which [valueField]
+// returns, and its other fields say what is measured.
 func knownMetric(name string) protoreflect.MessageType {
 	t, err := protoregistry.GlobalTypes.FindMessageByName(protoreflect.FullName(name))
 	if err != nil {
@@ -406,25 +603,35 @@ func knownMetric(name string) protoreflect.MessageType {
 	return t
 }
 
+// valueFields is the names of the fields that hold the measurement of a metric
+// that the spec defines. The message of each metric has one of them.
+var valueFields = []protoreflect.Name{
+	"cumulative_count",
+	"current_count",
+	"watermark",
+	"gauge",
+}
+
 // valueField returns the field of a metric's message that holds the
 // measurement, or nil if it has none.
 func valueField(d protoreflect.MessageDescriptor) protoreflect.FieldDescriptor {
-	f := d.Fields().ByName("value")
-	if f == nil || f.Kind() != protoreflect.Uint64Kind || f.Cardinality() == protoreflect.Repeated {
-		return nil
+	for _, name := range valueFields {
+		f := d.Fields().ByName(name)
+		if f != nil && f.Kind() == protoreflect.Uint64Kind && f.Cardinality() != protoreflect.Repeated {
+			return f
+		}
 	}
-	return f
+	return nil
 }
 
 // metricTable is the metrics that a call's preamble lists, by their index.
 type metricTable []tableEntry
 
 type tableEntry struct {
-	name  string
-	reach metricsgrpc.Reach
+	name string
 
 	// message is the type of the metric's message, or nil if the Observatory
-	// doesn't know the metric, or the node gave it no reach.
+	// doesn't know the metric.
 	message protoreflect.MessageType
 }
 
@@ -432,18 +639,35 @@ func newMetricTable(p *metricsgrpc.WatchMetricsResponse_Preamble) metricTable {
 	supported := p.GetSupportedMetrics()
 	t := make(metricTable, len(supported))
 
-	for i, m := range supported {
-		e := tableEntry{
-			name:  m.GetMessageName(),
-			reach: m.GetReach(),
+	for i, name := range supported {
+		t[i] = tableEntry{
+			name:    name,
+			message: knownMetric(name),
 		}
-		if e.reach != metricsgrpc.Reach_REACH_UNSPECIFIED {
-			e.message = knownMetric(e.name)
-		}
-		t[i] = e
 	}
 
 	return t
+}
+
+// keyOf returns the series of the metric with the given index and the given
+// subject. known is false if the metric is one that the Observatory doesn't
+// know.
+func (t metricTable) keyOf(index uint32, subject []byte) (key seriesKey, known bool, err error) {
+	i := int(index)
+	if i >= len(t) {
+		return seriesKey{}, false, fmt.Errorf(
+			"the message is of metric %d, but the preamble lists only %d",
+			index,
+			len(t),
+		)
+	}
+
+	e := t[i]
+	if e.message == nil {
+		return seriesKey{}, false, nil
+	}
+
+	return seriesKey{e.name, string(subject)}, true, nil
 }
 
 // decode returns the sample that s reports, and the series that it belongs to.
@@ -453,33 +677,24 @@ func (t metricTable) decode(
 	s *metricsgrpc.WatchMetricsResponse_Sample,
 	at time.Time,
 ) (key seriesKey, sample Sample, known bool, err error) {
-	i := int(s.GetMetricIndex())
-	if i >= len(t) {
-		return seriesKey{}, Sample{}, false, fmt.Errorf(
-			"the sample is of metric %d, but the preamble lists only %d",
-			s.GetMetricIndex(),
-			len(t),
-		)
+	key, known, err = t.keyOf(s.GetMetricIndex(), s.GetSubject())
+	if !known || err != nil {
+		return seriesKey{}, Sample{}, false, err
 	}
 
-	e := t[i]
-	if e.message == nil {
-		return seriesKey{}, Sample{}, false, nil
-	}
-
+	e := t[s.GetMetricIndex()]
 	m := e.message.New().Interface()
 	if err := proto.Unmarshal(s.GetValue(), m); err != nil {
 		return seriesKey{}, Sample{}, false, fmt.Errorf("the value of a %s sample is malformed: %w", e.name, err)
 	}
 
-	return seriesKey{e.name, string(s.GetSubject())},
+	return key,
 		Sample{
 			Metric:   e.name,
-			Reach:    e.reach,
 			Message:  m,
 			Revision: s.GetRevision(),
 			At:       at,
-			subject:  string(s.GetSubject()),
+			subject:  key.subject,
 		},
 		true,
 		nil
@@ -489,6 +704,12 @@ func (t metricTable) decode(
 func valueOf(m proto.Message) uint64 {
 	r := m.ProtoReflect()
 	return r.Get(valueField(r.Descriptor())).Uint()
+}
+
+// setValue changes the measurement that a metric's message holds.
+func setValue(m proto.Message, v uint64) {
+	r := m.ProtoReflect()
+	r.Set(valueField(r.Descriptor()), protoreflect.ValueOfUint64(v))
 }
 
 // ClusterSample is the value of one metric of one subject, such as the number
@@ -503,8 +724,8 @@ type ClusterSample struct {
 	Message proto.Message
 
 	// PerSecond is how many times per second the value has grown, on average,
-	// over the last minute. It is nil if the metric isn't a running total, or
-	// if any sample that contributes to the value has been observed for less
+	// over the last minute. It is nil if the metric isn't a cumulative count,
+	// or if any sample that contributes to the value has been observed for less
 	// than five seconds.
 	//
 	// Each node's rate comes from that node's own call, so it is never made from
@@ -521,68 +742,171 @@ func addRates(a, b *float64) *float64 {
 	return &sum
 }
 
+// combination is how the samples of one metric and one subject that several
+// nodes of a cluster report through WatchNodeMetrics make one value for the
+// whole cluster.
+type combination int
+
+const (
+	// summed is the combination of a current count or a cumulative count. The
+	// spec says that the sum over the nodes is an estimate of the value for the
+	// whole cluster.
+	summed combination = iota
+
+	// greatest is the combination of the length of an event stream, which the
+	// spec says is the greatest value that any node reports.
+	greatest
+
+	// uncombined is the combination of a metric whose value the spec gives no
+	// rule for combining, such as the lag of a handler, which several nodes can
+	// report of the same events.
+	uncombined
+)
+
+// combinationOf returns how the samples of a metric from several nodes make
+// one value.
+func combinationOf(metric string) combination {
+	if metric == string(proto.MessageName(new(metricsgrpc.EventStreamLength))) {
+		return greatest
+	}
+
+	t := knownMetric(metric)
+	if t == nil {
+		return uncombined
+	}
+
+	switch valueField(t.Descriptor()).Name() {
+	case "cumulative_count", "current_count":
+		return summed
+	default:
+		return uncombined
+	}
+}
+
+// reading is what [Combine] reads of one cluster at a moment.
+type reading struct {
+	// nodes is the nodes that are reporting and have a current call to
+	// WatchNodeMetrics, in the order that those calls began.
+	nodes []Node
+
+	// cluster is the node whose current call to WatchClusterMetrics is read. It
+	// is nil if no node that is reporting has such a call.
+	cluster *Node
+
+	// clustered is true if the engine runs as a cluster.
+	clustered bool
+}
+
+// readingOf returns what [Combine] reads of one cluster's nodes at the time
+// now.
+func readingOf(now time.Time, nodes []Node) reading {
+	r := reading{nodes: contributors(now, nodes)}
+
+	for _, n := range nodes {
+		if n.Preamble.HasCluster() {
+			r.clustered = true
+		}
+		if n.ClusterMetrics == nil || !n.Reporting(now) {
+			continue
+		}
+		if r.cluster == nil || n.ClusterMetrics.Call < r.cluster.ClusterMetrics.Call {
+			r.cluster = &n
+		}
+	}
+
+	return r
+}
+
+// fromNodes returns how the samples of a metric from the nodes' calls to
+// WatchNodeMetrics are combined. It returns false if they are not read: because
+// the call to WatchClusterMetrics that is read reports the metric, or because
+// the spec gives no rule for combining the metric and the engine runs as a
+// cluster. An engine that doesn't run as a cluster has one node, whose samples
+// describe the whole engine.
+func (r reading) fromNodes(metric string) (combination, bool) {
+	if r.cluster != nil && slices.Contains(r.cluster.ClusterMetrics.Preamble.GetSupportedMetrics(), metric) {
+		return 0, false
+	}
+
+	c := combinationOf(metric)
+	if c == uncombined && r.clustered {
+		return 0, false
+	}
+
+	return c, true
+}
+
+// reads returns true if any node's call is read.
+func (r reading) reads() bool {
+	return len(r.nodes) > 0 || r.cluster != nil
+}
+
+// rateOf returns the rate of a sample at the time now, or nil if it has none.
+func rateOf(now time.Time, s Sample) *float64 {
+	if r, ok := s.perSecond(now); ok {
+		return &r
+	}
+	return nil
+}
+
 // Combine returns what the nodes of one cluster report about the cluster as a
 // whole, at the time now, in no particular order.
 //
-// Only nodes that are reporting at now, and that have a current call to the
-// metrics API, contribute. A part of the cluster that no such node can read is
-// missing from the result.
+// Only nodes that are reporting at now contribute. A part of the cluster that
+// no such node can read is missing from the result.
 //
-// How a metric's samples are combined depends on its reach:
+// A metric that a node's current call to WatchClusterMetrics reports is read
+// from that call alone, because it describes the whole cluster. Of the nodes
+// that have such a call, it is the one whose call began first.
 //
-//   - When it is the cluster, any node's samples describe the whole cluster,
-//     so the result is from one node, which is the one whose call began first.
-//     Samples from the others are ignored, so that the result never mixes
-//     values from different calls.
-//   - When it is the node, each node's samples describe only the work that
-//     node owns. For each subject, the result is the sum of the values of the
-//     nodes' samples of it.
+// Every other metric is read from the nodes' current calls to
+// WatchNodeMetrics, each of which describes only the node's own work, unless
+// the engine doesn't run as a cluster. For each subject, the values of the
+// nodes' samples are combined as the spec says for the metric: a current count
+// or a cumulative count is the sum, and the length of an event stream is the
+// greatest. A metric that the spec gives no such rule for, such as the lag of a
+// handler, is left out, unless the engine doesn't run as a cluster. A node that
+// has stopped reporting a subject, with a Tombstone, adds nothing to it.
 //
-// If nodes don't agree about a metric's reach, the first node to begin a call
-// decides, and the nodes that disagree are ignored for that metric.
-//
-// The rate of a running total is combined in the same way as its value.
+// The rate of a cumulative count is combined in the same way as its value.
 func Combine(now time.Time, nodes []Node) []ClusterSample {
-	readers := contributors(now, nodes)
-	decisions := decide(readers)
+	r := readingOf(now, nodes)
+
+	var out []ClusterSample
+	if r.cluster != nil {
+		for _, s := range r.cluster.ClusterMetrics.Samples {
+			out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rateOf(now, s)})
+		}
+	}
 
 	type thing struct {
 		metric, subject string
 	}
-	var out []ClusterSample
-	sums := map[thing]int{} // the index in out of what has been summed
+	combined := map[thing]int{} // the index in out of what has been combined
 
-	for _, n := range readers {
+	for _, n := range r.nodes {
 		for _, s := range n.Metrics.Samples {
-			d := decisions[s.Metric]
-			if s.Reach != d.reach {
+			how, ok := r.fromNodes(s.Metric)
+			if !ok {
 				continue
 			}
 
-			var rate *float64
-			if r, ok := s.perSecond(now); ok {
-				rate = &r
+			rate := rateOf(now, s)
+
+			k := thing{s.Metric, s.subject}
+			i, ok := combined[k]
+			if !ok {
+				combined[k] = len(out)
+				out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rate})
+				continue
 			}
 
-			switch d.reach {
-			case metricsgrpc.Reach_REACH_CLUSTER:
-				if n.Metrics.Call == d.source {
-					out = append(out, ClusterSample{s.Metric, s.Message, rate})
-				}
-
-			case metricsgrpc.Reach_REACH_NODE:
-				k := thing{s.Metric, s.subject}
-				i, ok := sums[k]
-				if !ok {
-					sums[k] = len(out)
-					out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rate})
-					continue
-				}
-
-				r := out[i].Message.ProtoReflect()
-				f := valueField(r.Descriptor())
-				r.Set(f, protoreflect.ValueOfUint64(valueOf(out[i].Message)+valueOf(s.Message)))
+			switch how {
+			case summed:
+				setValue(out[i].Message, valueOf(out[i].Message)+valueOf(s.Message))
 				out[i].PerSecond = addRates(out[i].PerSecond, rate)
+			case greatest:
+				setValue(out[i].Message, max(valueOf(out[i].Message), valueOf(s.Message)))
 			}
 		}
 	}
@@ -591,63 +915,69 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 }
 
 // Supported returns the full names of the metrics that the nodes of one
-// cluster support, at the time now. A metric is supported if a node that
-// contributes to [Combine] lists it in the preamble of its call to the metrics
-// API.
+// cluster support, at the time now. A metric is supported if a call that
+// [Combine] reads lists it in its preamble, and Combine reads that call's
+// samples of it.
 //
 // A metric that is supported may still have no samples, such as the length of
 // event streams in a cluster that has none yet. A metric that isn't supported
 // never has samples.
 func Supported(now time.Time, nodes []Node) map[string]bool {
+	r := readingOf(now, nodes)
 	supported := map[string]bool{}
-	for name := range decide(contributors(now, nodes)) {
-		supported[name] = true
+
+	if r.cluster != nil {
+		for _, name := range r.cluster.ClusterMetrics.Preamble.GetSupportedMetrics() {
+			supported[name] = true
+		}
 	}
+
+	for _, n := range r.nodes {
+		for _, name := range n.Metrics.Preamble.GetSupportedMetrics() {
+			if _, ok := r.fromNodes(name); ok {
+				supported[name] = true
+			}
+		}
+	}
+
 	return supported
 }
 
-// Coverage returns the coverage of each metric whose reach is the node that only
-// some of the nodes that contribute to [Combine] support, at the time now, by its
-// full name. A metric's coverage is the share of those nodes that support it,
-// from 0 to 1. The sums that [Combine] makes of such a metric leave out the nodes
-// that don't support it, so they are too small by an amount that isn't known.
-// Nodes of one cluster that support different metrics may be partway through a
-// deploy, but nothing here relies on that.
+// Coverage returns the coverage of each metric that [Combine] reads from the
+// nodes' calls to WatchNodeMetrics, and that only some of the nodes that it
+// reads list, at the time now, by its full name. A metric's coverage is the
+// share of those nodes that list it, from 0 to 1. Combine leaves out the nodes
+// that don't list such a metric, so its sums of it are too small by an amount
+// that isn't known. Nodes of one cluster that support different metrics may be
+// partway through a deploy, but nothing here relies on that.
 //
-// A metric that every contributing node supports isn't listed, because its
-// coverage is whole. Nor is a metric whose reach is the cluster, because one node
-// describes the whole cluster.
+// A metric that every one of those nodes lists isn't listed, because its
+// coverage is whole. Nor is a metric that Combine reads from a call to
+// WatchClusterMetrics, because one node describes the whole cluster.
 func Coverage(now time.Time, nodes []Node) map[string]float64 {
-	readers := contributors(now, nodes)
-	coverage := map[string]float64{}
+	r := readingOf(now, nodes)
 
-	for name, d := range decide(readers) {
-		if d.reach != metricsgrpc.Reach_REACH_NODE {
-			continue
-		}
-
-		listing := 0
-		for _, n := range readers {
-			if slices.ContainsFunc(
-				n.Metrics.Preamble.GetSupportedMetrics(),
-				func(m *metricsgrpc.SupportedMetric) bool {
-					return m.GetMessageName() == name && m.GetReach() == d.reach
-				},
-			) {
-				listing++
+	listing := map[string]int{}
+	for _, n := range r.nodes {
+		for _, name := range n.Metrics.Preamble.GetSupportedMetrics() {
+			if _, ok := r.fromNodes(name); ok {
+				listing[name]++
 			}
 		}
+	}
 
-		if listing < len(readers) {
-			coverage[name] = float64(listing) / float64(len(readers))
+	coverage := map[string]float64{}
+	for name, count := range listing {
+		if count < len(r.nodes) {
+			coverage[name] = float64(count) / float64(len(r.nodes))
 		}
 	}
 
 	return coverage
 }
 
-// contributors returns the nodes that [Combine] reads, in the order that their
-// current calls to the metrics API began.
+// contributors returns the nodes that are reporting at the time now and have a
+// current call to WatchNodeMetrics, in the order that those calls began.
 func contributors(now time.Time, nodes []Node) []Node {
 	var out []Node
 	for _, n := range nodes {
@@ -659,26 +989,4 @@ func contributors(now time.Time, nodes []Node) []Node {
 		return cmp.Compare(a.Metrics.Call, b.Metrics.Call)
 	})
 	return out
-}
-
-// decision is what [Combine] reads of one metric: its reach, and, if the reach
-// is the cluster, the call that it reads.
-type decision struct {
-	reach  metricsgrpc.Reach
-	source uint64
-}
-
-// decide returns the decision for each metric that the contributors list. The
-// first node to list a metric decides its reach, and is the one that is read if
-// the reach is the cluster.
-func decide(contributors []Node) map[string]decision {
-	decisions := map[string]decision{}
-	for _, n := range contributors {
-		for _, m := range n.Metrics.Preamble.GetSupportedMetrics() {
-			if _, ok := decisions[m.GetMessageName()]; !ok {
-				decisions[m.GetMessageName()] = decision{m.GetReach(), n.Metrics.Call}
-			}
-		}
-	}
-	return decisions
 }

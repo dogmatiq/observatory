@@ -27,8 +27,8 @@ func TestCoverage(t *testing.T) {
 			app := appOf("statements", uuidpb.Generate())
 			h := uuidpb.Generate()
 
-			pendingMetric := supports(name(new(metricsgrpc.QueueCommandsPending)), metricsgrpc.Reach_REACH_NODE)
-			recordedMetric := supports(name(new(metricsgrpc.HandlerEventsRecorded)), metricsgrpc.Reach_REACH_NODE)
+			pendingMetric := name(new(metricsgrpc.QueueCommandsPending))
+			recordedMetric := name(new(metricsgrpc.HandlerEventsRecorded))
 
 			newer := startApp(t, ctx, o, c, app, pendingMetric, recordedMetric)
 			older := startApp(t, ctx, o, c, app, pendingMetric)
@@ -36,18 +36,39 @@ func TestCoverage(t *testing.T) {
 			q := uuidpb.Generate()
 			newer.sample(t, 0, "q", 1, pending(q, 3))
 			older.sample(t, 0, "q", 1, pending(q, 4))
-			newer.sample(t, 1, "h", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, Value: 100}.Build())
+			newer.sample(t, 1, "h", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, CumulativeCount: 100}.Build())
 			r.Record(time.Now(), o.Nodes())
 
 			time.Sleep(10 * time.Second)
-			newer.sample(t, 1, "h", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, Value: 160}.Build())
+			newer.sample(t, 1, "h", 2, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, CumulativeCount: 160}.Build())
 			r.Record(time.Now(), o.Nodes())
 
 			test(o, r, c)
 		})
 	}
 
-	t.Run("it is the share of the nodes that support each metric whose reach is the node that only some of them support", func(t *testing.T) {
+	t.Run("it leaves out a metric that a call to WatchClusterMetrics reports", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			c := uuidpb.Generate()
+			app := appOf("statements", uuidpb.Generate())
+
+			newer := startApp(t, ctx, o, c, app, queuePending)
+			older := startApp(t, ctx, o, c, app)
+			newer.startClusterCall(t, queuePending)
+
+			if got := Coverage(time.Now(), o.Nodes()); len(got) != 0 {
+				t.Fatalf("unexpected coverage: %v", got)
+			}
+
+			cancel()
+			<-newer.Engine.Done
+			<-older.Engine.Done
+		})
+	})
+
+	t.Run("it is the share of the nodes that support each metric that is combined from the nodes' own calls, and that only some of them support", func(t *testing.T) {
 		partway(t, func(o *Observer, _ *Recorder, _ *uuidpb.UUID) {
 			got := Coverage(time.Now(), o.Nodes())
 			if len(got) != 1 || got[name(new(metricsgrpc.HandlerEventsRecorded))] != 0.5 {

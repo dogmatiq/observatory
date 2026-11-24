@@ -6,6 +6,8 @@ github.com/dogmatiq/jumble v0.1.0 h1:Cb3ExfxY+AoUP4G9/sOwoOdYX8o+kOLK8+dhXAry+QA
 github.com/dogmatiq/jumble v0.1.0/go.mod h1:FCGV2ImXu8zvThxhd4QLstiEdu74vbIVw9bFJSBcKr4=
 github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf h1:tDHXMhA6RIHL50hGXNvOFP8Ho8zPg8hYT/NdTN1uoS0=
 github.com/dogmatiq/protobuf v0.8.1-0.20261118070544-d0a315b48dbf/go.mod h1:96bKDt02UetlEs2RxjOPE8TQvVnk2bVRre5Q3o/cDYg=
+github.com/dogmatiq/protobuf v0.12.0 h1:xvA/tq8JtlNo7NJutWddnOTOuxK1ROOuSi8mC8pL/+0=
+github.com/dogmatiq/protobuf v0.12.0/go.mod h1:96bKDt02UetlEs2RxjOPE8TQvVnk2bVRre5Q3o/cDYg=
 github.com/dogmatiq/tenet v0.0.0-20261118123219-baf488d9ecc8 h1:lgyNCz14JMr8+cV4n6o1RA5NmBi2crMH+LYrTjp+vgk=
 github.com/dogmatiq/tenet v0.0.0-20261118123219-baf488d9ecc8/go.mod h1:Yh5MqvZN4Tz58SSGUpapxY8b/Af3+BND4NhoznhU2mM=
 github.com/dogmatiq/tenet v0.1.0 h1:NYmNgkvSzAwKp304m81O6H3LXeK0RKN2OI3r9CNqAlI=
