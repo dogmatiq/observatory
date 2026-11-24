@@ -936,6 +936,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   doesn't report, on every view, so the cluster view's figures blur while some nodes are out of contact, as the site
   view's do, rather than shrinking with no sign. Today `Coverage` counts only the nodes that are reporting. Its new
   state is reviewed under the cluster tile.
+- Decided, to build with the item above: the cluster tile's headline sets apart the members that are out of contact as a
+  red "+N", as in "4 +1", as the site view's applications tile does, without the red accent, which stays for when every
+  node is out of contact, because the other nodes still work. The members are those of the membership rule, from the
+  nodes' sets of live nodes, so a node that leaves cleanly isn't counted. An engine that doesn't report its live nodes
+  has no "+N". The headline's card gets the worked example of a number set apart.
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with a bar of which applications record the most; the messages waiting, with those
   that are failing, and a bar of which applications have the most; and the number of applications in contact, with the

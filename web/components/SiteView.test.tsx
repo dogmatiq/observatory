@@ -99,3 +99,14 @@ test("the alert icon of an application out of contact says what losing contact m
 		"Contact with the application has been lost, so it's unknown whether the application is working.",
 	);
 });
+
+test("the applications tile is a red zero alone when every application is out of contact", () => {
+	const names = apps.map((a) => a.application.name);
+	render(
+		<SiteOverview data={siteOf(withContact(apps, { out: names }), euWest)} />,
+	);
+
+	const tile = screen.getByRole("article", { name: "Applications" });
+
+	expect(tile.textContent).toMatch(/^0applications$/);
+});

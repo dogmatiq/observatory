@@ -179,7 +179,7 @@ export function ReviewPage() {
 								</State>
 								<State
 									label="Every application out of contact"
-									note="The totals are the last ones, distrusted, as a cluster's are when every node is out of contact, and the applications tile's headline is a red 0."
+									note="The totals are the last ones, distrusted, as a cluster's are when every node is out of contact, and the applications tile's headline is a red 0 alone, with no &quot;+N&quot;, because when every application is out of contact there is nothing to set them apart from."
 									recommendation="Approve, as the cluster view does it."
 									wide
 								>

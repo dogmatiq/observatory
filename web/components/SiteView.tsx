@@ -405,7 +405,8 @@ export function ApplicationsCard({ live }: { live: number }) {
 /**
  * ApplicationsTile is the site's applications tile, whose headline is the number
  * of applications in contact, followed by the number out of contact, set apart
- * in red, such as "94 +2", as the queues tile sets apart its failing messages. Its chart is the heartbeat of each application in
+ * in red, such as "94 +2", as the queues tile sets apart its failing messages.
+ * When every application is out of contact, the headline is a red "0" alone. Its chart is the heartbeat of each application in
  * contact, from the node that sent the latest. It has no bar.
  *
  * While any application is out of contact, the tile has the red accent,
@@ -447,7 +448,10 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 						) : (
 							<Ramped value={live.length} format={String} />
 						)}
-						<OutOfContact count={out} />
+						{/* When every application is out of contact, there is nothing to set
+						them apart from, so the headline is the red zero alone, as the
+						cluster tile's is when every node is out of contact. */}
+						<OutOfContact count={live.length === 0 ? 0 : out} />
 					</span>
 				</Popover>
 			}
