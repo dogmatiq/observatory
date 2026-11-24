@@ -928,8 +928,20 @@ Tick each item when it is done, and write the pull request or commit that did it
   too once it serves the page. A name
   address keeps the address that was visited. `/clusters/{id}` moves to `/-/cluster/{id}` only for an ID that is a
   UUID, because a site named "clusters" has addresses of the same form. The page of a site, of an application at
-  several sites, and the lists of candidates are plain lists of links until they are designed. Every page that waits
+  several sites, and the lists of candidates are plain lists of links until they are designed. Their words, and the
+  heading "Clusters" of the root list, whose entries are now applications at sites, are placeholders until then, and
+  are settled as those pages are designed on `/-/review`. Every page that waits
   for something to become known asks again every second.
+- Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
+  minute across the applications, with a bar of which applications record the most; the messages waiting, with those
+  that are failing, and a bar of which applications have the most; and the number of applications in contact, with the
+  number out of contact, whose chart is the heartbeat chart with a share for each application in contact. Below them,
+  each application in the order of their names, as a small card with its name, its events per minute and its messages
+  waiting, linking to its application view; the plan's first idea, a grid of squares like a contribution graph, is the
+  alternative. An application is in contact while its engine, or any node of its cluster, is. The coverage rule
+  applies across the site: a total's coverage is the share of the nodes at the site that report it, and an application
+  out of contact counts as nodes that don't. The view of the applications at no site is the same, at the nil UUID's
+  address. The backend is built once the design is settled.
 - What a cluster's page shows of `HandlerEventStreamLag`. The spec gives no rule for combining it across nodes, on
   purpose: what makes sense to show is for the Observatory to work out. Until then a cluster shows it only if
   `WatchClusterMetrics` reports it.
@@ -941,11 +953,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
   against its published text, with a link to where it can be read, and a quote in another language has a published
   translation, with its translator.
-- Later: tighten the statuses that say "may be running a different version of the engine", on the card of a node that
-  doesn't report its workloads and on a section that only some nodes report. The engine API's preamble now says which
-  engine software and version a node runs, and which version of the application, so a card can say which nodes run
-  which version, or that the versions are the same, and so whether a version is the likely cause at all. The
-  Observatory doesn't read the versions yet.
+- Done: the statuses that said "may be running a different version of the engine", on the card of a node that doesn't
+  report its workloads and on a section that only some nodes report, say what the nodes' versions show, from the engine
+  API's preamble, and say "may be" only while a node's version is unknown.
 - A node that joins, or comes back, makes the cluster-wide rate of anything that nodes count unknown for five seconds,
   because a rate that any contributor can't give yet is none, so a `?` shows for that long. The demo does this now, because
   its nodes go down and come back. It belongs to the rule for what an unknown figure does, which is parked.

@@ -1,0 +1,703 @@
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
+import { cn } from "../lib/cn.ts";
+import { Covered, Distrusted } from "../lib/distrust.tsx";
+import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
+import { heartbeatLevel } from "../lib/levels.ts";
+import { useElapsed } from "../lib/live.tsx";
+import { applicationAtSitePath } from "../lib/route.ts";
+import { applicationSegments } from "../lib/segments.ts";
+import type { SiteApplication, SiteData } from "../model.ts";
+import { ErrorBoundary } from "./ErrorBoundary.tsx";
+import { Figure } from "./Figure.tsx";
+import { HeartbeatChart } from "./HeartbeatChart.tsx";
+import { Icon } from "./Icon.tsx";
+import { InfoCard } from "./InfoCard.tsx";
+import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
+import {
+	Alarm,
+	accentClasses,
+	cardClasses,
+	Failing,
+	linkedCardClasses,
+	MetricTile,
+	Noun,
+	raisedClasses,
+} from "./MetricTile.tsx";
+import { eventRateWords } from "./Overview.tsx";
+import { describedClasses, Popover } from "./Popover.tsx";
+import { Presence } from "./Presence.tsx";
+import { Ramped } from "./Ramped.tsx";
+import { RateCard, type RateWords } from "./RateCard.tsx";
+import { Sky } from "./Sky.tsx";
+import { Sparkline } from "./Sparkline.tsx";
+import { StackedBar } from "./StackedBar.tsx";
+import { subsystemColors } from "./subsystems.ts";
+import { useRate } from "./useRate.ts";
+
+/**
+ * Breakdown is how the site view lays out its applications below its tiles:
+ * `cells`, a grid of small cards, each with the application's name and figures,
+ * or `squares`, a grid of small squares in the manner of a contribution graph,
+ * each of which names its application only when it is pointed at.
+ */
+export type Breakdown = "cells" | "squares";
+
+/**
+ * SiteOverview is the site view: the totals of the applications at a site, or at
+ * no site, as three tiles across the top, the same size as the cluster view's,
+ * and each application below them, in the order of their names, so that an
+ * application keeps its place. Each application links to its application view.
+ */
+export function SiteOverview({ data }: { data: SiteData }) {
+	return (
+		<div className="grid gap-8">
+			<SiteTotals data={data} />
+			<SiteBreakdown data={data} breakdown="cells" />
+		</div>
+	);
+}
+
+/**
+ * SiteBreakdown is the part of the site view below its tiles, which is each of
+ * its applications, laid out as `breakdown` says.
+ */
+export function SiteBreakdown({
+	data,
+	breakdown,
+}: {
+	data: SiteData;
+	breakdown: Breakdown;
+}) {
+	return (
+		<section aria-label="Applications">
+			{breakdown === "cells" ? (
+				<ApplicationCells data={data} />
+			) : (
+				<ApplicationSquares data={data} />
+			)}
+		</section>
+	);
+}
+
+/**
+ * SiteTotals is the three tiles of the site view, laid out as the cluster view's
+ * are. A tile whose metrics no application's engine supports is not there.
+ */
+export function SiteTotals({ data }: { data: SiteData }) {
+	// Every application is out of contact, so the totals are what they were when
+	// a node last reported, and are not trusted.
+	const down = data.applications.every((a) => a.nodes === 0);
+
+	return (
+		<section
+			className="flex flex-wrap gap-5 [&>*]:min-w-0 [&>*]:flex-[1_1_260px]"
+			aria-label="Totals"
+		>
+			<Presence shape="fade">
+				{data.events && (
+					<ErrorBoundary>
+						<Distrusted value={down}>
+							<Covered coverage={data.events.coverage ?? 1}>
+								<SiteEventsTile data={data} events={data.events} />
+							</Covered>
+						</Distrusted>
+					</ErrorBoundary>
+				)}
+			</Presence>
+			<Presence shape="fade">
+				{data.queues && (
+					<ErrorBoundary>
+						<Distrusted value={down}>
+							<Covered coverage={data.queues.coverage ?? 1}>
+								<SiteQueuesTile data={data} queues={data.queues} />
+							</Covered>
+						</Distrusted>
+					</ErrorBoundary>
+				)}
+			</Presence>
+			<ErrorBoundary>
+				<ApplicationsTile data={data} />
+			</ErrorBoundary>
+		</section>
+	);
+}
+
+/**
+ * TheApplications names the applications that the site view is of, in a
+ * sentence: "the applications at the **eu-west** site", or "the applications
+ * that run at no site". The word "the" is its own.
+ */
+function TheApplications({ site }: { site: SiteData["site"] }) {
+	return site === undefined ? (
+		<>the applications that run at no site</>
+	) : (
+		<>
+			the applications at the{" "}
+			<span className="font-semibold text-fg">{site.name}</span> site
+		</>
+	);
+}
+
+/**
+ * siteAbout returns what the card of each of the site view's tiles says, which
+ * is what the part of the view is about, as the cluster view's do.
+ */
+export const siteAbout = {
+	events: (site: SiteData["site"]) => (
+		<p>
+			This section shows information about the events in{" "}
+			<TheApplications site={site} />.
+		</p>
+	),
+	queues: (site: SiteData["site"]) => (
+		<p>
+			This section shows information about the messages in{" "}
+			<TheApplications site={site} />.
+		</p>
+	),
+	applications: (site: SiteData["site"]) => (
+		<p>
+			This section shows which of <TheApplications site={site} /> are in
+			contact.
+		</p>
+	),
+};
+
+/**
+ * sitePartialStatus is the status of the card of a tile's icon while only some of
+ * the applications' nodes report what the tile shows. Unlike a cluster's, it
+ * says nothing about versions, because the applications at a site run different
+ * engines and versions as a matter of course.
+ */
+export const sitePartialStatus = {
+	icon: "alert",
+	text: "Only some of the applications' nodes report what this section shows, so this section's numbers include only those nodes.",
+} as const;
+
+/** What the card of the rate of the site's events tile says. */
+export const siteEventRateWords: RateWords = {
+	kind: "Event rate",
+	description: "The rate at which the applications are recording new events",
+};
+
+/** What the card of the rate of the site's queues tile says. */
+export const siteHandlingWords: RateWords = {
+	kind: "Message handling rate",
+	description:
+		"The rate at which the applications are handling commands and deadlines",
+};
+
+/**
+ * SiteEventsTile is the site's events tile, whose headline is the events per
+ * minute across the applications, and whose bar shows which applications record
+ * the most.
+ */
+function SiteEventsTile({
+	data,
+	events,
+}: {
+	data: SiteData;
+	events: NonNullable<SiteData["events"]>;
+}) {
+	const { scaled, per, state } = useRate(events.rate.perMinute);
+	const recording = data.applications.filter(
+		(a) => (a.events?.perMinute ?? 0) > 0,
+	).length;
+
+	const rateCard = (
+		<RateCard
+			subsystem="streams"
+			icon="event"
+			words={siteEventRateWords}
+			state={state}
+		/>
+	);
+
+	return (
+		<MetricTile
+			subsystem="streams"
+			label="Events"
+			icon="event"
+			about={siteAbout.events(data.site)}
+			aboutStatus={
+				events.coverage === undefined ? undefined : sitePartialStatus
+			}
+			value={
+				<Popover card content={rateCard}>
+					<span>
+						<Figure number={scaled?.amount} format={formatCompact} unit={per} />
+					</span>
+				</Popover>
+			}
+			detail={
+				<>
+					<Popover card content={rateCard}>
+						<span className={describedClasses}>
+							<Noun>{`events per ${per}`}</Noun>
+						</span>
+					</Popover>
+					{", from "}
+					<Ramped value={recording} format={String} />
+					{` ${nounFor(recording, "application", "applications")}`}
+				</>
+			}
+			bar={
+				<StackedBar
+					subsystem="streams"
+					segments={applicationSegments(
+						data.applications.map((a) => ({
+							application: a.application,
+							amount: a.events?.perMinute ?? 0,
+						})),
+						"events",
+					)}
+				/>
+			}
+			chart={
+				events.history ? (
+					<Sparkline
+						chart={events.history}
+						className="h-12"
+						describe={(value) => ({
+							figure: formatCompact(inUnit(value, per)),
+							unit: `events${shortPer[per]}`,
+						})}
+					/>
+				) : (
+					<Sky missing="the rate of events" />
+				)
+			}
+		/>
+	);
+}
+
+/**
+ * SiteQueuesTile is the site's queues tile, whose headline is the messages that
+ * wait across the applications, with those that are failing, and whose bar shows
+ * which applications have the most waiting.
+ */
+function SiteQueuesTile({
+	data,
+	queues,
+}: {
+	data: SiteData;
+	queues: NonNullable<SiteData["queues"]>;
+}) {
+	const { scaled, per, state } = useRate(queues.throughput?.perMinute);
+	const healthy = Math.max(0, queues.messages - queues.failing);
+
+	const rateCard = (
+		<RateCard
+			subsystem="queues"
+			icon="message"
+			words={siteHandlingWords}
+			state={state}
+		/>
+	);
+
+	return (
+		<MetricTile
+			subsystem="queues"
+			label="Queues"
+			icon="message"
+			about={siteAbout.queues(data.site)}
+			aboutStatus={
+				queues.coverage === undefined ? undefined : sitePartialStatus
+			}
+			accent={queues.failing > 0 ? "failing" : undefined}
+			value={
+				<Popover card content={<MessagesWaitingCard />}>
+					<span>
+						<Ramped value={healthy} format={formatCompact} />
+						<Failing count={queues.failing} size="headline" />
+					</span>
+				</Popover>
+			}
+			detail={
+				<>
+					<Noun>{nounFor(queues.messages, "message", "messages")}</Noun>
+					{queues.throughput && (
+						<>
+							{", "}
+							<Popover card content={rateCard}>
+								<span className={describedClasses}>
+									<Figure
+										number={scaled?.amount}
+										format={formatCompact}
+										unit={per}
+									/>
+									{shortPer[per]}
+								</span>
+							</Popover>
+						</>
+					)}
+				</>
+			}
+			bar={
+				<StackedBar
+					subsystem="queues"
+					segments={applicationSegments(
+						data.applications.map((a) => ({
+							application: a.application,
+							amount: a.queues?.messages ?? 0,
+						})),
+						"messages",
+					)}
+				/>
+			}
+			chart={
+				queues.history ? (
+					<Sparkline
+						chart={queues.history}
+						className="h-12"
+						describe={(value) => ({
+							figure: formatCompact(inUnit(value, per)),
+							unit: `handled${shortPer[per]}`,
+						})}
+					/>
+				) : (
+					<Sky missing="the rate at which messages are handled" />
+				)
+			}
+		/>
+	);
+}
+
+/**
+ * ApplicationsCard is the card of the headline of the applications tile, and of
+ * the words of its detail line. It says what the number counts, and what it is
+ * for an application to be in contact, for an engine that clusters and for one
+ * that doesn't. If no application is in contact, it says so, as a status.
+ */
+export function ApplicationsCard({ live }: { live: number }) {
+	return (
+		<InfoCard
+			subsystem="cluster"
+			icon="application"
+			kind="Applications"
+			status={
+				live === 0
+					? {
+							icon: "alert",
+							text: "Every application is out of contact, so it's unknown whether any application is working.",
+						}
+					: undefined
+			}
+		>
+			<p>
+				The number of applications that are in contact now. An application is in
+				contact while its engine, or any node of its cluster, is in contact.
+			</p>
+		</InfoCard>
+	);
+}
+
+/**
+ * ApplicationsTile is the site's applications tile, whose headline is the number
+ * of applications in contact, and whose detail line gives the number out of
+ * contact, if any are. Its chart is the heartbeat of each application in
+ * contact, from the node that sent the latest. It has no bar.
+ */
+export function ApplicationsTile({ data }: { data: SiteData }) {
+	const live = data.applications.filter((a) => a.nodes > 0);
+	const out = data.applications.length - live.length;
+
+	// The levels drain between updates, so they are worked out again with each
+	// frame from the time that has passed.
+	const elapsed = useElapsed();
+	const sections = live.map((a) => ({
+		id: a.application.key,
+		level: heartbeatLevel(
+			a.heartbeats.map((ago) => -ago),
+			elapsed,
+		),
+	}));
+
+	const card = <ApplicationsCard live={live.length} />;
+
+	return (
+		<MetricTile
+			subsystem="cluster"
+			label="Applications"
+			icon="application"
+			about={siteAbout.applications(data.site)}
+			accent={live.length === 0 ? "bad" : undefined}
+			value={
+				<Popover card content={card}>
+					<span>
+						{live.length === 0 ? (
+							<Alarm>
+								<Ramped value={0} format={String} />
+							</Alarm>
+						) : (
+							<Ramped value={live.length} format={String} />
+						)}
+					</span>
+				</Popover>
+			}
+			detail={
+				<Popover card content={card}>
+					<span className={describedClasses}>
+						<Noun>
+							{nounFor(live.length, "application", "applications")} in contact
+						</Noun>
+						{out > 0 && (
+							<>
+								{", "}
+								<Ramped value={out} format={String} /> out of contact
+							</>
+						)}
+					</span>
+				</Popover>
+			}
+			chart={<HeartbeatChart sections={sections} />}
+		/>
+	);
+}
+
+/**
+ * ApplicationCells is the breakdown of the site view as a grid of small cards,
+ * one for each application, in the order of the applications. Each card names
+ * its application and gives its events per minute and its messages waiting, or
+ * says that it is out of contact, and links to its application view.
+ */
+function ApplicationCells({ data }: { data: SiteData }) {
+	return (
+		<ul className="grid grid-cols-[repeat(auto-fill,minmax(176px,1fr))] gap-3">
+			{data.applications.map((a) => (
+				<li key={a.application.key} className="min-w-0">
+					<ErrorBoundary>
+						<ApplicationCell site={data.site} app={a} />
+					</ErrorBoundary>
+				</li>
+			))}
+		</ul>
+	);
+}
+
+/**
+ * ApplicationCell is the card of one application in [ApplicationCells]. An
+ * application that is out of contact has the red accent along its top, and says
+ * so in words in place of its figures. An application with failing messages has
+ * the orange accent. While only some of its nodes are in contact, its figures are
+ * blurred by how few are, by the coverage rule.
+ */
+function ApplicationCell({
+	site,
+	app,
+}: {
+	site: SiteData["site"];
+	app: SiteApplication;
+}) {
+	const out = app.nodes === 0;
+	const failing = app.queues?.failing ?? 0;
+	const accent = out ? "bad" : failing > 0 ? "failing" : undefined;
+
+	return (
+		<a
+			href={applicationAtSitePath(site?.key, app.application.key)}
+			className={cn(
+				cardClasses,
+				accent ? accentClasses[accent] : raisedClasses,
+				linkedCardClasses,
+				"flex flex-col gap-1.5 px-3.5 pt-3 pb-2.5 text-fg",
+			)}
+		>
+			<span className="truncate text-xs font-bold tracking-[0.04em] uppercase">
+				{app.application.name}
+			</span>
+			{out ? (
+				<span className="text-sm text-bad">out of contact</span>
+			) : (
+				<Covered coverage={app.coverage ?? 1}>
+					<ApplicationFigures app={app} explained />
+				</Covered>
+			)}
+		</a>
+	);
+}
+
+/**
+ * ApplicationFigures is the events per minute and the messages waiting of one
+ * application, each with the icon of what it counts, in the colors of its
+ * subsystem, for whichever of them the application's engine supports.
+ */
+function ApplicationFigures({
+	app,
+	explained,
+}: {
+	app: SiteApplication;
+
+	/**
+	 * True if each figure has the card that explains it, as its popover. A figure
+	 * inside a popover has none, because only one popover is open at a time.
+	 */
+	explained: boolean;
+}) {
+	const { state } = useRate(app.events?.perMinute);
+	const explain = (
+		card: ReactNode,
+		figure: ComponentProps<typeof Popover>["children"],
+	) =>
+		explained ? (
+			<Popover card content={card}>
+				{figure}
+			</Popover>
+		) : (
+			figure
+		);
+
+	return (
+		<span className="flex items-baseline gap-4 text-sm tabular-nums">
+			{app.events &&
+				explain(
+					<RateCard
+						subsystem="streams"
+						icon="event"
+						words={eventRateWords}
+						state={state}
+					/>,
+					<span
+						className={cn(
+							"inline-flex items-baseline gap-1",
+							subsystemColors.streams,
+						)}
+					>
+						<Icon
+							name="event"
+							className="size-3.5 self-center text-(--subsystem)"
+						/>
+						<span>
+							<Figure
+								number={app.events.perMinute}
+								format={formatCompact}
+								unit="minute"
+							/>
+							<span className="text-muted">/min</span>
+						</span>
+					</span>,
+				)}
+			{app.queues &&
+				explain(
+					<MessagesWaitingCard />,
+					<span
+						className={cn(
+							"inline-flex items-baseline gap-1",
+							subsystemColors.queues,
+						)}
+					>
+						<Icon
+							name="message"
+							className="size-3.5 self-center text-(--subsystem)"
+						/>
+						<span>
+							<Figure
+								number={app.queues.messages - app.queues.failing}
+								format={formatCompact}
+							/>
+							{/* A cell has a count of failing messages only while it has some,
+							so that a hundred cells don't each keep a count of none. */}
+							{app.queues.failing > 0 && (
+								<Failing count={app.queues.failing} size="stat" />
+							)}
+						</span>
+					</span>,
+				)}
+		</span>
+	);
+}
+
+/**
+ * ApplicationSquares is the breakdown of the site view as a grid of small
+ * squares, one for each application, in the order of the applications, in the
+ * manner of a contribution graph. A square's shade is how busy its application
+ * is, by its events per minute, in four steps. A square is orange while the
+ * application has failing messages, and an outline while it is out of contact.
+ * Pointing at a square shows the card of its application, and the square links
+ * to its application view.
+ */
+function ApplicationSquares({ data }: { data: SiteData }) {
+	const busiest = Math.max(
+		1,
+		...data.applications.map((a) => a.events?.perMinute ?? 0),
+	);
+
+	return (
+		<ul
+			className={cn(
+				"flex flex-wrap gap-1.5 rounded-card bg-panel p-4 [box-shadow:var(--shadow-raised)]",
+				subsystemColors.cluster,
+			)}
+		>
+			{data.applications.map((a) => {
+				const out = a.nodes === 0;
+				const failing = (a.queues?.failing ?? 0) > 0;
+				const busy = (a.events?.perMinute ?? 0) / busiest;
+				const step = busy === 0 ? 0 : busy < 0.05 ? 1 : busy < 0.25 ? 2 : 3;
+
+				return (
+					<li key={a.application.key}>
+						<Popover card content={<ApplicationCard app={a} />}>
+							<a
+								href={applicationAtSitePath(data.site?.key, a.application.key)}
+								className={cn(
+									"block size-5 rounded-[4px] transition-transform duration-150 hover:scale-125 motion-reduce:transition-none",
+									out
+										? "border-2 border-dashed border-bad"
+										: failing
+											? "bg-failing"
+											: "bg-(--subsystem)",
+									!out &&
+										!failing &&
+										["opacity-25", "opacity-45", "opacity-70", ""][step],
+									a.coverage !== undefined && "distrust-blur",
+								)}
+								style={
+									a.coverage === undefined
+										? undefined
+										: ({ "--distrust": 1 - a.coverage } as CSSProperties)
+								}
+							>
+								<span className="sr-only">{a.application.name}</span>
+							</a>
+						</Popover>
+					</li>
+				);
+			})}
+		</ul>
+	);
+}
+
+/**
+ * ApplicationCard is the card of a square of [ApplicationSquares]. It names the
+ * application and gives its figures, or says, as a status, that it is out of
+ * contact.
+ */
+export function ApplicationCard({ app }: { app: SiteApplication }) {
+	const out = app.nodes === 0;
+
+	return (
+		<InfoCard
+			subsystem="cluster"
+			icon="application"
+			kind="Application"
+			identifier={
+				<span className="font-semibold text-fg">{app.application.name}</span>
+			}
+			status={
+				out
+					? {
+							icon: "alert",
+							text: "Contact with the application has been lost, so it's unknown whether the application is working.",
+						}
+					: undefined
+			}
+		>
+			{!out && (
+				<Covered coverage={app.coverage ?? 1}>
+					<ApplicationFigures app={app} explained={false} />
+				</Covered>
+			)}
+		</InfoCard>
+	);
+}

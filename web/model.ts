@@ -45,6 +45,89 @@ export interface Installation {
 }
 
 /**
+ * SiteData is everything that the site view shows: the totals of the
+ * applications at one site, or at no site, and each application.
+ */
+export interface SiteData {
+	/** The site, which is absent for the applications at no site. */
+	site?: Site;
+
+	/**
+	 * The events tile. Absent if no application's engine supports the events
+	 * recorded.
+	 */
+	events?: {
+		/** The events recorded per minute, across the applications. */
+		rate: { perMinute?: number };
+
+		/**
+		 * The share of the nodes at the site that report the events recorded, if
+		 * only some of them do, as it is for a cluster's events tile. An application
+		 * whose nodes are all out of contact counts as nodes that don't report.
+		 */
+		coverage?: number;
+
+		/** The history of events recorded per minute. */
+		history?: Chart;
+	};
+
+	/**
+	 * The queues tile. Absent if no application's engine supports the messages in
+	 * queues.
+	 */
+	queues?: {
+		/** The number of messages that are waiting, across the applications. */
+		messages: number;
+
+		/** The number of those messages whose delivery is failing. */
+		failing: number;
+
+		/** The share of the nodes at the site that report the messages in queues. */
+		coverage?: number;
+
+		/** The messages handled per minute, if any engine supports it. */
+		throughput?: { perMinute?: number };
+
+		/** The history of the messages handled per minute. */
+		history?: Chart;
+	};
+
+	/** The applications, in the order of their names. */
+	applications: SiteApplication[];
+}
+
+/**
+ * SiteApplication is what the site view shows of one application at the site.
+ */
+export interface SiteApplication {
+	application: { name: string; key: string };
+
+	/**
+	 * The number of the application's nodes that are in contact. Zero if every
+	 * node is out of contact.
+	 */
+	nodes: number;
+
+	/**
+	 * The share of the application's nodes that are in contact, if only some of
+	 * them are. The application's figures are then the sums of those nodes.
+	 */
+	coverage?: number;
+
+	/**
+	 * The times at which the heartbeats of the node that sent the latest one
+	 * arrived, as [LiveNode.heartbeats] are. Empty while out of contact.
+	 */
+	heartbeats: number[];
+
+	/** The events recorded per minute, if the engine supports it. */
+	events?: { perMinute?: number };
+
+	/** The messages that are waiting, if the engine supports it. */
+	queues?: { messages: number; failing: number };
+}
+
+/**
  * ClusterSummary is one cluster in the list of the clusters that the
  * Observatory knows.
  */

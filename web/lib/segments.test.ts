@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { overview } from "../fixtures/overview.ts";
 import { golden } from "../fixtures/prototype-golden.ts";
 import {
+	applicationSegments,
 	bindingSegments,
 	handlerNodeSegments,
 	layoutSegments,
@@ -340,4 +341,51 @@ test("a segment of an event stream says how much of the events it holds", () => 
 			total: { amount: 4, things: 2 },
 		},
 	]);
+});
+
+test("a bar of a site's applications is largest first, leaves out those with none, and gives each its share", () => {
+	const app = (name: string, amount: number) => ({
+		application: { name, key: name },
+		amount,
+	});
+	const segments = applicationSegments(
+		[app("accounts", 10), app("billing", 0), app("payments", 30)],
+		"events",
+	);
+
+	expect(segments.map((s) => s.title)).toEqual([
+		"30 events per minute in payments",
+		"10 events per minute in accounts",
+	]);
+	expect(segments.map((s) => s.about)).toEqual([
+		{
+			thing: "application",
+			of: "events",
+			application: { name: "payments", key: "payments" },
+			amount: 30,
+			share: 0.75,
+		},
+		{
+			thing: "application",
+			of: "events",
+			application: { name: "accounts", key: "accounts" },
+			amount: 10,
+			share: 0.25,
+		},
+	]);
+});
+
+test("a bar of many applications merges the smallest into the last", () => {
+	const segments = applicationSegments(
+		Array.from({ length: 8 }, (_, i) => ({
+			application: { name: `app-${i}`, key: `${i}` },
+			amount: i + 1,
+		})),
+		"messages",
+	);
+
+	expect(segments).toHaveLength(6);
+	expect(segments.at(-1)?.title).toBe(
+		"6 messages waiting in 3 other applications",
+	);
 });

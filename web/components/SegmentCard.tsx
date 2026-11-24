@@ -1,6 +1,10 @@
 import { useContext } from "react";
 import { formatCompact, formatPercent } from "../lib/format.ts";
-import type { SegmentAbout } from "../lib/segments.ts";
+import {
+	type ApplicationAbout,
+	applicationAmounts,
+	type SegmentAbout,
+} from "../lib/segments.ts";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { VersionsContext, versionsSentence } from "./partial.ts";
@@ -54,6 +58,11 @@ const things = {
  */
 export function SegmentCard({ about }: { about: SegmentAbout }) {
 	const versions = useContext(VersionsContext);
+
+	if (about.thing === "application") {
+		return <ApplicationSegmentCard about={about} />;
+	}
+
 	const of = things[about.thing];
 
 	// A node that doesn't report its workloads while others do has a share that
@@ -98,6 +107,51 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 			{"advice" in of && total.things > 1 && total.amount > 1 && (
 				<p>{of.advice}</p>
 			)}
+		</InfoCard>
+	);
+}
+
+/**
+ * What the card of a segment of each bar of a site's applications says about the
+ * bar, and the subsystem whose colors it has.
+ */
+const applicationBars = {
+	events: {
+		subsystem: "streams",
+		bar: "This bar shows which applications are recording the most events.",
+	},
+	messages: {
+		subsystem: "queues",
+		bar: "This bar shows which applications have the most messages waiting.",
+	},
+} as const;
+
+/**
+ * ApplicationSegmentCard is the card of a segment of a bar of a site's
+ * applications. It drills down, as the card of a stream does: it names the
+ * application, gives its amount and its share as its figures, and says what the
+ * bar shows. It gives no advice, because nothing is promised about how the
+ * applications at a site are best spread.
+ */
+function ApplicationSegmentCard({ about }: { about: ApplicationAbout }) {
+	const { subsystem, bar } = applicationBars[about.of];
+	const [singular, plural] = applicationAmounts[about.of];
+
+	return (
+		<InfoCard
+			subsystem={subsystem}
+			icon="application"
+			kind="Application"
+			identifier={
+				<span className="font-semibold text-fg">{about.application.name}</span>
+			}
+			figure={{
+				value: <Ramped value={about.amount} format={formatCompact} />,
+				unit: about.amount === 1 ? singular : plural,
+				aside: <Ramped value={about.share} format={formatPercent} />,
+			}}
+		>
+			<p>{bar}</p>
 		</InfoCard>
 	);
 }

@@ -52,6 +52,7 @@ export interface BarSegment {
  */
 export type SegmentAbout =
 	| SpreadAbout
+	| ApplicationAbout
 	| {
 			thing: "node";
 			id: string;
@@ -90,6 +91,26 @@ export type SpreadAbout = {
 	 * queues or nodes.
 	 */
 	total: { amount: number; things: number };
+};
+
+/**
+ * ApplicationAbout is what a card says about an application that has a share of
+ * what a bar of a site's applications spreads: the events that the application
+ * records per minute, or the messages that wait in its queues.
+ */
+export type ApplicationAbout = {
+	thing: "application";
+	of: "events" | "messages";
+	application: { name: string; key: string };
+
+	/** How many of what the bar spreads the application has. */
+	amount: number;
+
+	/** The share of all of them that the application has, from 0 to 1. */
+	share: number;
+
+	total?: never;
+	id?: never;
 };
 
 /**
@@ -225,6 +246,52 @@ export function queueSegments(queues: SpreadPart[]): BarSegment[] {
 			`${countOf(total, "message", "messages")} in ${count} other queues`,
 	);
 }
+
+/**
+ * applicationSegments returns the segments of a bar of how much of something each
+ * of a site's applications has, largest first, given the amount that each has.
+ * An application that has none has no segment.
+ */
+export function applicationSegments(
+	applications: {
+		application: { name: string; key: string };
+		amount: number;
+	}[],
+	of: ApplicationAbout["of"],
+): BarSegment[] {
+	const total = applications.reduce((sum, a) => sum + a.amount, 0);
+	const [singular, plural] = applicationAmounts[of];
+
+	return limitSegments(
+		applications
+			.filter((a) => a.amount > 0)
+			.sort((a, b) => b.amount - a.amount)
+			.map((a) => ({
+				value: a.amount,
+				title: `${countOf(a.amount, singular, plural)} in ${a.application.name}`,
+				about: {
+					thing: "application" as const,
+					of,
+					application: a.application,
+					amount: a.amount,
+					share: total === 0 ? 0 : a.amount / total,
+				},
+			})),
+		(rest, count) =>
+			`${countOf(rest, singular, plural)} in ${count} other applications`,
+	);
+}
+
+/**
+ * What a bar of a site's applications counts, in the singular and the plural.
+ */
+export const applicationAmounts: Record<
+	ApplicationAbout["of"],
+	readonly [string, string]
+> = {
+	events: ["event per minute", "events per minute"],
+	messages: ["message waiting", "messages waiting"],
+};
 
 /**
  * bindingSegments returns the segments of a bar of how a handler's instances are
