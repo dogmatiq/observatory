@@ -607,11 +607,11 @@ export function ContactLostCard({ app }: { app: SiteApplication }) {
 }
 
 /**
- * contactLostText is the status of an application that is out of contact, as
- * the engine card says it of an engine.
+ * contactLostText is the status of an application that is out of contact, in
+ * the form of the engine card's status, with the application as its subject.
  */
-const contactLostText =
-	"Contact with the application has been lost, so it's unknown whether the application is working.";
+export const contactLostText =
+	"The application is out of contact, so it's unknown whether it is working.";
 
 /**
  * ApplicationFigures is the events per minute and the messages waiting of one

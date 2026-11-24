@@ -16,7 +16,7 @@ import {
 	noNodesText,
 	WorkloadsCard,
 } from "./ClusterCards.tsx";
-import { EngineCard } from "./EngineCard.tsx";
+import { EngineCard, engineOutText } from "./EngineCard.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { messagesWaitingText } from "./MessagesWaitingCard.tsx";
@@ -42,6 +42,7 @@ import {
 	ApplicationCells,
 	ApplicationsCard,
 	ApplicationsTile,
+	ContactLostCard,
 	SiteBreakdown,
 	SiteOverview,
 	SiteTotals,
@@ -142,7 +143,7 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="Two applications out of contact, and two with only some nodes in contact"
-						note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as the other cards have their icon there, and pointing at the icon shows a card that says contact with the application has been lost. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
+						note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as the other cards have their icon there, and pointing at the icon shows a card that says the application is out of contact, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
 						recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its card gives the words, as the status of a card does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 						wide
 					>
@@ -362,8 +363,24 @@ export function ReviewPage() {
 					notDeciding={
 						"The words on the tiles themselves (SH 1); the card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
 					}
-					note="The card that opens when a tile's headline, or the words of its detail line, are pointed at."
+					note="The card that opens when a tile's headline, or the words of its detail line, are pointed at, and the card of the alert icon of a cell whose application is out of contact."
 				>
+					<State
+						label="The card of a cell's alert icon"
+						note="It names the application, and its status says what losing contact means for the reader. Its form follows the engine card's status, which is under review at WD 5, so it follows whatever WD 5 decides."
+						recommendation="Approve, with this wording. It is the engine card's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
+						precedents={[
+							{
+								where: "On the cluster view, the status of the engine card",
+								status: { underReview: "WD 5" },
+								words: <p>{engineOutText}</p>,
+							},
+						]}
+					>
+						<Panel>
+							<ContactLostCard app={contactLostExample} />
+						</Panel>
+					</State>
 					<State
 						label="The card of the applications in contact"
 						precedents={[
@@ -1526,6 +1543,11 @@ export function ReviewPage() {
 		</Review>
 	);
 }
+
+/** An application of the site view's fixture, out of contact. */
+const contactLostExample = withContact(siteApplications, { out: ["kyc"] }).find(
+	(a) => a.application.name === "kyc",
+) as SiteData["applications"][number];
 
 /** The application of the cluster view's fixture, at a site. */
 const atSite = { ...application, site: "eu-west" };

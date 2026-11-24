@@ -7,6 +7,10 @@ import { InfoCard } from "./InfoCard.tsx";
  *
  * `online` is whether the engine is in contact.
  */
+/** The status of the engine's card while the engine is out of contact. */
+export const engineOutText =
+	"The engine is out of contact, so it's unknown whether the application is working.";
+
 export function EngineCard({ online }: { online: boolean }) {
 	return (
 		<InfoCard
@@ -18,7 +22,7 @@ export function EngineCard({ online }: { online: boolean }) {
 					? undefined
 					: {
 							icon: "alert",
-							text: "The engine is out of contact, so it's unknown whether the application is working.",
+							text: engineOutText,
 						}
 			}
 		>

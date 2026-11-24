@@ -96,7 +96,7 @@ test("the alert icon of an application out of contact says what losing contact m
 	const icon = screen.getByText("Contact lost").parentElement as HTMLElement;
 
 	expect(await tipOf(icon)).toContain(
-		"Contact with the application has been lost, so it's unknown whether the application is working.",
+		"The application is out of contact, so it's unknown whether it is working.",
 	);
 });
 
