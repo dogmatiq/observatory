@@ -1038,6 +1038,15 @@ Tick each item when it is done, and write the pull request or commit that did it
   annotation says whether it is messages handled, messages removed, commands handled or deadlines handled. The chart's
   hovercard already gives a unit for each ("handled", "removals", "commands", "deadlines"), which the detail line could
   use, as in "442 commands/min". While the rate is the headline, its label already says what it counts.
+- To build after the review of the explainers: the queues card's headline and bar, and the compact digest's figure,
+  count the messages that are due, which are ready to be delivered now (`QueueCommandsDue` and `QueueDeadlinesDue`),
+  not every message waiting (`QueueCommandsPending` and `QueueDeadlinesPending`). A deadline waits for its scheduled
+  time, so deadlines scheduled ahead make the count of messages waiting grow while nothing is wrong, and the advice
+  "Fewer messages waiting is better. If the number of waiting messages keeps rising, messages are arriving faster than
+  they are being handled." is then wrong; a count of due messages rises only when the application falls behind. The
+  failing "+N" is unchanged. To settle when it is built: what the cards show for an engine that reports the messages
+  waiting but not the ones that are due, whether the word on the cards changes from "messages", and whether the process
+  digest's count of deadlines waiting changes too. The held-back table's row for messages that are due changes with it.
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
   engine's event stream model from the server for this, as the events card has it.
