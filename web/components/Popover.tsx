@@ -107,11 +107,19 @@ export function Popover({
 	content,
 	interactive = false,
 	card = false,
+	shows,
 	children,
 }: {
 	content?: ReactNode;
 	interactive?: boolean;
 	card?: boolean;
+
+	/**
+	 * Says, at the moment that the element is pointed at or focused, whether the
+	 * popover appears this time. It appears every time if this is not given.
+	 */
+	shows?: (element: Element) => boolean;
+
 	children: ReactElement<Trigger>;
 }) {
 	const id = useId();
@@ -174,6 +182,9 @@ export function Popover({
 		window.clearTimeout(timer.current);
 		if (shown) {
 			// The pointer is back, from the panel, or while it was about to leave.
+			return;
+		}
+		if (shows !== undefined && !shows(element)) {
 			return;
 		}
 
@@ -263,6 +274,31 @@ export function Popover({
 				)}
 		</>
 	);
+}
+
+/**
+ * Tooltip gives text that is cut short to fit its place, such as a long name, a
+ * tooltip of the whole text, which is a popover of one line that appears while the
+ * text is pointed at, and only while the text is cut short. Its child is the
+ * element that cuts the text short.
+ */
+export function Tooltip({
+	text,
+	children,
+}: {
+	text: string;
+	children: ReactElement<Trigger>;
+}) {
+	return (
+		<Popover content={text} shows={isCutShort}>
+			{children}
+		</Popover>
+	);
+}
+
+/** isCutShort returns whether an element's text is wider than the element. */
+function isCutShort(element: Element): boolean {
+	return element.scrollWidth > element.clientWidth;
 }
 
 /**

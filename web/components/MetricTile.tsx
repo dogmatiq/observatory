@@ -52,7 +52,6 @@ export function MetricTile({
 	aboutStatus,
 	identifier,
 	value,
-	valueTitle,
 	detail,
 	bar,
 	chart,
@@ -86,9 +85,6 @@ export function MetricTile({
 
 	/** The headline number. */
 	value: ReactNode;
-
-	/** The headline number in full, as its popover. */
-	valueTitle?: string;
 
 	/** The detail line under the number, which always takes two lines of room. */
 	detail: ReactNode;
@@ -133,11 +129,9 @@ export function MetricTile({
 	const content = (
 		<ReadoutContext.Provider value={setReadout}>
 			<div className="flex items-center justify-between gap-3">
-				<Popover content={valueTitle}>
-					<span className="self-start text-4xl leading-none font-bold tracking-[-0.02em] tabular-nums">
-						{value}
-					</span>
-				</Popover>
+				<span className="self-start text-4xl leading-none font-bold tracking-[-0.02em] tabular-nums">
+					{value}
+				</span>
 				<div className="flex items-center gap-2.5">
 					<span
 						aria-hidden="true"

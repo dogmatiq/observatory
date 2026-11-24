@@ -14,7 +14,7 @@ import {
 	linkedCardClasses,
 	raisedClasses,
 } from "./MetricTile.tsx";
-import { Popover } from "./Popover.tsx";
+import { Popover, Tooltip } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
@@ -81,14 +81,14 @@ export function HandlerDigest({
 		<>
 			<div className="flex min-w-0 items-center gap-3">
 				<span className="flex min-w-0 flex-col">
-					<Popover content={handler.name}>
+					<Tooltip text={handler.name}>
 						<span
 							id={nameId}
 							className="min-w-0 truncate text-sm font-bold tracking-[0.04em] uppercase"
 						>
 							<HandlerName name={handler.name} />
 						</span>
-					</Popover>
+					</Tooltip>
 					<span className="flex min-w-0 items-center gap-3 text-2xs font-medium tracking-[0.08em] text-muted uppercase">
 						<span className="min-w-0 truncate">
 							{handler.disabled ? `${handler.kind}, disabled` : handler.kind}

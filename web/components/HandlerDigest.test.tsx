@@ -1,4 +1,11 @@
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import {
+	act,
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { application } from "../fixtures/overview.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
@@ -418,7 +425,7 @@ test("a chart has the color of the messages that it counts", () => {
 	);
 });
 
-test("the punctuation of a handler's name is muted, and the words are not, and a popover has the whole name", async () => {
+test("the punctuation of a handler's name is muted, and the words are not, and a tooltip has the whole name when it is cut short", async () => {
 	render(
 		<HandlerDigest
 			application={application}
@@ -436,10 +443,41 @@ test("the punctuation of a handler's name is muted, and the words are not, and a
 		digest.getAttribute("aria-labelledby") as string,
 	) as HTMLElement;
 	expect(name.textContent).toBe("statement-schedule.v2");
+
+	// The page has no layout here, so the name is made wider than its place.
+	Object.defineProperty(name, "scrollWidth", { value: 200 });
+	Object.defineProperty(name, "clientWidth", { value: 100 });
 	expect(await tipOf(name)).toBe("statement-schedule.v2");
 
 	const muted = [...name.querySelectorAll(".text-faint")].map(
 		(e) => e.textContent,
 	);
 	expect(muted).toEqual(["-", "."]);
+});
+
+test("a handler's name that fits has no tooltip", () => {
+	vi.useFakeTimers();
+	try {
+		render(
+			<HandlerDigest
+				application={application}
+				handler={{
+					key: "k",
+					name: "statements",
+					kind: "process",
+					summary: quiet,
+				}}
+			/>,
+		);
+
+		const digest = screen.getByRole("article", { name: "statements" });
+		const name = document.getElementById(
+			digest.getAttribute("aria-labelledby") as string,
+		) as HTMLElement;
+		fireEvent.pointerEnter(name);
+		act(() => vi.runAllTimers());
+		expect(screen.queryByRole("tooltip")).toBeNull();
+	} finally {
+		vi.useRealTimers();
+	}
 });
