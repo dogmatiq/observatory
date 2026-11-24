@@ -117,7 +117,7 @@ export function ReviewPage() {
 								step={1}
 								title="The grid of applications"
 								notDeciding={
-									"What a card's figures are, and what their popovers say (SW); how a card looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
+									"What a card's figures are, and what their popovers say (SH); how a card looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
 								}
 								note="Each application is a small card with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
 							>
@@ -158,7 +158,7 @@ export function ReviewPage() {
 								step={0}
 								title="The view in each state"
 								notDeciding={
-									"The layout (SL); what the tiles and their cards say, including the card that explains the applications tile's headline (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
+									"The layout (SL); what the tiles and their cards say, including the card that explains the applications tile's headline (SW and SH); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
 								}
 							>
 								<State
@@ -237,14 +237,14 @@ export function ReviewPage() {
 
 						<Tile
 							code="SW"
-							title="Site view: the tiles' words"
-							note="What the card of each tile's icon and headline says."
+							title="Site view: the icons' words"
+							note="What the card of each tile's icon says."
 						>
 							<Part
 								step={1}
 								title="The icons"
 								notDeciding={
-									"How the cards look, which is as on the cluster view; the cards of the headlines (SW 2); the words in a card of the grid (SS); what a site is, which nothing on the view explains yet."
+									"How the cards look, which is as on the cluster view; the cards of the headlines (SH); the words in a card of the grid (SS); what a site is, which nothing on the view explains yet."
 								}
 								note="The card of each tile's icon says what its section is about. Nothing on the view says what a site is yet. While only some of the applications' nodes report what the events or queues tile shows, its card says why, as a status. It says nothing about versions, because the applications at a site run different engines and versions as a matter of course."
 							>
@@ -308,12 +308,18 @@ export function ReviewPage() {
 									</Panel>
 								</State>
 							</Part>
+						</Tile>
 
+						<Tile
+							code="SH"
+							title="Site view: the headlines' words"
+							note="What the card of each tile's headline says, and the detail lines."
+						>
 							<Part
-								step={2}
+								step={1}
 								title="The headlines and detail lines"
 								notDeciding={
-									"The card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW 1); the cards of the bars' segments (SB)."
+									"The card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
 								}
 								note="The events tile's headline is the events per minute, and its detail line counts the applications that recorded any. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, as in &quot;94 +2&quot;, and its detail line is the word &quot;applications&quot;."
 							>
@@ -364,7 +370,7 @@ export function ReviewPage() {
 								step={1}
 								title="The bars"
 								notDeciding={
-									"How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' other cards (SW)."
+									"How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' other cards (SW and SH)."
 								}
 								note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's card drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
 							>
@@ -412,7 +418,7 @@ export function ReviewPage() {
 								step={1}
 								title="The applications tile's chart"
 								notDeciding={
-									"How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's headline and words (SW)."
+									"How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's headline and words (SW and SH)."
 								}
 								recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
 								note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
