@@ -116,13 +116,14 @@ const shapes: Record<IconName, ReactNode> = {
 			<path d="M12 12V8" />
 		</>
 	),
+	// Lucide's "merge", turned to point right: several lanes joining one, as
+	// handling many messages at once becomes handling them one at a time.
 	"minimize-concurrency": (
-		<>
-			<path d="M8 3v3a2 2 0 0 1-2 2H3" />
-			<path d="M21 8h-3a2 2 0 0 1-2-2V3" />
-			<path d="M3 16h3a2 2 0 0 1 2 2v3" />
-			<path d="M16 21v-3a2 2 0 0 1 2-2h3" />
-		</>
+		<g transform="rotate(90 12 12)">
+			<path d="m8 6 4-4 4 4" />
+			<path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22" />
+			<path d="m20 22-5-5" />
+		</g>
 	),
 	queue: (
 		<>
