@@ -992,7 +992,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   hovercards of the bar's segments, which then only drill down; that move is made when the explainer is built. A bar's
   amounts are a spread: "distribution" and "shared among" are not used. In the explainer the advice
   names what is spread: "An even spread is better; a stream that holds more than its fair share limits parallel
-  throughput." Done: the segment hovercards' advice says
+  throughput." The queues card's says the same of queues. The advice relies on what the multiple-streams and
+  multiple-queues models are for, which is handling the streams or queues in parallel; the spec doesn't promise that
+  unconditionally, and isn't changed to. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
