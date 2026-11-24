@@ -994,7 +994,16 @@ Tick each item when it is done, and write the pull request or commit that did it
   names what is spread: "An even spread is better; a stream that holds more than its fair share limits parallel
   throughput." The queues card's says the same of queues. The advice relies on what the multiple-streams and
   multiple-queues models are for, which is handling the streams or queues in parallel; the spec doesn't promise that
-  unconditionally, and isn't changed to. Done: the segment hovercards' advice says
+  unconditionally, and isn't changed to.
+  The queues explainer is approved. Its annotations of the rate and of the chart say what the engine counts, and what
+  it leaves out: "the rate of handled messages", "the rate at which messages leave the queues, handled or not", "the
+  rate of handled commands, not deadlines" or "the rate of handled deadlines, not commands", each "averaged over the
+  last minute". While no node reports the messages waiting, the rate is the headline, and the explainer has no bar, no
+  box and no advice about messages waiting. Under the card it says "Commands and deadlines wait on queues until they
+  are delivered. A deadline is delivered when its scheduled time arrives." and "Fewer messages waiting is better. If the
+  number of waiting messages keeps rising, messages are arriving faster than they are being handled." Its box reads
+  "The statements application's engine spreads messages across several queues. An even spread is better; a queue that
+  holds more than its fair share limits parallel throughput." Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
