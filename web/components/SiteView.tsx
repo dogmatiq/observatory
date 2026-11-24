@@ -397,6 +397,11 @@ export function ApplicationsCard({ live }: { live: number }) {
  * of applications in contact, and whose detail line gives the number out of
  * contact, if any are. Its chart is the heartbeat of each application in
  * contact, from the node that sent the latest. It has no bar.
+ *
+ * While any application is out of contact, the tile has the red accent, and the
+ * number out of contact is red, because an application out of contact is one
+ * that nothing shows to be working, unlike a node, whose cluster's other nodes
+ * carry on.
  */
 export function ApplicationsTile({ data }: { data: SiteData }) {
 	const live = data.applications.filter((a) => a.nodes > 0);
@@ -421,7 +426,7 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 			label="Applications"
 			icon="application"
 			about={siteAbout.applications(data.site)}
-			accent={live.length === 0 ? "bad" : undefined}
+			accent={out > 0 ? "bad" : undefined}
 			value={
 				<Popover card content={card}>
 					<span>
@@ -444,7 +449,10 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 						{out > 0 && (
 							<>
 								{", "}
-								<Ramped value={out} format={String} /> out of contact
+								<Alarm>
+									<Ramped value={out} format={String} />
+								</Alarm>{" "}
+								out of contact
 							</>
 						)}
 					</span>
