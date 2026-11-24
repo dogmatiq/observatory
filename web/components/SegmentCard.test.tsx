@@ -161,7 +161,7 @@ test("the card of a node that doesn't report its workloads, while others do, say
 	);
 
 	expect(container.textContent).toContain(
-		"This node's workloads are unknown, but other nodes in the cluster report their workloads. This node may be running a different version of the engine.",
+		"This node's workloads are unknown, but other nodes in the cluster report their workloads.",
 	);
 	expect(container.textContent).not.toContain("%");
 });

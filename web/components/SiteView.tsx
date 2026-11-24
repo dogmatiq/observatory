@@ -183,13 +183,13 @@ function AtTheSite({ site }: { site: SiteData["site"] }) {
 
 /**
  * sitePartialStatus is the status of the card of a tile's icon while only some of
- * the applications' nodes report what the tile shows. Unlike a cluster's, it
- * says nothing about versions, because the applications at a site run different
- * engines and versions as a matter of course.
+ * the applications report what the tile shows in full: some of their nodes, or
+ * all of them, don't report it, or are out of contact. Its numbers can then only
+ * appear lower than they really are. See [partialStatus] for a cluster's.
  */
 export const sitePartialStatus = {
 	icon: "alert",
-	text: "Only some of the applications' nodes report what this section shows, so this section's numbers include only those nodes.",
+	text: "Only some of the applications fully report what this section shows, so the numbers may appear lower than they really are.",
 } as const;
 
 /** What the card of the rate of the site's events tile says. */

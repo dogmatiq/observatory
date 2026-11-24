@@ -1,4 +1,3 @@
-import { useContext } from "react";
 import { formatCompact, formatPercent } from "../lib/format.ts";
 import {
 	type ApplicationAbout,
@@ -7,7 +6,6 @@ import {
 } from "../lib/segments.ts";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
-import { VersionsContext, versionsSentence } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 
 /**
@@ -57,8 +55,6 @@ export const things = {
  * nothing is promised about how an even distribution of workloads serves it.
  */
 export function SegmentCard({ about }: { about: SegmentAbout }) {
-	const versions = useContext(VersionsContext);
-
 	if (about.thing === "application") {
 		return <ApplicationSegmentCard about={about} />;
 	}
@@ -76,7 +72,7 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 				identifier={<Identifier id={about.id} of={of.kind.toLowerCase()} />}
 				status={{
 					icon: "alert",
-					text: `This node's workloads are unknown, but other nodes in the cluster report their workloads.${versionsSentence(versions, "This node")}`,
+					text: "This node's workloads are unknown, but other nodes in the cluster report their workloads.",
 				}}
 			/>
 		);

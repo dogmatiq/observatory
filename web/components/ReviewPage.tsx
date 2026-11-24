@@ -33,7 +33,7 @@ import {
 	queuesAbout,
 	Totals,
 } from "./Overview.tsx";
-import { partialText } from "./partial.ts";
+import { partialStatus } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 import { RateCard } from "./RateCard.tsx";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
@@ -227,7 +227,7 @@ export function ReviewPage() {
 							{
 								where: "Its status",
 								status: { underReview: "EV 1" },
-								words: <p>{partialText(undefined)}</p>,
+								words: <p>{partialStatus.text}</p>,
 							},
 						]}
 						recommendation="Approve, with this wording, which was proposed in review, with &quot;at the eu-west site&quot;, as the cluster view says where an application is. The tile counts the event streams of all the applications together in its detail line."
@@ -254,7 +254,7 @@ export function ReviewPage() {
 							{
 								where: "Its status",
 								status: { underReview: "EV 1" },
-								words: <p>{partialText(undefined)}</p>,
+								words: <p>{partialStatus.text}</p>,
 							},
 						]}
 						recommendation="Approve, with this wording, in the same shape as the events tile's. The tile counts the queues of all the applications together in its detail line, which says roughly how widely the site's work can be spread."
@@ -568,93 +568,14 @@ export function ReviewPage() {
 					note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The card of the icon says why, as a status. The queues tile and the kind icon of a handler card show the same status in the same case."
 				>
 					<State
-						label="A version is unknown"
-						recommendation="Approve, with this wording. It says what the nodes do, then what follows for the numbers, as the user sees them, and then the likely cause."
+						label="Only some of the nodes report what the tile shows"
+						note="One fixed text, whatever the cause. The status no longer says anything about versions, which belong wherever the views come to show versions."
+						recommendation="Approve, with the wording given in review. It says what the nodes do, and then what follows for the numbers as the reader sees them: every number that the section shows is a sum, or the greatest of the nodes' values, so it can only appear lower than it really is."
 					>
 						<Panel>
-							<EventsIconCard status={partialText(undefined)} />
+							<EventsIconCard status={partialStatus.text} />
 						</Panel>
 					</State>
-					<State
-						label={"The nodes run different versions of the engine"}
-						note={
-							"The nodes' preambles show the versions, so the status says what they show."
-						}
-						recommendation="Approve, with this wording."
-					>
-						<Panel>
-							<EventsIconCard
-								status={
-									"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes. The cluster's nodes are running different versions of the engine."
-								}
-							/>
-						</Panel>
-					</State>
-					<State
-						label={"The nodes run different versions of the application"}
-						note={
-							"The nodes' preambles show the versions, so the status says what they show."
-						}
-						recommendation="Approve, with this wording."
-					>
-						<Panel>
-							<EventsIconCard
-								status={
-									"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes. The cluster's nodes are running different versions of the application."
-								}
-							/>
-						</Panel>
-					</State>
-					<State
-						label={"The nodes run different versions of both"}
-						note={
-							"The nodes' preambles show the versions, so the status says what they show."
-						}
-						recommendation="Approve, with this wording."
-					>
-						<Panel>
-							<EventsIconCard
-								status={
-									"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes. The cluster's nodes are running different versions of the engine and of the application."
-								}
-							/>
-						</Panel>
-					</State>
-					<State
-						label={"The versions are the same"}
-						note={
-							"Every node runs the same versions, so the status doesn't blame the version."
-						}
-						recommendation="Approve, with this wording."
-					>
-						<Panel>
-							<EventsIconCard
-								status={
-									"Only some of the cluster's nodes report what this section shows, so its numbers include only those nodes."
-								}
-							/>
-						</Panel>
-					</State>
-					<Choices
-						of="A"
-						title="the status"
-						choices={[
-							[
-								"The consequence first",
-								<EventsIconCard
-									key="first"
-									status="This section's numbers include only some of the cluster's nodes, because the other nodes don't report what this section shows. Some nodes may be running a different version of the engine."
-								/>,
-							],
-							[
-								"Saying when it ends",
-								<EventsIconCard
-									key="ends"
-									status="Only some of the cluster's nodes report what this section shows, so its numbers are blurred until every node reports what this section shows. Some nodes may be running a different version of the engine."
-								/>,
-							],
-						]}
-					/>
 				</Part>
 
 				<Part
@@ -805,7 +726,7 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="A node that doesn't report its workloads"
-						note="Other nodes report their workloads and this one doesn't, so this one is supported and not working, and the page says only that it may be running a different version of the engine: its share isn't known, and its segment is a faint square. The number of workloads counts only the nodes that report them, blurred by how few they are."
+						note="Other nodes report their workloads and this one doesn't, so this one is supported and not working, and its card says only that its workloads are unknown: its share isn't known, and its segment is a faint square. The number of workloads counts only the nodes that report them, blurred by how few they are."
 						decided={false}
 						recommendation="Approve. The cluster supports what any of its nodes supports, and a node that doesn't is supported and not working, which it stops being when every node supports the same things."
 					>
@@ -1133,14 +1054,14 @@ export function ReviewPage() {
 								"The consequence first",
 								<NodeCardWith
 									key="first"
-									status="This node's workloads are unknown. Other nodes in the cluster report their workloads, so this node may be running a different version of the engine."
+									status="This node's workloads are unknown. Other nodes in the cluster report their workloads."
 								/>,
 							],
 							[
 								"As a contrast",
 								<NodeCardWith
 									key="contrast"
-									status="Some of the cluster's nodes report their workloads and this node doesn't report its workloads, so this node may be running a different version of the engine."
+									status="Some of the cluster's nodes report their workloads and this node doesn't report its workloads."
 								/>,
 							],
 						]}

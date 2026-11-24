@@ -964,9 +964,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
   against its published text, with a link to where it can be read, and a quote in another language has a published
   translation, with its translator.
-- Done: the statuses that said "may be running a different version of the engine", on the card of a node that doesn't
-  report its workloads and on a section that only some nodes report, say what the nodes' versions show, from the engine
-  API's preamble, and say "may be" only while a node's version is unknown.
+- Done: the statuses of the card of a node that doesn't report its workloads and of a section that only some nodes
+  report say nothing about versions, because a status has one fixed text for each cause. The server still compares the
+  nodes' versions of the engine and of the application, and sends whether they are the same, for wherever the views
+  come to show versions, which is the footer's open question below.
 - A node that joins, or comes back, makes the cluster-wide rate of anything that nodes count unknown for five seconds,
   because a rate that any contributor can't give yet is none, so a `?` shows for that long. The demo does this now, because
   its nodes go down and come back. It belongs to the rule for what an unknown figure does, which is parked.
