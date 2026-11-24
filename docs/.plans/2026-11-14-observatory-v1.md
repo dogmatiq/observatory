@@ -1007,9 +1007,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   The cluster explainer is approved. It has no box, because the cluster card is shown only for an engine that clusters,
   so the card already says what the box would. Under the card it says, following the card from top to bottom, "Each
   node is a running process of the application's engine, and the nodes share the application's work.", when the card
-  shows workloads "The work is divided into workloads, ongoing tasks such as delivering messages to a handler, and each
-  is given to one node at a time.", and "Each node sends heartbeats to show that it is running. Its section of the line
-  rises with each heartbeat and falls until the next, so a silent node sinks to the bottom." Its paragraphs describe
+  shows workloads "The work is divided into ongoing tasks called workloads, such as delivering messages to a handler.
+  Each workload is given to one node at a time.", and "Each node sends heartbeats to show that it is running. Its
+  section of the line rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats
+  stop." Its paragraphs describe
   what happens rather than define terms, as the events and queues explainers' do. Its annotations are "the number of nodes in contact now", "the number of workloads in the
   cluster", "how the workloads are spread across the nodes" and "how recently each node sent a heartbeat". Done: the segment hovercards' advice says
   "An even spread is better".
