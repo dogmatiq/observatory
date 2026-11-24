@@ -1006,7 +1006,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   holds more than its fair share limits parallel throughput."
   The cluster explainer is approved. It has no box, because the cluster card is shown only for an engine that clusters,
   so the card already says what the box would. Under the card it says "Each node is one running process of the
-  application's engine, and the nodes share the application's work." and, when the card shows workloads, "A workload
+  application's engine, and the nodes share the application's work.", "A heartbeat is a signal that a node sends
+  repeatedly to show that it is running. The line along the bottom has a section for each node, which rises when the
+  node sends a heartbeat and falls until it sends the next, so a node that stops sending them sinks to the bottom."
+  and, when the card shows workloads, "A workload
   is an ongoing task that the cluster gives to one of its nodes, such as delivering messages to one of the
   application's handlers." Its annotations are "the number of nodes in contact now", "the number of workloads in the
   cluster", "how the workloads are spread across the nodes" and "how recently each node sent a heartbeat". Done: the segment hovercards' advice says
