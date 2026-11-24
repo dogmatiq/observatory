@@ -969,7 +969,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   explainer, a dialog that zooms a copy of the card, with made-up figures, to the middle of the window, with annotations
   around it that point at its parts. Hovercards are then only for drilling down, so the kinds above are worked out
   again with that in mind. The explainer opens from a "?" at the bottom right of every vital card and digest, which
-  shows while the card is pointed at or focused, and always on a touch screen, which can't point.
+  shows while the card is pointed at or focused, and always on a touch screen, which can't point. The copy has
+  made-up figures, fixed for each layout, chosen so that every state worth explaining is shown, such as a "+N", an
+  accent and blur, and it shows only what this card can show, by the rules for how what the nodes support shapes the
+  layout. It is subtly labelled as example figures, and is in shades of gray, except for the part that the reader
+  points at, or whose annotation the reader points at, which is in its own colors.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
