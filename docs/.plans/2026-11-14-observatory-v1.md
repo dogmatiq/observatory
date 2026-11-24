@@ -1001,9 +1001,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   it leaves out: "the rate of handled messages", "the rate at which messages leave the queues, handled or not", "the
   rate of handled commands, not deadlines" or "the rate of handled deadlines, not commands", each "averaged over the
   last minute". While no node reports the messages waiting, the rate is the headline, and the explainer has no bar, no
-  box and no advice about messages waiting. Under the card it says "Commands and deadlines wait on queues until they
-  are delivered. A deadline is delivered when its scheduled time arrives." and "Fewer messages waiting is better. If the
-  number of waiting messages keeps rising, messages are arriving faster than they are being handled." Its box reads
+  box and no advice about messages waiting. Under the card it says what the plan's item on due messages gives, below.
+  Its box reads
   "The statements application's engine spreads messages across several queues. An even spread is better; a queue that
   holds more than its fair share limits parallel throughput."
   The cluster explainer is approved. It has no box, because the cluster card is shown only for an engine that clusters,
