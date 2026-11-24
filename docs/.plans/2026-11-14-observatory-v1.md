@@ -968,7 +968,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   Decided since, and being explored at `/-/annotations`: a vital card or digest is explained all at once by an
   explainer, a dialog that zooms a copy of the card, with made-up figures, to the middle of the window, with annotations
   around it that point at its parts. Hovercards are then only for drilling down, so the kinds above are worked out
-  again with that in mind.
+  again with that in mind. The explainer opens from a "?" at the bottom right of every vital card and digest, which
+  shows while the card is pointed at or focused, and always on a touch screen, which can't point.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
