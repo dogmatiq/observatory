@@ -185,7 +185,9 @@ func TestOverview(t *testing.T) {
 
 					sites := map[string]string{}
 					for _, c := range Clusters(time.Now(), o.Nodes()) {
-						sites[c.ID] = c.Site
+						if c.Site != nil {
+							sites[c.ID] = c.Site.Name
+						}
 					}
 					if sites[a.AsString()] != "eu-west" || sites[b.AsString()] != "" {
 						t.Fatalf("unexpected sites: %v", sites)
@@ -194,11 +196,11 @@ func TestOverview(t *testing.T) {
 					// The view of the cluster names it too, for the places that refer to
 					// the application.
 					r := NewRecorder()
-					if got := viewOf(t, r, o, a).Site; got != "eu-west" {
-						t.Fatalf("unexpected site in the view: got %q, want %q", got, "eu-west")
+					if got := viewOf(t, r, o, a).Site; got == nil || got.Name != "eu-west" {
+						t.Fatalf("unexpected site in the view: got %+v, want %q", got, "eu-west")
 					}
-					if got := viewOf(t, r, o, b).Site; got != "" {
-						t.Fatalf("unexpected site in the view: got %q, want none", got)
+					if got := viewOf(t, r, o, b).Site; got != nil {
+						t.Fatalf("unexpected site in the view: got %+v, want none", got)
 					}
 
 					cancel()

@@ -52,6 +52,10 @@ type Observer struct {
 	// node of, by the ID of the cluster, even after it has forgotten the nodes.
 	records map[string]ClusterRecord
 
+	// remembered is the number of clusters that the Observer has begun to
+	// remember, which gives each record its place in [ClusterRecord.seen].
+	remembered uint64
+
 	// calls is the number of calls to the metrics API that have begun.
 	calls uint64
 
@@ -265,6 +269,11 @@ const idleLimit = 3 * 24 * time.Hour
 // ForgetIdle forgets the nodes of every cluster that none of whose nodes has
 // reported for three days, at the time now, as [Observer.Forget] does, but keeps
 // what it remembers about the cluster itself, as a [ClusterRecord].
+//
+// It forgets the record too if the Observer began to remember another cluster
+// of the same installation after it, which has replaced it, such as when an
+// engine that doesn't run as a cluster restarts with a new ID. A cluster that
+// nothing has replaced is remembered until the Observer is stopped.
 func (o *Observer) ForgetIdle(now time.Time) {
 	o.m.Lock()
 	defer o.m.Unlock()
@@ -284,6 +293,22 @@ func (o *Observer) ForgetIdle(now time.Time) {
 			o.forget(id)
 		}
 	}
+
+	newest := map[installationKey]uint64{}
+	for _, rec := range o.records {
+		k := rec.installationKey()
+		newest[k] = max(newest[k], rec.seen)
+	}
+
+	// A record whose nodes have all been forgotten is of a cluster that has been
+	// idle for at least as long.
+	for id, rec := range o.records {
+		at, ok := latest[id]
+		idle := !ok || now.Sub(at) >= idleLimit
+		if idle && rec.seen < newest[rec.installationKey()] {
+			delete(o.records, id)
+		}
+	}
 }
 
 // ClusterRecord is what an [Observer] remembers about a cluster that it has had
@@ -299,16 +324,24 @@ type ClusterRecord struct {
 
 	Application Application
 
-	// Site is the name of the site that the cluster is deployed to. It is empty
-	// if its nodes named none.
-	Site string
+	// Site is the site that the cluster is deployed to. It is nil if its nodes
+	// named none.
+	Site *Site
+
+	// seen orders the records by when the Observer began to remember them: a
+	// record that it began to remember later has a greater number.
+	seen uint64
 }
 
 // remember updates what the Observer remembers about the cluster of a node that
 // has sent the preamble p. The latest node to connect decides. o.m must be held.
 func (o *Observer) remember(p *enginegrpc.WatchEngineResponse_Preamble) {
 	id := clusterOf(p)
-	rec := o.records[id]
+	rec, ok := o.records[id]
+	if !ok {
+		o.remembered++
+		rec.seen = o.remembered
+	}
 	rec.ID = id
 	rec.Clustered = p.HasCluster()
 
@@ -318,7 +351,7 @@ func (o *Observer) remember(p *enginegrpc.WatchEngineResponse_Preamble) {
 			Key:  identity.GetKey().AsString(),
 		}
 	}
-	if site := p.GetSite().GetName(); site != "" {
+	if site := siteIn(p); site != nil {
 		rec.Site = site
 	}
 

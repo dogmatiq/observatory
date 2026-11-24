@@ -84,7 +84,7 @@ test("it shows nothing until the burst ends", async () => {
 	const { result } = renderHook(() => useWatched("c d", clock));
 	await settle();
 
-	expect(open().map((s) => s.url)).toEqual(["/api/clusters/c%20d/watch"]);
+	expect(open().map((s) => s.url)).toEqual(["/-/api/clusters/c%20d/watch"]);
 	expect(result.current).toEqual({ status: "loading" });
 
 	act(() => {
@@ -328,7 +328,7 @@ test("it closes the stream when the cluster changes, and when the page stops sho
 	await settle();
 
 	expect(first?.closed).toBe(true);
-	expect(open().map((s) => s.url)).toEqual(["/api/clusters/c2/watch"]);
+	expect(open().map((s) => s.url)).toEqual(["/-/api/clusters/c2/watch"]);
 
 	unmount();
 	expect(open()).toHaveLength(0);

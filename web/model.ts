@@ -23,6 +23,28 @@ export interface Application {
 }
 
 /**
+ * Site is a site that clusters are deployed to.
+ */
+export interface Site {
+	name: string;
+
+	/** The key of the site's identity, which is a UUID. */
+	key: string;
+}
+
+/**
+ * Installation is one application at one site, which is what the application
+ * view shows. An application that runs at no site has one installation, with
+ * no site.
+ */
+export interface Installation {
+	application: { name: string; key: string };
+
+	/** The site, which is absent for the installation with no site. */
+	site?: Site;
+}
+
+/**
  * ClusterSummary is one cluster in the list of the clusters that the
  * Observatory knows.
  */
@@ -32,8 +54,8 @@ export interface ClusterSummary {
 
 	application: Application;
 
-	/** The name of the site that the cluster is deployed to, if it has one. */
-	site?: string;
+	/** The site that the cluster is deployed to, if it has one. */
+	site?: Site;
 
 	/**
 	 * Whether any node of the cluster is reporting. A cluster that is not has been

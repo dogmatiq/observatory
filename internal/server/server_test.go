@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"testing/synctest"
@@ -235,7 +236,7 @@ func startWatch(ctx context.Context, h http.Handler, id string) *watchRequest {
 
 	go func() {
 		defer close(w.Done)
-		req := httptest.NewRequest(http.MethodGet, "/api/clusters/"+id+"/watch", nil)
+		req := httptest.NewRequest(http.MethodGet, "/-/api/clusters/"+id+"/watch", nil)
 		h.ServeHTTP(w.Response, req.WithContext(ctx))
 	}()
 
@@ -326,7 +327,7 @@ func TestServer(t *testing.T) {
 		h := New(observe.NewObserver(), observe.NewRecorder())
 
 		t.Run("it lists no clusters, as an empty array", func(t *testing.T) {
-			w := get(h, "/api/clusters")
+			w := get(h, "/-/api/clusters")
 
 			if w.Code != http.StatusOK {
 				t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusOK)
@@ -337,7 +338,7 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("it fails with 404 for a cluster", func(t *testing.T) {
-			w := get(h, "/api/clusters/e5c1bb5a-6ae0-4d3c-bba6-0cdd9e1f4e4a")
+			w := get(h, "/-/api/clusters/e5c1bb5a-6ae0-4d3c-bba6-0cdd9e1f4e4a")
 
 			if w.Code != http.StatusNotFound {
 				t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusNotFound)
@@ -345,7 +346,7 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("it fails with 404 for the stream of a cluster", func(t *testing.T) {
-			w := get(h, "/api/clusters/e5c1bb5a-6ae0-4d3c-bba6-0cdd9e1f4e4a/watch")
+			w := get(h, "/-/api/clusters/e5c1bb5a-6ae0-4d3c-bba6-0cdd9e1f4e4a/watch")
 
 			if w.Code != http.StatusNotFound {
 				t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusNotFound)
@@ -372,7 +373,7 @@ func TestServer(t *testing.T) {
 		t.Run("it lists the cluster with the name of its application", func(t *testing.T) {
 			withCluster(t, func(h http.Handler, id string) {
 				var list []observe.ClusterSummary
-				if err := json.Unmarshal(get(h, "/api/clusters").Body.Bytes(), &list); err != nil {
+				if err := json.Unmarshal(get(h, "/-/api/clusters").Body.Bytes(), &list); err != nil {
 					t.Fatal(err)
 				}
 				if len(list) != 1 || list[0].ID != id || list[0].Application.Name != "statements" {
@@ -383,7 +384,7 @@ func TestServer(t *testing.T) {
 
 		t.Run("it gives the cluster's view, which is not cached", func(t *testing.T) {
 			withCluster(t, func(h http.Handler, id string) {
-				w := get(h, "/api/clusters/"+id)
+				w := get(h, "/-/api/clusters/"+id)
 
 				if w.Code != http.StatusOK {
 					t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusOK)
@@ -400,6 +401,188 @@ func TestServer(t *testing.T) {
 					t.Fatalf("unexpected application: %+v", view.Application)
 				}
 			})
+		})
+	})
+}
+
+// nilUUID is the key of the site of an installation with no site, in the API.
+const nilUUID = "00000000-0000-0000-0000-000000000000"
+
+func TestServerInstallations(t *testing.T) {
+	// app returns an application with the given name and key.
+	app := func(name string, key *uuidpb.UUID) *configpb.Application {
+		return configpb.Application_builder{
+			Identity: identitypb.Identity_builder{Name: name, Key: key}.Build(),
+		}.Build()
+	}
+	site := func(name string, key *uuidpb.UUID) *identitypb.Identity {
+		return identitypb.Identity_builder{Name: name, Key: key}.Build()
+	}
+
+	// keys are the keys and IDs of what the Observatory knows in these tests.
+	type keys struct {
+		EuWest, NamedStatements      *uuidpb.UUID
+		Statements, Billing          *uuidpb.UUID
+		StatementsAtEuWest, Unsited  *uuidpb.UUID
+		BillingAtEuWest, BillingAtNS *uuidpb.UUID
+	}
+
+	// known is an Observatory that knows the statements application at the
+	// eu-west site, run by a cluster, and with no site, run by an engine that
+	// doesn't run as a cluster, and the billing application at the eu-west site
+	// and at a site named "statements", each run by a cluster.
+	known := func(t *testing.T, test func(h http.Handler, k keys)) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+
+			o, r := observe.NewObserver(), observe.NewRecorder()
+			k := keys{
+				EuWest:             uuidpb.Generate(),
+				NamedStatements:    uuidpb.Generate(),
+				Statements:         uuidpb.Generate(),
+				Billing:            uuidpb.Generate(),
+				StatementsAtEuWest: uuidpb.Generate(),
+				Unsited:            uuidpb.Generate(),
+				BillingAtEuWest:    uuidpb.Generate(),
+				BillingAtNS:        uuidpb.Generate(),
+			}
+
+			connectNodeAt(t, ctx, o, k.StatementsAtEuWest, uuidpb.Generate(), site("eu-west", k.EuWest), app("statements", k.Statements))
+			connectEngine(t, ctx, o, enginegrpc.WatchEngineResponse_Preamble_builder{
+				Id:          k.Unsited,
+				Application: app("statements", k.Statements),
+			}.Build())
+			connectNodeAt(t, ctx, o, k.BillingAtEuWest, uuidpb.Generate(), site("eu-west", k.EuWest), app("billing", k.Billing))
+			connectNodeAt(t, ctx, o, k.BillingAtNS, uuidpb.Generate(), site("statements", k.NamedStatements), app("billing", k.Billing))
+
+			test(New(o, r), k)
+		})
+	}
+
+	// installations returns what the API lists for the query, each as the name
+	// of its application, and " at " and the name of its site if it has one.
+	installations := func(t *testing.T, h http.Handler, query string) []string {
+		t.Helper()
+
+		w := get(h, "/-/api/installations"+query)
+		if w.Code != http.StatusOK {
+			t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusOK)
+		}
+
+		var list []observe.Installation
+		if err := json.Unmarshal(w.Body.Bytes(), &list); err != nil {
+			t.Fatal(err)
+		}
+
+		out := []string{}
+		for _, i := range list {
+			label := i.Application.Name
+			if i.Site != nil {
+				label += " at " + i.Site.Name
+			}
+			out = append(out, label)
+		}
+		return out
+	}
+
+	// clusters returns the IDs of the clusters that the API lists for the query.
+	clusters := func(t *testing.T, h http.Handler, query string) []string {
+		t.Helper()
+
+		w := get(h, "/-/api/clusters"+query)
+		if w.Code != http.StatusOK {
+			t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusOK)
+		}
+
+		var list []observe.ClusterSummary
+		if err := json.Unmarshal(w.Body.Bytes(), &list); err != nil {
+			t.Fatal(err)
+		}
+
+		out := []string{}
+		for _, c := range list {
+			out = append(out, c.ID)
+		}
+		return out
+	}
+
+	expect := func(t *testing.T, got []string, want ...string) {
+		t.Helper()
+
+		if want == nil {
+			want = []string{}
+		}
+		if !slices.Equal(got, want) {
+			t.Fatalf("unexpected result: got %q, want %q", got, want)
+		}
+	}
+
+	t.Run("it lists the installations at a site, by the site's key", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, installations(t, h, "?site="+k.EuWest.AsString()), "billing at eu-west", "statements at eu-west")
+		})
+	})
+
+	t.Run("it lists the installations with no site, by the nil UUID", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, installations(t, h, "?site="+nilUUID), "statements")
+
+			body := get(h, "/-/api/installations?site="+nilUUID).Body.String()
+			if strings.Contains(body, `"site"`) {
+				t.Fatalf("expected no site in an installation with no site: %s", body)
+			}
+		})
+	})
+
+	t.Run("it lists the installations of an application, by the application's key", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, installations(t, h, "?application="+k.Billing.AsString()), "billing at eu-west", "billing at statements")
+		})
+	})
+
+	t.Run("it lists the installation of an application at a site, by their names", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, installations(t, h, "?site-name=eu-west&application-name=statements"), "statements at eu-west")
+		})
+	})
+
+	t.Run("it tells a site from an application that has the same name", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, installations(t, h, "?site-name=statements"), "billing at statements")
+			expect(t, installations(t, h, "?application-name=statements"), "statements", "statements at eu-west")
+		})
+	})
+
+	t.Run("it lists no installation, as an empty array, for a name that nothing has", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, installations(t, h, "?application-name=nothing"))
+		})
+	})
+
+	t.Run("it lists the clusters of an installation at a site", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, clusters(t, h, "?site="+k.EuWest.AsString()+"&application="+k.Statements.AsString()), k.StatementsAtEuWest.AsString())
+		})
+	})
+
+	t.Run("it lists the engine of an installation with no site, by the nil UUID", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, clusters(t, h, "?site="+nilUUID+"&application="+k.Statements.AsString()), k.Unsited.AsString())
+		})
+	})
+
+	t.Run("it lists no cluster, as an empty array, for an installation that it doesn't know", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			expect(t, clusters(t, h, "?site="+k.NamedStatements.AsString()+"&application="+k.Statements.AsString()))
+		})
+	})
+
+	t.Run("it fails with 400 for the clusters of an application with no site's key", func(t *testing.T) {
+		known(t, func(h http.Handler, k keys) {
+			if w := get(h, "/-/api/clusters?application="+k.Statements.AsString()); w.Code != http.StatusBadRequest {
+				t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusBadRequest)
+			}
 		})
 	})
 }
@@ -433,10 +616,10 @@ func TestServerDown(t *testing.T) {
 	t.Run("it lists a cluster that it has forgotten the nodes of, as not reporting", func(t *testing.T) {
 		forgotten(t, func(h http.Handler, id string) {
 			var list []observe.ClusterSummary
-			if err := json.Unmarshal(get(h, "/api/clusters").Body.Bytes(), &list); err != nil {
+			if err := json.Unmarshal(get(h, "/-/api/clusters").Body.Bytes(), &list); err != nil {
 				t.Fatal(err)
 			}
-			if len(list) != 1 || list[0].ID != id || list[0].Reporting || list[0].Site != "eu-west" {
+			if len(list) != 1 || list[0].ID != id || list[0].Reporting || list[0].Site == nil || list[0].Site.Name != "eu-west" {
 				t.Fatalf("unexpected clusters: %+v", list)
 			}
 		})
@@ -444,7 +627,7 @@ func TestServerDown(t *testing.T) {
 
 	t.Run("it gives the view of a cluster that it has forgotten the nodes of, as down, with its application and site", func(t *testing.T) {
 		forgotten(t, func(h http.Handler, id string) {
-			w := get(h, "/api/clusters/"+id)
+			w := get(h, "/-/api/clusters/"+id)
 			if w.Code != http.StatusOK {
 				t.Fatalf("unexpected status: got %d, want %d", w.Code, http.StatusOK)
 			}
@@ -453,7 +636,7 @@ func TestServerDown(t *testing.T) {
 			if err := json.Unmarshal(w.Body.Bytes(), &view); err != nil {
 				t.Fatal(err)
 			}
-			if view.Application.Name != "statements" || view.Site != "eu-west" || len(view.Overview.Cluster.Nodes) != 0 {
+			if view.Application.Name != "statements" || view.Site == nil || view.Site.Name != "eu-west" || len(view.Overview.Cluster.Nodes) != 0 {
 				t.Fatalf("unexpected view: %+v", view)
 			}
 		})

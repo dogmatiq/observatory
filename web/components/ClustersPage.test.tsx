@@ -21,7 +21,7 @@ test("it tells apart clusters of one application by their site, or else by the s
 		{
 			id: "11111111-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
 			application,
-			site: "eu-west",
+			site: { name: "eu-west", key: "s" },
 			reporting: true,
 		},
 		{

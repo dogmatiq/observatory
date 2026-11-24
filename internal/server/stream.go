@@ -293,8 +293,8 @@ func documentOf(view observe.ClusterView) map[string]any {
 		"name": view.Application.Name,
 		"key":  view.Application.Key,
 	}
-	if view.Site != "" {
-		application["site"] = view.Site
+	if view.Site != nil {
+		application["site"] = view.Site.Name
 	}
 
 	doc := map[string]any{"application": application}

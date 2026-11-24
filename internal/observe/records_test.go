@@ -35,7 +35,7 @@ func TestRecords(t *testing.T) {
 			connected(t, o, cluster)
 
 			rec, ok := o.Record(cluster.AsString())
-			if !ok || rec.Application.Name != "statements" || rec.Site != "eu-west" || !rec.Clustered {
+			if !ok || rec.Application.Name != "statements" || rec.Site == nil || rec.Site.Name != "eu-west" || !rec.Clustered {
 				t.Fatalf("unexpected record: %+v", rec)
 			}
 		})
@@ -75,7 +75,7 @@ func TestRecords(t *testing.T) {
 			}
 
 			list := o.Clusters(time.Now())
-			if len(list) != 1 || list[0].ID != cluster.AsString() || list[0].Reporting || list[0].Site != "eu-west" || list[0].Application.Name != "statements" {
+			if len(list) != 1 || list[0].ID != cluster.AsString() || list[0].Reporting || list[0].Site == nil || list[0].Site.Name != "eu-west" || list[0].Application.Name != "statements" {
 				t.Fatalf("unexpected clusters: %+v", list)
 			}
 		})
@@ -128,10 +128,10 @@ func TestRecords(t *testing.T) {
 			ID:          "c",
 			Clustered:   true,
 			Application: Application{Name: "statements", Key: "k"},
-			Site:        "eu-west",
+			Site:        &Site{Name: "eu-west", Key: "s"},
 		})
 
-		if view.Application.Name != "statements" || view.Site != "eu-west" {
+		if view.Application.Name != "statements" || view.Site == nil || view.Site.Name != "eu-west" {
 			t.Fatalf("unexpected view: %+v", view)
 		}
 		if view.Overview.Cluster.Nodes == nil || len(view.Overview.Cluster.Nodes) != 0 || view.Overview.Handlers == nil || len(view.Overview.Handlers) != 0 {

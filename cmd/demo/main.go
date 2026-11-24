@@ -2,7 +2,7 @@
 // the user interface can be developed and tried without an engine.
 //
 // It listens on localhost:8080. Run the user interface's development server
-// beside it, which proxies "/api" to this address.
+// beside it, which proxies "/-/api" to this address.
 package main
 
 import (
@@ -67,7 +67,7 @@ func run(ctx context.Context) error {
 	// An engine's node can open a tunnel here, to be observed as well as the
 	// simulated nodes are.
 	mux := http.NewServeMux()
-	mux.Handle("/tunnel", tunnel.Handler(ctx, observer))
+	mux.Handle("/-/tunnel", tunnel.Handler(ctx, observer))
 	mux.Handle("/", server.New(observer, recorder))
 
 	srv := &http.Server{
@@ -80,7 +80,7 @@ func run(ctx context.Context) error {
 		srv.Shutdown(context.Background())
 	}()
 
-	log.Printf("serving the API at http://%s/api/clusters, and tunnels at ws://%s/tunnel", address, address)
+	log.Printf("serving the API at http://%s/-/api/clusters, and tunnels at ws://%s/-/tunnel", address, address)
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

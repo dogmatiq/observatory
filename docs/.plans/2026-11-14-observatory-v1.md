@@ -392,7 +392,7 @@ parts. An item that says "Done" is built.
     means. The rate's card has one when the rate is lost or unavailable, which says that the samples are being averaged,
     with a turning icon, because the rate is being worked out.
   - Every element that is being worked on, or that has something undecided, is shown in every state that it can be in,
-    side by side, at `/review`, because the demo reaches the unusual ones only by chance. A new element gets its section
+    side by side, at `/-/review`, because the demo reaches the unusual ones only by chance. A new element gets its section
     there before it is presented, and an element leaves the page once it is settled, so that the page shows only what is
     still open. A tile is shown whole, in each of its states, and then part by part, in the order of review, from the
     least specific to the most: its icon, its headline, its detail line, its bar and its chart, each with
@@ -403,7 +403,7 @@ parts. An item that says "Done" is built.
     part, or each state, is marked as decided or under review, and what is under review has the recommendation of what
     to decide beside it. A button accepts a recommendation: the dev server keeps the decisions that are made on the page in
     `artifacts/review/decisions.json`, which is not committed, for the agent that the review is with to read and act on. Where there are other wordings or designs of what a state shows, the state shows the recommended one, and the others are in a row of alternatives below the part's states, in a dashed frame named for the state and what is being chosen, which says that accepting the state or one of them is one decision, each with the state's ID and a number, such as "CL 4C1", and a button that accepts it in the state's place. A button at the top of the page plays the animations again.
-    `/vitals` has the words of the popovers of the vital statistics on one page, in every combination of what they
+    `/-/vitals` has the words of the popovers of the vital statistics on one page, in every combination of what they
     count and of the state of the rate, so that they can be read in one go. Its sentences can be rewritten in place: a bar says how many have changed, copies each change, as it was and as it is now, with the card that it is in, to be sent as feedback, and puts them back. The edits are kept in the browser.
   - What each popover says, and the hover state of its element, are being settled one element at a time, by using them,
     and the hover state of an element follows from its content. Done: the bar segments, whose popovers show the thing
@@ -431,7 +431,7 @@ parts. An item that says "Done" is built.
     signal, except for the cluster tile, whose card is about the cluster and gives its ID, so it has the cluster's icon: the events tile's is events, and the queues tile's is messages, so the queues tile's icon and its cards' are an
     envelope, and only a card about a queue has the tray. If the chart and the rate are ever built from the messages that the handlers
     handle, because the queues don't report their removals, the card says so, and says which verb it counts. All of its
-    states are at `/review`. The stats have a chip behind them when pointed at, because a stat
+    states are at `/-/review`. The stats have a chip behind them when pointed at, because a stat
     is a group of elements to read as a whole, and the chip is not for a single element, such as a name. Done: the kind icon, whose card, in the color of the kind, says in the way of the events tile's card, "This section shows information
     about the … aggregate in the … application", so that it is clear when the handler's name is not, such as a handler
     named "aggregate", and then reminds the reader what that kind of handler does. It assumes that the reader knows the
@@ -470,7 +470,7 @@ parts. An item that says "Done" is built.
   bar: "19 messages, 442/min". Each is shown when every node of the cluster says so in its preamble, in
   `EventStreamModel` and `QueueModel`, and not otherwise, because nothing in the spec promises that a node reports every
   stream or queue, or by when, so a stream or a queue that is the only one reported may not be the only one. Decided on
-  `/review` (EV 0B, QU 0B).
+  `/-/review` (EV 0B, QU 0B).
 - The cluster tile, in progress: its headline is the number of live nodes with the workloads that they own, and "0 cluster
   nodes" with the number in red (`Alarm`), and not the words, so that they still make a sentence, with a red accent along the top of the tile, and the heartbeat chart drawn as a flat gray line in the
   middle of its room, because the accent and the words already say what is wrong. It is not the moon's sky, because that
@@ -482,7 +482,7 @@ parts. An item that says "Done" is built.
   describes the bar: as on the other tiles, only the card of a segment of the bar does. Each card keeps to about forty words, as the others do. A segment of the bar has the card of its node, with the node's ID, the
   workloads that it owns and its share of them. If no node's engine divides its work into workloads, the tile leaves the
   workloads out, and has no bar, because a bar of the nodes alone would say only how many there are, which the
-  headline says (decided on `/review`, CL 0D). What one node is, and how it beats, is for the hover of the chart. The page tells four kinds of engine apart, which a node says in its preamble:
+  headline says (decided on `/-/review`, CL 0D). What one node is, and how it beats, is for the hover of the chart. The page tells four kinds of engine apart, which a node says in its preamble:
   one that doesn't cluster, whose preamble has no `cluster`, which has an engine tile in place of the cluster tile, and
   is not drawn as a cluster of one; one that clusters and doesn't divide its work into workloads, whose nodes compete
   for work; one that divides its work and doesn't report the workloads, whose nodes assign themselves workloads and say
@@ -490,11 +490,12 @@ parts. An item that says "Done" is built.
   whose nodes say that they report them, as above. The state document says whether the engine runs as a cluster, and
   whether any node says that it reports its workloads, and a node's workloads are absent until it sends them. The engine tile's headline says whether the engine is online, which is while it is in contact:
   "Online" or, in red with the red accent, "Offline", with no detail line, because the engine never changes from one
-  process to several. Its card says that online means in contact, with contact being lost, and so whether the application is working being unknown, as a status, both in words still to be settled at `/review`, and mentions
+  process to several. Its card says that online means in contact, with contact being lost, and so whether the application is working being unknown, as a status, both in words still to be settled at `/-/review`, and mentions
   neither nodes nor clusters. A page says "offline", and not "down" or "stopped", for an engine or a cluster that isn't reporting, because it
   can't tell a process that has stopped from one that it can't reach. The code and the state document call it `down`. Its chart is the process's
-  heartbeat, and it has no bar. Its icon has a card that says what the tile is about, with the engine's ID. The page
-  of such an engine is at the engine's ID, as a cluster's is at the cluster's. Decided at `/review`: its place in the row of tiles (EN 0C) and the card of its icon (EN 1). Still to do: the popover and hover rule of the heartbeat wave.
+  heartbeat, and it has no bar. Its icon has a card that says what the tile is about, with the engine's ID. Such an
+  engine has no page of its own, because its ID changes each time that it starts; it is seen through its application at
+  its site. Decided at `/-/review`: its place in the row of tiles (EN 0C) and the card of its icon (EN 1). Still to do: the popover and hover rule of the heartbeat wave.
 - Wherever the page names the application, it names the site as well, if the cluster has one ("the statements application at the
   eu-west site"; the title bar says "statements at eu-west"), because an application may run at several sites and a site
   may have several clusters. The site comes from the nodes' preambles, in `ClusterView.Site`, and the state document
@@ -861,7 +862,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   - [ ] **Engines through tenet**: accepting engines through tenet once its two sides work, and checking engines' server
     certificates once their gRPC connections use mutual TLS.
     The accepting side is written: `internal/tunnel` has the HTTP handler that takes a node's tunnel from tenet and gives
-    it to `Observer.Serve`, and `cmd/demo` serves it at `/tunnel`. A node must serve its gRPC server on the network and
+    it to `Observer.Serve`, and `cmd/demo` serves it at `/-/tunnel`. A node must serve its gRPC server on the network and
     address that `internal/tunnel` names: network `dogma`, address `engine`, which runkit serves its gRPC server on
     through the tunnel. A node that doesn't send its preamble within 10 seconds is dropped, because a tunnel can be
     opened by anything that reaches the Observatory. The spec promises no time, and is not amended: the limit is the
@@ -876,8 +877,8 @@ Tick each item when it is done, and write the pull request or commit that did it
     `observe.Recorder` keeps the history behind each chart, one point a second for the last 70 seconds, and makes the
     `ClusterView` of a cluster from what its nodes report: the tiles and the handler cards, with a section left out when
     no node supports its metrics, and a number left out until it can be given. `internal/server` serves `GET
-    /api/clusters` and `GET /api/clusters/{id}` as JSON, and `GET /api/clusters/{id}/watch` as a stream of changes to what the page draws. The pages are `/`, a plain
-    list of the clusters, each with its site or else the start of its ID, that stands in for the universe view, and `/clusters/{id}`. `cmd/demo` serves the API with a
+    /-/api/clusters` and `GET /-/api/clusters/{id}` as JSON, and `GET /-/api/clusters/{id}/watch` as a stream of changes to what the page draws. The pages are `/`, a plain
+    list of the clusters, each with its site or else the start of its ID, that stands in for the universe view, and `/-/cluster/{id}`. `cmd/demo` serves the API with a
     simulated cluster, which is the source of moving data for developing the page. The heartbeat levels and the scrolling
     sparklines are on the page.
   - [ ] **Smoke test**: a real engine with the Observatory, managed by the Observatory's CI.
@@ -886,13 +887,23 @@ Tick each item when it is done, and write the pull request or commit that did it
   it.
 
 ## Open
-- Decided, to build: a person browses by the application at a site. Its page's address is the application's key and the
+- Decided and built: a person browses by the application at a site. Its page's address is the application's key and the
   site, and it is what the clusters page links to. Each cluster that runs it is a drill-down beneath it, by the
   cluster's ID, so two clusters of one application at one site, as in a blue/green deploy, are side by side and not
   merged; with one cluster, the application's page can show it directly. An engine that doesn't run as a cluster gets a
   new ID each time it starts, so each run is a drill-down beneath the application's page by that ID, and a restart is
   a new run under the same page, not a new page that leaves the old one out of contact until it is forgotten.
-- Decided: the permalinks, by keys and IDs, which never change, with singular words. An application nests under a site,
+  Done, with the permalinks below in place of drill-downs: the clusters page links each cluster to the application view
+  of its application at its site, which shows its cluster directly, and lists the clusters, each linking to
+  `/-/cluster/{id}`, while more than one runs it. `Observer.ClustersOf` says which clusters those are: each cluster of
+  the installation that has a node reporting, apart from one that has been replaced, which is one that has no node
+  connected while a cluster of the installation that the Observer began to remember after it has one; and, if no
+  cluster is reporting, the newest, which is down. A restart of an engine that doesn't run as a cluster is therefore the
+  new run on the same page, even while the old run's heartbeat has not expired, and the page, which asks which clusters
+  run the installation every second, moves on to it. The clusters page leaves out a cluster that has been replaced, and
+  `Observer.ForgetIdle` forgets the record of one, as well as its nodes, once it has been idle for 3 days; the newest
+  cluster of an installation is remembered until the Observatory stops, as before.
+- Decided and built: the permalinks, by keys and IDs, which never change, with singular words. An application nests under a site,
   because a site is always bigger than an application. `/` is the universe; `/site/{site key}` a site, with every
   application at it; `/site/{site key}/app/{app key}` the application at that site, which is the view designed so far;
   `/app/{app key}` an application across every site that it runs at, an aggregate, which with only one site shows
@@ -908,6 +919,17 @@ Tick each item when it is done, and write the pull request or commit that did it
   candidates when there are several, and waits for the name to become known when there are none. This relies on
   dogmatiq/dogma#233, accepted for Dogma 1.0.0, which makes every identity name start with a letter or a digit, so
   that no name can be `-`.
+  Done: `web/lib/route.ts` has the addresses, and `/-/fixture`, `/-/terms`, `/-/review` and `/-/vitals` are the
+  pages for development. The API is `GET /-/api/clusters`, which with the query parameters `site` and `application`
+  gives the clusters of one installation, and `GET /-/api/installations`, which the keys or the names of a site and an
+  application filter, with the nil UUID as the key of no site; a name's page asks for both kinds of name and tells them
+  apart. The demo serves its tunnel at `/-/tunnel`. The page's files are under `/-/`, and the dev server serves the
+  page at every address that a browser asks for a page at outside `/-/`, which the Observatory's own server must do
+  too once it serves the page. A name
+  address keeps the address that was visited. `/clusters/{id}` moves to `/-/cluster/{id}` only for an ID that is a
+  UUID, because a site named "clusters" has addresses of the same form. The page of a site, of an application at
+  several sites, and the lists of candidates are plain lists of links until they are designed. Every page that waits
+  for something to become known asks again every second.
 - What a cluster's page shows of `HandlerEventStreamLag`. The spec gives no rule for combining it across nodes, on
   purpose: what makes sense to show is for the Observatory to work out. Until then a cluster shows it only if
   `WatchClusterMetrics` reports it.

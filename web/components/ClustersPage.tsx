@@ -1,12 +1,13 @@
 import { shortId } from "../lib/format.ts";
-import { clusterPath } from "../lib/route.ts";
+import { applicationAtSitePath } from "../lib/route.ts";
 import type { ClusterSummary } from "../model.ts";
 import { Page } from "./Page.tsx";
 import { Popover } from "./Popover.tsx";
 
 /**
  * ClustersPage is the page at the Observatory's first address. It lists the
- * clusters that the Observatory knows, each linking to its own page.
+ * clusters that the Observatory knows, each linking to the application view of
+ * the application that it runs, at its site.
  *
  * The clusters that are reporting are listed first, then those that are not, which
  * the Observatory remembers and has no node of that is reporting, and are marked.
@@ -36,11 +37,18 @@ export function ClustersPage({
 					{ordered(clusters).map((cluster) => (
 						<li key={cluster.id}>
 							<Popover content={`Cluster ${cluster.id}`}>
-								<a href={clusterPath(cluster.id)}>{cluster.application.name}</a>
+								<a
+									href={applicationAtSitePath(
+										cluster.site?.key,
+										cluster.application.key,
+									)}
+								>
+									{cluster.application.name}
+								</a>
 							</Popover>
 							{/* Tells apart clusters that run the same application. */}
 							<span className="ml-2 text-muted">
-								{cluster.site ?? shortId(cluster.id)}
+								{cluster.site?.name ?? shortId(cluster.id)}
 							</span>
 							{!cluster.reporting && (
 								<span className="ml-2 text-muted">out of contact</span>

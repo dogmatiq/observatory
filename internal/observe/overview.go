@@ -29,9 +29,9 @@ type ClusterSummary struct {
 
 	Application Application `json:"application"`
 
-	// Site is the name of the site that the cluster is deployed to. It is empty
-	// if the cluster's nodes name no site.
-	Site string `json:"site,omitempty"`
+	// Site is the site that the cluster is deployed to. It is nil if the
+	// cluster's nodes name no site.
+	Site *Site `json:"site,omitempty"`
 
 	// Reporting is true if any node of the cluster is reporting. A cluster that
 	// the Observatory remembers and has no node of, or none that is reporting,
@@ -45,6 +45,16 @@ type Application struct {
 	Name string `json:"name"`
 
 	// Key is the key of the application's identity, as a UUID.
+	Key string `json:"key"`
+}
+
+// Site is a site that clusters are deployed to. An application at a site is one
+// installation of the application. See [Installation].
+type Site struct {
+	// Name is the name of the site's identity.
+	Name string `json:"name"`
+
+	// Key is the key of the site's identity, as a UUID.
 	Key string `json:"key"`
 }
 
@@ -70,10 +80,11 @@ func Clusters(now time.Time, nodes []Node) []ClusterSummary {
 	return out
 }
 
-// Clusters returns every cluster that the Observer has had a node of, at the time
-// now, sorted by the ID of the cluster: those that it has nodes of, as [Clusters]
-// gives them, and those that it remembers and has no node of, which are not
-// reporting.
+// Clusters returns the clusters that the Observer sees each installation through,
+// as [Observer.ClustersOf] gives them, at the time now, sorted by the ID of the
+// cluster: those that it has nodes of, as [Clusters] gives them, and those that
+// it remembers and has no node of, which are not reporting. A cluster that a
+// newer cluster of its installation has replaced is left out.
 func (o *Observer) Clusters(now time.Time) []ClusterSummary {
 	out := Clusters(now, o.Nodes())
 
@@ -90,6 +101,17 @@ func (o *Observer) Clusters(now time.Time) []ClusterSummary {
 			})
 		}
 	}
+
+	current := map[string]bool{}
+	o.m.Lock()
+	for _, c := range o.current(now) {
+		current[c.ID] = true
+	}
+	o.m.Unlock()
+
+	out = slices.DeleteFunc(out, func(c ClusterSummary) bool {
+		return !current[c.ID]
+	})
 
 	slices.SortFunc(out, func(a, b ClusterSummary) int {
 		return cmp.Compare(a.ID, b.ID)
@@ -193,29 +215,44 @@ func applicationOf(now time.Time, nodes []Node) (Application, *configpb.Applicat
 	}, config
 }
 
-// siteOf returns the name of the site that a cluster's nodes name, or "" if none
-// does. If they name different sites, it is the name of the node with the lowest
-// ID that names one.
-func siteOf(nodes []Node) string {
-	site, from := "", ""
+// siteOf returns the site that a cluster's nodes name, or nil if none does. If
+// they name different sites, it is the site of the node with the lowest ID that
+// names one.
+func siteOf(nodes []Node) *Site {
+	var (
+		site *Site
+		from string
+	)
 	for _, n := range nodes {
-		name := n.Preamble.GetSite().GetName()
+		s := siteIn(n.Preamble)
 		id := n.Preamble.GetId().AsString()
-		if name != "" && (from == "" || id < from) {
-			site, from = name, id
+		if s != nil && (site == nil || id < from) {
+			site, from = s, id
 		}
 	}
 	return site
+}
+
+// siteIn returns the site that a node names in its preamble, or nil if it names
+// none.
+func siteIn(p *enginegrpc.WatchEngineResponse_Preamble) *Site {
+	if !p.HasSite() {
+		return nil
+	}
+	return &Site{
+		Name: p.GetSite().GetName(),
+		Key:  p.GetSite().GetKey().AsString(),
+	}
 }
 
 // ClusterView is everything that the cluster view of one cluster shows.
 type ClusterView struct {
 	Application Application `json:"application"`
 
-	// Site is the name of the site that the cluster is deployed to. It is empty
-	// if the cluster's nodes name no site. Wherever the view refers to the
-	// application, it says which site, because an application may run at several.
-	Site string `json:"site,omitempty"`
+	// Site is the site that the cluster is deployed to. It is nil if the
+	// cluster's nodes name no site. Wherever the view refers to the application,
+	// it says which site, because an application may run at several.
+	Site *Site `json:"site,omitempty"`
 
 	// Down is true if no node of the cluster is reporting now. If the Observer
 	// still has nodes of it, Overview is what it was when a node last reported, with

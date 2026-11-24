@@ -65,7 +65,7 @@ const decisionsFile = "artifacts/review/decisions.json";
 
 /**
  * reviewDecisions is a plugin of the dev server that keeps the decisions made on
- * the review page, `/review`, in {@link decisionsFile}. GET `/__review/decisions`
+ * the review page, `/-/review`, in {@link decisionsFile}. GET `/__review/decisions`
  * returns them, and POST adds one, which is a JSON object with the ID of what was
  * decided, the decision, and the recommendation that was accepted, if one was. It
  * is only in the dev server: the Observatory itself has no review page.
@@ -118,14 +118,65 @@ function reviewDecisions() {
 	};
 }
 
+/**
+ * The beginning of every address that is the Observatory's own, such as those of
+ * its API and of the page's files. Every other address is a name.
+ */
+const ownPrefix = "/-/";
+
+/** A request to the dev server, as {@link pageAtEveryName} reads it. */
+interface PageRequest {
+	method?: string;
+	url?: string;
+	headers: { accept?: string };
+}
+
+/**
+ * pageAtEveryName is a plugin of the dev server that serves the page for every
+ * address that a browser asks for a page at and that is not one of the
+ * Observatory's own, because the page shows each name that it is given. The
+ * dev server serves the page itself only within {@link ownPrefix}, which is
+ * where the page's files are, so the plugin asks it for the page there.
+ */
+function pageAtEveryName() {
+	return {
+		name: "page-at-every-name",
+		configureServer(server: {
+			middlewares: {
+				use(
+					handler: (req: PageRequest, res: unknown, next: () => void) => void,
+				): void;
+			};
+		}) {
+			server.middlewares.use((req, _res, next) => {
+				const path = req.url ?? "/";
+				if (
+					(req.method === "GET" || req.method === "HEAD") &&
+					req.headers.accept?.includes("text/html") &&
+					!path.startsWith(ownPrefix) &&
+					!path.startsWith("/__")
+				) {
+					req.url = ownPrefix;
+				}
+				next();
+			});
+		},
+	};
+}
+
 export default defineConfig({
 	root: "web",
-	plugins: [react(), tailwindcss(), reviewDecisions()],
+
+	// The page's files are served within the Observatory's own addresses, so that
+	// none of them is mistaken for a name.
+	base: ownPrefix,
+
+	plugins: [react(), tailwindcss(), reviewDecisions(), pageAtEveryName()],
 	server: {
 		// The Observatory's Go server answers the page's requests for data. In
 		// development the page is served by Vite instead, so it forwards them.
 		proxy: {
-			"/api": {
+			"/-/api": {
 				target: "http://localhost:8080",
 				configure: (proxy) => closeStreamsOfLostServer(proxy),
 			},

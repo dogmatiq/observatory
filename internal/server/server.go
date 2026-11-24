@@ -3,7 +3,7 @@
 //
 // # The stream
 //
-// GET /api/clusters/{id}/watch serves a stream of server-sent events. It
+// GET /-/api/clusters/{id}/watch serves a stream of server-sent events. It
 // describes the cluster as a state document, and then says only what changes,
 // so that the same data is never sent twice to a page that already has it. The
 // document is the cluster's own data. How a page lays it out is the page's
@@ -34,8 +34,8 @@
 // The document has these fields. Every collection is an object that is keyed by
 // the ID of what it holds, so that a patch can add, change or remove one entry:
 //
-//   - "application": {"name", "key", "site"}. "site" is absent if no node names
-//     a site.
+//   - "application": {"name", "key", "site"}. "site" is the name of the site,
+//     and is absent if no node names a site.
 //   - "cluster": {"reportsWorkloads"}, if the engine runs as a cluster. It is
 //     absent for an engine that doesn't, whose ID is the ID in the address.
 //     "reportsWorkloads" is true if any node says that it reports the
@@ -97,36 +97,73 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"slices"
 	"time"
 
 	"github.com/dogmatiq/observatory/internal/observe"
 )
 
-// New returns a handler that serves the API that the user interface calls:
+// noSite is the key that the API uses for the site of an installation with no
+// site, which is the nil UUID. Dogma doesn't allow the nil UUID as the key of an
+// identity, so no site has it.
+const noSite = "00000000-0000-0000-0000-000000000000"
+
+// New returns a handler that serves the API that the user interface calls. Its
+// paths begin with "/-/api/", because the Observatory's own paths all begin with
+// "/-/", and the others are the names of sites and applications.
 //
-//   - GET /api/clusters lists the clusters, as an array of
-//     [observe.ClusterSummary].
-//   - GET /api/clusters/{id} gives the cluster view of one cluster, as an
+//   - GET /-/api/clusters lists the clusters that the Observatory sees each
+//     installation through, as an array of [observe.ClusterSummary], sorted by
+//     ID. With the query parameters "site" and "application", which are the keys
+//     of a site and an application, it lists only those of that installation,
+//     as [observe.Observer.ClustersOf] gives them. The array is empty if the
+//     Observatory doesn't know the installation. It fails with the status 400
+//     if only one of the two is given.
+//   - GET /-/api/clusters/{id} gives the cluster view of one cluster, as an
 //     [observe.ClusterView]. It fails with the status 404 if the Observatory
 //     doesn't know the cluster.
-//   - GET /api/clusters/{id}/watch keeps what a page draws of the cluster up to
+//   - GET /-/api/clusters/{id}/watch keeps what a page draws of the cluster up to
 //     date, as a stream of server-sent events that only say what changed. See
 //     the package documentation. It fails with the status 404 if the Observatory doesn't know the
 //     cluster.
+//   - GET /-/api/installations lists the installations that the Observatory
+//     knows, as an array of [observe.Installation], in the order that
+//     [observe.Observer.Installations] gives. Each query parameter leaves out the
+//     installations that don't match it: "site" is the key of the site,
+//     "application" the key of the application, "site-name" the name of the site
+//     and "application-name" the name of the application. A name matches only if
+//     it is the same, byte for byte.
+//
+// The key of the site of an installation with no site is the nil UUID,
+// 00000000-0000-0000-0000-000000000000, wherever the API takes a site's key. An
+// installation with no site has no "site" in what the API gives.
 //
 // None is cached.
 func New(o *observe.Observer, r *observe.Recorder) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /api/clusters", func(w http.ResponseWriter, _ *http.Request) {
-		clusters := o.Clusters(time.Now())
+	mux.HandleFunc("GET /-/api/clusters", func(w http.ResponseWriter, req *http.Request) {
+		q := req.URL.Query()
+		var clusters []observe.ClusterSummary
+
+		switch {
+		case !q.Has("site") && !q.Has("application"):
+			clusters = o.Clusters(time.Now())
+		case q.Has("site") && q.Has("application"):
+			clusters = o.ClustersOf(time.Now(), siteKeyOf(q.Get("site")), q.Get("application"))
+		default:
+			http.Error(w, `give both "site" and "application", or neither`, http.StatusBadRequest)
+			return
+		}
+
 		if clusters == nil {
 			clusters = []observe.ClusterSummary{}
 		}
 		respond(w, clusters)
 	})
 
-	mux.HandleFunc("GET /api/clusters/{id}", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("GET /-/api/clusters/{id}", func(w http.ResponseWriter, req *http.Request) {
 		view, ok := viewOf(o, r, time.Now(), req.PathValue("id"))
 		if !ok {
 			http.NotFound(w, req)
@@ -135,11 +172,53 @@ func New(o *observe.Observer, r *observe.Recorder) http.Handler {
 		respond(w, view)
 	})
 
-	mux.HandleFunc("GET /api/clusters/{id}/watch", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("GET /-/api/clusters/{id}/watch", func(w http.ResponseWriter, req *http.Request) {
 		serveStream(w, req, o, r)
 	})
 
+	mux.HandleFunc("GET /-/api/installations", func(w http.ResponseWriter, req *http.Request) {
+		q := req.URL.Query()
+
+		installations := slices.DeleteFunc(o.Installations(), func(i observe.Installation) bool {
+			return !matches(q, i)
+		})
+
+		respond(w, installations)
+	})
+
 	return mux
+}
+
+// matches returns true if the installation matches every query parameter of
+// GET /-/api/installations. See [New].
+func matches(q url.Values, i observe.Installation) bool {
+	if i.Site == nil {
+		// An installation with no site has no site's name to match.
+		return !q.Has("site-name") &&
+			matching(q, "site", noSite) &&
+			matching(q, "application", i.Application.Key) &&
+			matching(q, "application-name", i.Application.Name)
+	}
+
+	return matching(q, "site", i.Site.Key) &&
+		matching(q, "site-name", i.Site.Name) &&
+		matching(q, "application", i.Application.Key) &&
+		matching(q, "application-name", i.Application.Name)
+}
+
+// matching returns true if the query has no parameter of the given name, or if
+// the parameter is the given value.
+func matching(q url.Values, name, value string) bool {
+	return !q.Has(name) || q.Get(name) == value
+}
+
+// siteKeyOf returns the key of a site, as [observe.Observer.ClustersOf] takes
+// it, from the key that the API uses, which is [noSite] for no site.
+func siteKeyOf(key string) string {
+	if key == noSite {
+		return ""
+	}
+	return key
 }
 
 // viewOf returns the cluster view of a cluster, whether it has nodes now or only
