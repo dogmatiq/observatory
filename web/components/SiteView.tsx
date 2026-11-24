@@ -161,8 +161,7 @@ export const siteAbout = {
 	),
 	applications: (site: SiteData["site"]) => (
 		<p>
-			This section shows which of <TheApplications site={site} /> are in
-			contact.
+			This section shows information about <TheApplications site={site} />.
 		</p>
 	),
 };
