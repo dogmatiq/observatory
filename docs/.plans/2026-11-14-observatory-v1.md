@@ -996,6 +996,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   multiple-queues models are for, which is handling the streams or queues in parallel; the spec doesn't promise that
   unconditionally, and isn't changed to. Done: the segment hovercards' advice says
   "An even spread is better".
+- Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
+  the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
+  annotation says whether it is messages handled, messages removed, commands handled or deadlines handled. The chart's
+  hovercard already gives a unit for each ("handled", "removals", "commands", "deadlines"), which the detail line could
+  use, as in "442 commands/min". While the rate is the headline, its label already says what it counts.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
