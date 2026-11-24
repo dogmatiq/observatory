@@ -1003,7 +1003,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   are delivered. A deadline is delivered when its scheduled time arrives." and "Fewer messages waiting is better. If the
   number of waiting messages keeps rising, messages are arriving faster than they are being handled." Its box reads
   "The statements application's engine spreads messages across several queues. An even spread is better; a queue that
-  holds more than its fair share limits parallel throughput." Done: the segment hovercards' advice says
+  holds more than its fair share limits parallel throughput."
+  The cluster explainer is approved. It has no box, because the cluster card is shown only for an engine that clusters,
+  so the card already says what the box would. Under the card it says "Each node is one running process of the
+  application's engine, and the nodes share the application's work." and, when the card shows workloads, "A workload
+  is an ongoing task that the cluster gives to one of its nodes, such as delivering messages to one of the
+  application's handlers." Its annotations are "the number of nodes in contact now", "the number of workloads in the
+  cluster", "how the workloads are spread across the nodes" and "how recently each node sent a heartbeat". Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
