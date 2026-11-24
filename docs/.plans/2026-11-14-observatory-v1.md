@@ -981,11 +981,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   Text that is true of this application only is drawn apart, on a sunken ground, with the icon of what it is about.
   It names the application, in bold. The events card's reads "The statements application spreads its events across
   several event streams. An even spread is better; events on a stream are processed in order, so a stream that holds
-  more than its fair share limits throughput." and "Each aggregate instance's events are appended to a single event
+  more than its fair share limits throughput." and "Each aggregate instance's events are written to a single event
   stream, so their order is kept.", shown whenever the card shows its bar of streams, which an engine that reports the
   multiple-streams model shows even while only one stream has been seen. In a window too narrow for the annotations beside the card at full
   size, each is a numbered marker on the card, and their words are listed under it, by number.
-  The events card's explainer defines an event stream only when the card shows its streams. Each bar's advice, such
+  When the events card shows its streams, its explainer says "Each event that the application records is written to a
+  single event stream. An event stream keeps its events in the order they were written, so they can be read in that
+  order." Each bar's advice, such
   as "An even spread is better", is in the explainer of its card, only when the card has the bar, and leaves the
   hovercards of the bar's segments, which then only drill down; that move is made when the explainer is built. A bar's
   amounts are a spread: "distribution" and "shared among" are not used. In the explainer the advice
