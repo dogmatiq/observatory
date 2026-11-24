@@ -1014,13 +1014,20 @@ Tick each item when it is done, and write the pull request or commit that did it
   section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats
   stop." Its paragraphs describe
   what happens rather than define terms, as the events and queues explainers' do. Its annotations are "the number of nodes in contact now", "the number of workloads in the
-  cluster", "how the workloads are spread across the nodes" and "how recently each node sent a heartbeat". Done: the segment hovercards' advice says
+  cluster", "how the workloads are spread across the nodes" and "how recently each node sent a heartbeat".
+  The aggregate's digest explainer is approved. Its arrows point at the figures themselves: the handler's name from
+  above the card, the kind and the instances level from the left, the commands waiting from above, and the failing
+  count level from the right. Its box says "several event streams", so it is there only when the bar has more than one
+  segment. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
   annotation says whether it is messages handled, messages removed, commands handled or deadlines handled. The chart's
   hovercard already gives a unit for each ("handled", "removals", "commands", "deadlines"), which the detail line could
   use, as in "442 commands/min". While the rate is the headline, its label already says what it counts.
+- To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
+  event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
+  engine's event stream model from the server for this, as the events card has it.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
