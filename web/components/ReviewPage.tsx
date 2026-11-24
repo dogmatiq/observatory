@@ -44,6 +44,7 @@ import {
 	ApplicationsTile,
 	SiteBreakdown,
 	SiteOverview,
+	SiteTotals,
 	siteAbout,
 	siteEventRateWords,
 	siteHandlingWords,
@@ -324,15 +325,44 @@ export function ReviewPage() {
 			<Tile
 				code="SH"
 				title="Site view: the headlines' words"
-				note="What the card of each tile's headline says, and the detail lines."
+				note="What each tile's headline and detail line say, and then what the card of each headline says."
 			>
 				<Part
 					step={1}
 					title="The headlines and detail lines"
 					notDeciding={
-						"The card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
+						"The cards that open when the headlines and detail lines are pointed at (SH 2); the cards of the icons (SW); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
 					}
-					note="The events tile's headline is the events per minute, and its detail line gives the number of event streams of all the applications together, as in &quot;in 412 streams&quot;. The queues tile's is the messages waiting, with those that are failing, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute, as in &quot;messages in 37 queues, 19.6K/min&quot;. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, as in &quot;94 +2&quot;, and its detail line is the word &quot;applications&quot;."
+					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the number of event streams of all the applications together. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
+				>
+					<State
+						label="Two applications out of contact, three with failing messages"
+						recommendation="Approve, with these words. The events and queues tiles' detail lines have the shape of the cluster view's, quoted below, and the applications tile's is its noun alone, because its headline says the rest."
+						precedents={[
+							{
+								where: "On the cluster view, the detail lines",
+								status: "settled",
+								words: (
+									<>
+										<p>events per minute, 844 events in 1 stream</p>
+										<p>messages in 2 queues, 370/min</p>
+									</>
+								),
+							},
+						]}
+						wide
+					>
+						<SiteDemo data={siteOf(someOut, euWest)} only="totals" />
+					</State>
+				</Part>
+
+				<Part
+					step={2}
+					title="The cards of the headlines"
+					notDeciding={
+						"The words on the tiles themselves (SH 1); the card of the messages waiting, which is the cluster view's and settled; the cards of the icons (SW); the cards of the bars' segments (SB)."
+					}
+					note="The card that opens when a tile's headline, or the words of its detail line, are pointed at."
 				>
 					<State
 						label="The card of the applications in contact"
@@ -1527,7 +1557,13 @@ const someOut = withContact(siteApplications, {
  * arrive from each application that is in contact, each at its own pace, as they
  * do on the view, so that its chart moves.
  */
-function SiteDemo({ data, only }: { data: SiteData; only?: "applications" }) {
+function SiteDemo({
+	data,
+	only,
+}: {
+	data: SiteData;
+	only?: "applications" | "totals";
+}) {
 	const beats = useRef(
 		new Map<string, { next: number; interval: number; beats: number[] }>(),
 	);
@@ -1581,6 +1617,8 @@ function SiteDemo({ data, only }: { data: SiteData; only?: "applications" }) {
 		<LiveData receivedAt={receivedAt}>
 			{only === "applications" ? (
 				<ApplicationsTile data={live} />
+			) : only === "totals" ? (
+				<SiteTotals data={live} />
 			) : (
 				<SiteOverview data={live} />
 			)}
