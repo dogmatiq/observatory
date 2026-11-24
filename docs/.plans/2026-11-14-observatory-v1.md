@@ -940,7 +940,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   red "+N", as in "4 +1", as the site view's applications tile does, without the red accent, which stays for when every
   node is out of contact, because the other nodes still work. The members are those of the membership rule, from the
   nodes' sets of live nodes, so a node that leaves cleanly isn't counted. An engine that doesn't report its live nodes
-  has no "+N". The headline's card gets the worked example of a number set apart.
+  has no "+N". The headline's card gets the worked example of a number set apart. The cluster explainer then gets an
+  annotation of its own for the "+N", along the lines of "the number of nodes out of contact", placed by the rules for a
+  figure beside the headline, and a mockup variant, whose wording is reviewed then.
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with the events in the event streams of all the applications together, and the number of
   those streams, which is how widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
