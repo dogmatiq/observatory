@@ -306,7 +306,14 @@ function Moon({
 			<svg
 				data-moon=""
 				aria-hidden="true"
-				className="pointer-events-auto absolute top-[7px] right-[14%] size-[34px] overflow-visible motion-safe:animate-[moonrise_30s_ease-out_both]"
+				className={cn(
+					"pointer-events-auto absolute top-[7px] right-[14%] size-[34px] overflow-visible transition-[filter] duration-300 ease-out motion-reduce:transition-none motion-safe:animate-[moonrise_30s_ease-out_both]",
+					// The moon glows while it is pointed at: white in the night, and a warm
+					// light in the day, which a white glow would be lost in.
+					tone === "night"
+						? "hover:drop-shadow-[0_0_6px_rgb(255_255_255/0.75)]"
+						: "hover:drop-shadow-[0_0_6px_rgb(255_214_120/0.95)]",
+				)}
 				viewBox="-15 -15 30 30"
 			>
 				<defs>
