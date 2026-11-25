@@ -1047,7 +1047,7 @@ export function ReviewPage() {
 				>
 					<State
 						label="Online"
-						recommendation="Approve. It says what &quot;online&quot; rests on, the engine's heartbeats arriving in time, and what follows from it, and explains the heartbeat chart as the cluster card's explainer does, for one process."
+						recommendation="Approve. It explains the heartbeat chart as the cluster card's explainer does, for one process, and says what the card shows when the heartbeats stop, which gives &quot;online&quot; its meaning."
 						wide
 					>
 						<Explained spec={engineExplainer} />
@@ -1826,7 +1826,7 @@ const engineExplainer: ExplainerSpec = {
 		},
 	],
 	paragraphs: [
-		"The engine sends heartbeats to show that it is running. It is online while its heartbeats arrive in time, so the figures on this view are current. The heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
+		"The engine sends heartbeats to show that it is running. The heartbeat chart rises with each heartbeat and falls until the next. If the heartbeats stop, the chart sinks to the bottom, and the card shows the engine as offline.",
 	],
 	before: [
 		"Icon: This section shows information about the engine that runs the statements application at the eu-west site.",
