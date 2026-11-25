@@ -2103,7 +2103,7 @@ const siteEventsExplainer: ExplainerSpec = {
 	],
 	paragraphs: [
 		{
-			text: "Each event that an application records is written to an event stream. Streams store events in the order they are written, so they can be read in that order.",
+			text: "Events that an application records are written to event streams. Streams store events in the order they are written, so they can be read in that order.",
 			when: { has: "stream" },
 			compare:
 				"the same, with “the application”, and then a box: The statements application's engine spreads events across several event streams. An even spread is better; a stream that holds more than its fair share limits parallel throughput. Each aggregate instance is bound to a single stream so that its events can be read in order.",
