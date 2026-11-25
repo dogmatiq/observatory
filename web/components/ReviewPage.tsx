@@ -20,6 +20,7 @@ import type {
 	Application,
 	LiveNode,
 	OverviewData,
+	SiteApplication,
 	SiteData,
 } from "../model.ts";
 import { ApplicationName } from "./ApplicationName.tsx";
@@ -491,18 +492,16 @@ export function ReviewPage() {
 					<Part
 						step={1}
 						title="The applications tile's chart"
-						deciding="How the applications tile's heartbeat chart gives each application in contact a share, and what happens to an application's share when contact is lost."
-						notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's words (SH 1) and its explainer (SW 3)."
-						recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
-						note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
+						deciding="How the applications tile's heartbeat chart gives each application in contact a share, which heartbeats an application's share follows, and what happens to it when contact is lost."
+						notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's (CL 5), including how a node's section falls to its deadline; the tile's words (SH 1) and its explainer (SW 3)."
+						note="Each application in contact has an equal share of the chart's width. Before, an application's share follows the heartbeats of whichever of its nodes sent the latest one, and falls over three of that node's usual intervals. After, it follows the application's deadline, which is the latest of its nodes' deadlines, because the application is in contact while any of its nodes is: a heartbeat raises it only if it moves that deadline later, and it falls to empty at the deadline, which is when the application goes out of contact. Its share then shrinks away. Each application here has the fixture's number of nodes, from one to six, which beat every two to five seconds, with a deadline 15 seconds after each heartbeat. Stop an application to see it go."
 					>
-						<State label="Every application in contact" wide>
-							<div className="max-w-md">
-								<SiteDemo
-									data={siteOf(siteApplications.slice(0, 12), euWest)}
-									only="applications"
-								/>
-							</div>
+						<State
+							label="Applications in contact, before and after"
+							recommendation="Approve the after. A share is empty exactly when its application goes out of contact, and no one node's pace stands for the application's."
+							wide
+						>
+							<ApplicationBeats applications={siteApplications.slice(0, 12)} />
 						</State>
 					</Part>
 				</Tile>
@@ -846,7 +845,7 @@ export function ReviewPage() {
 						step={0}
 						title="The tile"
 						deciding="How the cluster tile looks while a node doesn't report its workloads."
-						notDeciding="The statuses, which become alert flags (FL); the explainer, which is approved; the chart, which is settled (CL 5)."
+						notDeciding="The statuses, which become alert flags (FL); the explainer, which is approved; the chart (CL 5)."
 					>
 						{(
 							[
@@ -977,10 +976,15 @@ export function ReviewPage() {
 					<Part
 						step={5}
 						title="The chart"
-						decided={true}
-						note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. Add and remove nodes to see each."
+						deciding="How a node's section of the chart falls between its heartbeats: to empty at the deadline that its latest heartbeat gives, which is when the Observatory takes it to be out of contact."
+						notDeciding="The rest of how the chart moves, which is settled: the static and the lens with no node live, the ripple when the first comes back, and the line settling when the last goes."
+						note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. Today a node's section falls to empty over three of the usual intervals between its heartbeats, as the browser has seen them. With deadlines, it falls to empty at the deadline of its latest heartbeat: the time by which the node says that it sends the next, or, if it says none, three of the intervals that its engine gives. The nodes here beat every two to five seconds, with a deadline 15 seconds after each heartbeat, as the demo engine's do. Add nodes, and stop them, to see each."
 					>
-						<State label="Nodes coming and going">
+						<State
+							label="Nodes coming and going, before and after"
+							recommendation="Approve the after. A section is empty exactly when its node is out of contact, so the chart never shows a node as gone while it is in contact, or as there after it has gone."
+							wide
+						>
 							<Nodes application={application} />
 						</State>
 					</Part>
@@ -1086,7 +1090,6 @@ export function ReviewPage() {
 	);
 }
 
-/** An application of the site view's fixture, out of contact. */
 /**
  * Flagged draws a card with an alert flag to the left of its anchor, which is the
  * card's icon. Pointing at the flag shows the status in a tooltip. It shows how a
@@ -1398,8 +1401,8 @@ interface DemoNode {
 	/** The usual time between its heartbeats, in milliseconds. */
 	interval: number;
 
-	/** When it next beats, on the browser's clock. */
-	next: number;
+	/** When it next beats, on the browser's clock, or undefined once it has stopped. */
+	next: number | undefined;
 
 	/** The times of its latest heartbeats, oldest first, on the browser's clock. */
 	beats: number[];
@@ -1409,10 +1412,83 @@ interface DemoNode {
 const demoNodes = 8;
 
 /**
- * A cluster tile that has no node, to which nodes can be added and from which they
- * can be taken away, as nodes join and leave a cluster. Each node beats at its own
- * pace while it is there, and each beat is data that arrives, as it does on the
- * cluster's page.
+ * How long after a demonstration node's heartbeat arrives the heartbeat expires,
+ * in milliseconds, which is the demo engine's: longer than the longest of the
+ * nodes' intervals.
+ */
+const demoExpiry = 15_000;
+
+/**
+ * demoNode returns a node of a demonstration, which beats every two to five
+ * seconds, as the demo engine's nodes do, and has just beaten.
+ */
+function demoNode(id: string, now: number): DemoNode {
+	const interval = 2000 + Math.random() * 3000;
+	return {
+		id,
+		workloads: 1 + Math.floor(Math.random() * 3),
+		interval,
+		next: now + interval,
+		beats: [now],
+	};
+}
+
+/**
+ * beat makes each node that is due beat, and takes away each node that has
+ * stopped once its latest heartbeat has expired, as the Observatory takes it to
+ * be out of contact then. It returns true if anything changed.
+ */
+function beat(nodes: DemoNode[], now: number): boolean {
+	let changed = false;
+
+	for (const n of nodes) {
+		if (n.next !== undefined && now >= n.next) {
+			changed = true;
+			n.beats = [...n.beats, now].slice(-9);
+			n.next = now + n.interval * (0.9 + Math.random() * 0.2);
+		}
+	}
+
+	const live = nodes.filter(
+		(n) => n.next !== undefined || now < (n.beats.at(-1) ?? 0) + demoExpiry,
+	);
+	if (live.length !== nodes.length) {
+		nodes.splice(0, nodes.length, ...live);
+		changed = true;
+	}
+
+	return changed;
+}
+
+/**
+ * SideBySide shows two things side by side, each with a caption above it,
+ * such as a chart before and after a change.
+ */
+function SideBySide({
+	items,
+}: {
+	items: readonly (readonly [string, ReactNode])[];
+}) {
+	return (
+		<div className="flex flex-wrap items-start gap-8">
+			{items.map(([caption, item]) => (
+				<div key={caption} className="flex w-[360px] flex-col gap-2">
+					<span className="text-sm font-semibold">{caption}</span>
+					{item}
+				</div>
+			))}
+		</div>
+	);
+}
+
+/**
+ * Nodes is a cluster tile that has no node, to which nodes can be added, and
+ * whose nodes can be stopped, as nodes join and leave a cluster, drawn twice
+ * from the same heartbeats, once with no deadlines, so that each node's level
+ * drains over three of its usual intervals, and once with the deadline of each
+ * node's latest heartbeat, to which its level drains. Each node beats at its own pace while it runs, and each beat is
+ * data that arrives, as it does on the cluster's page. A node that is stopped
+ * sends no more heartbeats, and leaves when its latest one expires.
  */
 function Nodes({ application }: { application: Application }) {
 	const nodes = useRef<DemoNode[]>([]);
@@ -1422,23 +1498,15 @@ function Nodes({ application }: { application: Application }) {
 	useEffect(() => {
 		const timer = window.setInterval(() => {
 			const now = performance.now();
-			let beat = false;
-
-			for (const n of nodes.current) {
-				if (now >= n.next) {
-					beat = true;
-					n.beats = [...n.beats, now].slice(-9);
-					n.next = now + n.interval * (0.9 + Math.random() * 0.2);
-				}
-			}
-
-			if (beat) {
+			if (beat(nodes.current, now)) {
 				setReceivedAt(now);
 			}
 		}, 50);
 
 		return () => window.clearInterval(timer);
 	}, []);
+
+	const running = nodes.current.filter((n) => n.next !== undefined);
 
 	const add = () => {
 		if (nodes.current.length >= demoNodes) {
@@ -1447,39 +1515,45 @@ function Nodes({ application }: { application: Application }) {
 
 		const now = performance.now();
 		added.current++;
-		nodes.current = [
-			...nodes.current,
-			{
-				// Ascending, because the page lists nodes by ID.
-				id: `00000000-0000-4000-8000-${String(added.current).padStart(12, "0")}`,
-				workloads: 1 + Math.floor(Math.random() * 3),
-				interval: 1500 + Math.random() * 2000,
-				next: now + 1500 + Math.random() * 2000,
-				beats: [now],
-			},
-		];
+		// Ascending, because the page lists nodes by ID.
+		const id = `00000000-0000-4000-8000-${String(added.current).padStart(12, "0")}`;
+		nodes.current = [...nodes.current, demoNode(id, now)];
 		setReceivedAt(now);
 	};
 
-	const remove = (all: boolean) => {
-		nodes.current = all ? [] : nodes.current.slice(0, -1);
+	const stop = (all: boolean) => {
+		for (const n of all ? running : running.slice(-1)) {
+			n.next = undefined;
+		}
 		setReceivedAt(performance.now());
 	};
+
+	const tile = (deadlines: boolean) => (
+		<ClusterTile
+			application={application}
+			data={{
+				reportsWorkloads: true,
+				nodes: nodes.current.map((n) => ({
+					id: n.id,
+					workloads: n.workloads,
+					heartbeats: n.beats.map((t) => receivedAt - t),
+					deadline: deadlines
+						? (n.beats.at(-1) ?? receivedAt) + demoExpiry - receivedAt
+						: undefined,
+				})),
+			}}
+			href={undefined}
+		/>
+	);
 
 	return (
 		<div className="flex flex-col gap-3">
 			<LiveData receivedAt={receivedAt}>
-				<ClusterTile
-					application={application}
-					data={{
-						reportsWorkloads: true,
-						nodes: nodes.current.map((n) => ({
-							id: n.id,
-							workloads: n.workloads,
-							heartbeats: n.beats.map((t) => receivedAt - t),
-						})),
-					}}
-					href={undefined}
+				<SideBySide
+					items={[
+						["Before: over three of the usual intervals", tile(false)],
+						["After: to the deadline", tile(true)],
+					]}
 				/>
 			</LiveData>
 			<div className="flex flex-wrap gap-2">
@@ -1494,25 +1568,187 @@ function Nodes({ application }: { application: Application }) {
 				<button
 					type="button"
 					className={button}
-					disabled={nodes.current.length === 0}
-					onClick={() => remove(false)}
+					disabled={running.length === 0}
+					onClick={() => stop(false)}
 				>
-					Remove a node
+					Stop a node
 				</button>
 				<button
 					type="button"
 					className={button}
-					disabled={nodes.current.length === 0}
-					onClick={() => remove(true)}
+					disabled={running.length === 0}
+					onClick={() => stop(true)}
 				>
-					Remove them all
+					Stop them all
 				</button>
 			</div>
 		</div>
 	);
 }
 
-/** The application, at a site. */
+/**
+ * ApplicationBeats is the applications tile of a site's applications, drawn
+ * twice from the same heartbeats: once with each application's section
+ * following the node that sent the latest heartbeat, with no deadline, and once
+ * with the latest deadline of the application's nodes, to which its section
+ * drains. Each
+ * application has as many nodes as the fixture gives it, and each node beats at
+ * its own pace. An application can be stopped, which stops each of its nodes; it
+ * is out of contact once the last of their heartbeats has expired.
+ */
+function ApplicationBeats({
+	applications,
+}: {
+	applications: SiteApplication[];
+}) {
+	const nodes = useRef<Map<string, DemoNode[]> | undefined>(undefined);
+	if (nodes.current === undefined) {
+		const now = performance.now();
+		nodes.current = new Map(
+			applications.map((a) => [
+				a.application.key,
+				Array.from({ length: a.nodes }, (_, i) => {
+					const n = demoNode(String(i), now);
+					// The nodes start at different moments, as real ones do.
+					n.beats = [now - Math.random() * n.interval];
+					return n;
+				}),
+			]),
+		);
+	}
+	const [receivedAt, setReceivedAt] = useState(() => performance.now());
+
+	useEffect(() => {
+		const timer = window.setInterval(() => {
+			const now = performance.now();
+			let changed = false;
+			for (const ns of nodes.current?.values() ?? []) {
+				changed = beat(ns, now) || changed;
+			}
+			if (changed) {
+				setReceivedAt(now);
+			}
+		}, 50);
+
+		return () => window.clearInterval(timer);
+	}, []);
+
+	const all = [...(nodes.current?.entries() ?? [])];
+	const running = all.filter(([, ns]) => ns.some((n) => n.next !== undefined));
+	const stopped = all.filter(([, ns]) => ns.every((n) => n.next === undefined));
+
+	const stop = () => {
+		for (const n of running[0]?.[1] ?? []) {
+			n.next = undefined;
+		}
+		setReceivedAt(performance.now());
+	};
+
+	const start = () => {
+		const now = performance.now();
+		for (const [key, ns] of stopped) {
+			const a = applications.find((x) => x.application.key === key);
+			ns.splice(
+				0,
+				ns.length,
+				...Array.from({ length: a?.nodes ?? 1 }, (_, i) =>
+					demoNode(String(i), now),
+				),
+			);
+		}
+		setReceivedAt(now);
+	};
+
+	const tile = (deadlines: boolean) => (
+		<ApplicationsTile
+			data={siteOf(
+				applications.map((a) => {
+					const ns = nodes.current?.get(a.application.key) ?? [];
+					if (ns.length === 0) {
+						return { ...a, nodes: 0, heartbeats: [] };
+					}
+					return {
+						...a,
+						...(deadlines
+							? deadlineBeats(ns, receivedAt)
+							: { heartbeats: latestNodeBeats(ns, receivedAt) }),
+					};
+				}),
+				euWest,
+			)}
+		/>
+	);
+
+	return (
+		<div className="flex flex-col gap-3">
+			<LiveData receivedAt={receivedAt}>
+				<SideBySide
+					items={[
+						["Before: the node that sent the latest heartbeat", tile(false)],
+						["After: the latest deadline of its nodes", tile(true)],
+					]}
+				/>
+			</LiveData>
+			<div className="flex flex-wrap gap-2">
+				<button
+					type="button"
+					className={button}
+					disabled={running.length === 0}
+					onClick={stop}
+				>
+					Stop an application
+				</button>
+				<button
+					type="button"
+					className={button}
+					disabled={stopped.length === 0}
+					onClick={start}
+				>
+					Start them again
+				</button>
+			</div>
+		</div>
+	);
+}
+
+/**
+ * latestNodeBeats returns the times of the heartbeats of the node that sent the
+ * latest one, in milliseconds before `now`.
+ */
+function latestNodeBeats(nodes: DemoNode[], now: number): number[] {
+	let latest: DemoNode | undefined;
+	for (const n of nodes) {
+		if ((n.beats.at(-1) ?? -1) > (latest?.beats.at(-1) ?? -1)) {
+			latest = n;
+		}
+	}
+	return (latest?.beats ?? []).map((t) => now - t);
+}
+
+/**
+ * deadlineBeats returns the heartbeats of an application's nodes that each moved
+ * its deadline later, and its deadline, which is the latest of its nodes', as the
+ * applications tile takes them, in milliseconds before and after `now`.
+ */
+function deadlineBeats(
+	nodes: DemoNode[],
+	now: number,
+): { heartbeats: number[]; deadline: number } {
+	const times = nodes.flatMap((n) => n.beats).sort((a, b) => a - b);
+	const moved: number[] = [];
+	let deadline = Number.NEGATIVE_INFINITY;
+	for (const t of times) {
+		if (t + demoExpiry > deadline) {
+			deadline = t + demoExpiry;
+			moved.push(t);
+		}
+	}
+	return {
+		heartbeats: moved.slice(-9).map((t) => now - t),
+		deadline: deadline - now,
+	};
+}
+
 /** The data of the cluster tile, with the given number of the fixture's nodes. */
 function clusterTile(nodes: number): NonNullable<OverviewData["cluster"]> {
 	return {
@@ -1520,11 +1756,6 @@ function clusterTile(nodes: number): NonNullable<OverviewData["cluster"]> {
 		nodes: overview.cluster.nodes.slice(0, nodes),
 	};
 }
-
-/** The data of the events tile, with the given rate, or without one. */
-/** A figure at the size of a headline, with buttons that do things to it. */
-/** A handler digest of a process, with buttons that change the numbers on it. */
-/** A count of failing messages after a number, with buttons that change it. */
 
 /** The look of a button that drives a demonstration on this page. */
 const button =

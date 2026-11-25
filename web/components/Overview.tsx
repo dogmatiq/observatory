@@ -1,6 +1,6 @@
 import { Covered, Distrusted, useCurrent } from "../lib/distrust.tsx";
 import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
-import { heartbeatLevel } from "../lib/levels.ts";
+import { levelOf } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
 import {
 	nodeSegments,
@@ -550,10 +550,7 @@ export function ClusterTile({
 	const elapsed = useElapsed();
 	const sections = data.nodes.map((n) => ({
 		id: n.id,
-		level: heartbeatLevel(
-			n.heartbeats.map((ago) => -ago),
-			elapsed,
-		),
+		level: levelOf(n, elapsed),
 	}));
 
 	// The number and its detail line both have the card of the nodes.
@@ -661,10 +658,7 @@ export function EngineTile({
 			: [
 					{
 						id: node.id,
-						level: heartbeatLevel(
-							node.heartbeats.map((ago) => -ago),
-							elapsed,
-						),
+						level: levelOf(node, elapsed),
 					},
 				];
 

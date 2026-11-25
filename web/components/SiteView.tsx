@@ -7,7 +7,7 @@ import {
 import { cn } from "../lib/cn.ts";
 import { Covered, Distrusted } from "../lib/distrust.tsx";
 import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
-import { heartbeatLevel } from "../lib/levels.ts";
+import { levelOf } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { applicationSegments } from "../lib/segments.ts";
@@ -440,7 +440,8 @@ export function ApplicationsCard({ live }: { live: number }) {
  * of applications in contact, followed by the number out of contact, set apart
  * in red, such as "94 +2", as the queues tile sets apart its failing messages.
  * When every application is out of contact, the headline is a red "0" alone. Its chart is the heartbeat of each application in
- * contact, from the node that sent the latest. It has no bar.
+ * contact, which drains to the application's deadline if it has one. It has no
+ * bar.
  *
  * While any application is out of contact, the tile has the red accent,
  * because an application out of contact is one
@@ -456,10 +457,7 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 	const elapsed = useElapsed();
 	const sections = live.map((a) => ({
 		id: a.application.key,
-		level: heartbeatLevel(
-			a.heartbeats.map((ago) => -ago),
-			elapsed,
-		),
+		level: levelOf(a, elapsed),
 	}));
 
 	const card = <ApplicationsCard live={live.length} />;

@@ -129,10 +129,21 @@ export interface SiteApplication {
 	coverage?: number;
 
 	/**
-	 * The times at which the heartbeats of the node that sent the latest one
-	 * arrived, as [LiveNode.heartbeats] are. Empty while out of contact.
+	 * The times at which the heartbeats that the applications tile's chart
+	 * follows arrived, as [LiveNode.heartbeats] are: with a deadline, each
+	 * heartbeat of any of the application's nodes that moved the deadline
+	 * later, and without one, those of the node that sent the latest heartbeat.
+	 * Empty while out of contact.
 	 */
 	heartbeats: number[];
+
+	/**
+	 * The latest of the deadlines of the application's nodes, as
+	 * [LiveNode.deadline] is, because the application is in contact while any of
+	 * its nodes is. Absent if its nodes give no way to tell when their
+	 * heartbeats expire.
+	 */
+	deadline?: number;
 
 	/**
 	 * The events recorded per minute, if the engine supports it, and the
@@ -249,6 +260,13 @@ export interface LiveNode {
 	 * Observatory.
 	 */
 	heartbeats: number[];
+
+	/**
+	 * The time by which the node's next heartbeat is due, in milliseconds after
+	 * the moment that the server produced this. Absent if the node gives no way
+	 * to tell when its heartbeats expire.
+	 */
+	deadline?: number;
 }
 
 /**

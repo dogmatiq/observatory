@@ -1,5 +1,10 @@
 import { expect, test } from "vitest";
-import { drainBeats, heartbeatLevel, riseTime } from "./levels.ts";
+import {
+	deadlineLevel,
+	drainBeats,
+	heartbeatLevel,
+	riseTime,
+} from "./levels.ts";
 
 test("a node that has sent no heartbeat is empty", () => {
 	expect(heartbeatLevel([], 5000)).toBe(0);
@@ -50,4 +55,35 @@ test("only the recent heartbeats set the usual interval", () => {
 	const now = 9000 + riseTime + 1500;
 
 	expect(heartbeatLevel(beats, now)).toBeCloseTo(0.5);
+});
+
+test("a level with a deadline is empty with no heartbeat", () => {
+	expect(deadlineLevel([], 15_000, 5000)).toBe(0);
+});
+
+test("a level with a deadline is full once it has risen, and empty exactly at the deadline", () => {
+	const deadline = 15_000;
+
+	expect(deadlineLevel([0], deadline, riseTime)).toBe(1);
+	expect(deadlineLevel([0], deadline, (riseTime + deadline) / 2)).toBeCloseTo(
+		0.5,
+	);
+	expect(deadlineLevel([0], deadline, deadline - 1)).toBeGreaterThan(0);
+	expect(deadlineLevel([0], deadline, deadline)).toBe(0);
+	expect(deadlineLevel([0], deadline, deadline + 10_000)).toBe(0);
+});
+
+test("a heartbeat with a deadline rises from the level that the one before it had drained to", () => {
+	// Deadlines 15 s after each heartbeat, and a heartbeat half way through the
+	// drain of the one before it.
+	const arrives = (riseTime + 15_000) / 2;
+	const from = deadlineLevel([0], 15_000, arrives);
+
+	const level = deadlineLevel(
+		[0, arrives],
+		arrives + 15_000,
+		arrives + riseTime / 2,
+	);
+
+	expect(level).toBeCloseTo(from + (1 - from) / 2);
 });

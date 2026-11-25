@@ -1047,6 +1047,14 @@ Tick each item when it is done, and write the pull request or commit that did it
   The node hovercard's sentence "Workloads vary in size, so two nodes with the same number of workloads can have very
   different amounts of work to do." moves to the end of the cluster explainer's paragraph about workloads (approved);
   its words are under review (CL 6).
+  Under review (CL 5, SC 1), shown before and after: a section of the heartbeat chart falls to empty at the deadline of
+  its latest heartbeat, which is the time by which the node says that it sends the next, or three of the intervals that
+  its engine gives, as the server already works out to tell whether the node is in contact. Today it falls over three of
+  the usual intervals that the browser has seen, so it can empty while the node is in contact. An application's section
+  on the site view follows the latest deadline of its nodes, and a heartbeat raises it only if it moves that deadline
+  later. To build if approved: the server sends each node's deadline with its heartbeats, and the page drops the
+  fallback to the usual intervals; a node that gives no way to tell when its heartbeats expire stays full while it is
+  connected, as the server takes it to be in contact.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
