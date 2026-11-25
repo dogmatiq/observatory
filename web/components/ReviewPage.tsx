@@ -41,7 +41,7 @@ import { Popover, panelClasses } from "./Popover.tsx";
 import { partialStatus } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
-import { SegmentCard, things } from "./SegmentCard.tsx";
+import { SegmentCard } from "./SegmentCard.tsx";
 import {
 	ApplicationsTile,
 	CompactDigests,
@@ -434,29 +434,17 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The bars"
-					deciding="What the bars of the events and queues tiles show: a segment for each of the busiest applications and one for the rest, where the events tile's bar divides the rate of new events, as its headline does, and not the events stored, as the cluster view's bar of streams does; and what a segment's hovercard says when it is pointed at."
-					notDeciding="How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' explainers (SW) and the alert flag's hovercard (SH 2)."
-					note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's hovercard drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
+					deciding="What the bars of the events and queues tiles show: a segment for each of the busiest applications and one for the rest, where the events tile's bar divides the rate of new events, as its headline does, and not the events stored, as the cluster view's bar of streams does; and the figures of a segment's hovercard."
+					notDeciding="How a bar is drawn and shaded, which is as on the cluster view; where a hovercard puts the application's name and kind, which is IC; that a hovercard has no words about the bar, which the tiles' explainers say (SW); that the applications tile has no bar (SL); the alert flag's tooltip (SH 2)."
+					note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's hovercard drills down: the application's name, its amount and its share. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
 				>
 					<State
 						label="Pointing at an application on the events bar"
-						precedents={[
-							{
-								where:
-									"On the cluster view, the hovercard of a stream on the events bar",
-								status: { underReview: "EV 4" },
-								words: (
-									<>
-										<p>{things["event-stream"].bar}</p>
-										<p>{things["event-stream"].advice}</p>
-									</>
-								),
-							},
-						]}
-						recommendation="Approve, with this wording."
+						recommendation="Approve. It drills down to the application: its events per minute and its share of them."
 					>
 						<Panel>
 							<SegmentCard
+								paragraphs={false}
 								about={{
 									thing: "application",
 									of: "events",
@@ -472,23 +460,11 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="Pointing at an application on the queues bar"
-						precedents={[
-							{
-								where:
-									"On the cluster view, the hovercard of a queue on the queues bar",
-								status: { underReview: "QU 4" },
-								words: (
-									<>
-										<p>{things.queue.bar}</p>
-										<p>{things.queue.advice}</p>
-									</>
-								),
-							},
-						]}
-						recommendation="Approve, with this wording."
+						recommendation="Approve, as for the events bar."
 					>
 						<Panel>
 							<SegmentCard
+								paragraphs={false}
 								about={{
 									thing: "application",
 									of: "messages",
@@ -763,10 +739,10 @@ export function ReviewPage() {
 					step={4}
 					title="The bar"
 					deciding="What a segment of the events tile's bar shows when it is pointed at: its stream, its events and its share of them."
-					notDeciding="Which streams the bar shows, and how it is drawn, which are settled; the advice about the spread, which moves to the explainer."
+					notDeciding="Which streams the bar shows, and how it is drawn, which are settled; where the hovercard puts the stream's ID, which is IC; the words about the bar, which are in the explainer."
 					decided={false}
-					recommendation="Approve. The sentence about the bar is the same each time and has no figures in it, which are the stream's events and share."
-					note="Each segment is an event stream, and has the hovercard of that stream: its events and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that appends every event to one stream has no bar, so the hovercard is only ever of one of several streams."
+					recommendation="Approve. It drills down to the stream: its events and its share of them."
+					note="Each segment is an event stream, and has the hovercard of that stream: its ID, its events and its share of them. What the bar shows, and how it is best spread, are in the tile's explainer. An engine that appends every event to one stream has no bar, so the hovercard is only ever of one of several streams."
 				>
 					{(
 						[
@@ -781,6 +757,7 @@ export function ReviewPage() {
 						<State key={label} label={`Pointing at ${label.toLowerCase()}`}>
 							<Panel>
 								<SegmentCard
+									paragraphs={false}
 									about={{
 										thing: "event-stream",
 										id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
@@ -830,10 +807,10 @@ export function ReviewPage() {
 					step={4}
 					title="The bar"
 					deciding="What a segment of the queues tile's bar shows when it is pointed at: its queue, its messages and its share of them."
-					notDeciding="Which queues the bar shows, and how it is drawn, which are settled; the advice about the spread, which moves to the explainer."
+					notDeciding="Which queues the bar shows, and how it is drawn, which are settled; where the hovercard puts the queue's ID, which is IC; the words about the bar, which are in the explainer."
 					decided={false}
 					recommendation="Approve, as the events tile's bar."
-					note="Each segment is a queue, and has the hovercard of that queue: its messages and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that keeps every message in one queue has no bar, so the hovercard is only ever of one of several queues."
+					note="Each segment is a queue, and has the hovercard of that queue: its ID, its messages and its share of them. What the bar shows, and how it is best spread, are in the tile's explainer. An engine that keeps every message in one queue has no bar, so the hovercard is only ever of one of several queues."
 				>
 					{(
 						[
@@ -843,6 +820,7 @@ export function ReviewPage() {
 						<State key={label} label={`Pointing at ${label.toLowerCase()}`}>
 							<Panel>
 								<SegmentCard
+									paragraphs={false}
 									about={{
 										thing: "queue",
 										id: "113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93",
