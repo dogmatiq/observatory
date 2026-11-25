@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "../lib/cn.ts";
 import type { Application } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
@@ -37,6 +38,7 @@ export interface NavItem {
  */
 export function TitleBar({
 	application,
+	identifier,
 	nav = [],
 }: {
 	/**
@@ -44,6 +46,13 @@ export function TitleBar({
 	 * that is not about one cluster has none.
 	 */
 	application?: Application;
+
+	/**
+	 * The ID of what runs the application, after where the page is: the cluster's,
+	 * or the engine's if it doesn't cluster. It is the same for every part of the
+	 * page, so it is shown here rather than on any one card.
+	 */
+	identifier?: ReactNode;
 
 	/**
 	 * The page's links, in groups. A line separates one group from the next.
@@ -78,6 +87,11 @@ export function TitleBar({
 							)}
 						</span>
 					</Popover>
+				)}
+				{identifier && (
+					<span className="-ml-3 text-xs whitespace-nowrap text-faint">
+						{identifier}
+					</span>
 				)}
 				{nav.length > 0 && (
 					<nav className="flex gap-0.5 overflow-x-auto [scrollbar-width:none] max-narrow:order-3 max-narrow:w-full max-narrow:flex-wrap">

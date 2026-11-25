@@ -1042,11 +1042,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   didn't notice the muted outline. It doesn't depend on whether the viewer has used an explainer before.
   When the explainers are built into the views, every hovercard that explains goes: each card's icon hovercard, the
   hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
-  what drills down (a segment's identity and amount, and the cluster's and the engine's IDs), the statuses, as alert
+  what drills down (a segment's identity and amount, and a digest's identity), the statuses, as alert
   flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
   A digest's name opens an identity hovercard, as a preview of the page that the digest leads to: the thing's kind, its
   name in bold, its identity key, shortened and copyable, and where it is, with no figures. No card's icon opens a
-  hovercard, so an icon no longer grows when it is pointed at.
+  hovercard, so an icon no longer grows when it is pointed at. The cluster's ID, or the engine's for an engine that
+  doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word "cluster"
+  or "engine", shortened and copyable, because it is the same for every part of the view.
   `/review` no longer reviews the words of the hovercards that explain (it retired EV 1, CL 1–3, EN 1–2, WD, and SH 2's
   headline hovercards), and reviews the site view's explainers (SW) and the engine tile's (EN 4). Done: the segment hovercards' advice says
   "An even spread is better".

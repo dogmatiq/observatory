@@ -32,10 +32,8 @@ import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import {
 	ClusterTile,
-	clusterAbout,
 	EngineTile,
 	EventsTile,
-	engineAbout,
 	QueuesTile,
 	Totals,
 } from "./Overview.tsx";
@@ -55,6 +53,7 @@ import {
 	SiteTotals,
 } from "./SiteView.tsx";
 import { handlerSubsystem, kindColors } from "./subsystems.ts";
+import { TitleBar } from "./TitleBar.tsx";
 
 /**
  * ReviewPage shows every state of the tiles that are being worked on, or that
@@ -586,64 +585,52 @@ export function ReviewPage() {
 			<Tile
 				code="ID"
 				title="The cluster's and the engine's IDs"
-				note="The ID of the cluster, and of the engine that doesn't cluster, is in the hovercard of the vital card's icon today, under the words that the explainer's title replaces. The explainer shows made-up figures, so it can't show a real ID."
+				note="The ID of the cluster that runs the application, or of the engine if it doesn't cluster, is the same for every part of the cluster view, so it belongs to the view, not to a card. It moves from the hovercard of the vital card's icon to the title bar, and no card's icon opens a hovercard any more."
 			>
 				<Part
-					step={1}
-					title="A hovercard on the icon with only the ID"
-					deciding="That the cluster's and the engine's icons keep a hovercard with only the kind and the ID, which can be copied, and lose the paragraph that the explainer's title replaces."
-					notDeciding="How an ID is shortened and copied, which is settled; IDs elsewhere, such as a stream's on its bar."
-					note="The hovercard of the icon keeps the kind and the shortened ID, which can be copied, and loses its paragraph. The other way is to show the ID in the view itself, such as beside the application's name in the title bar, which this review doesn't draw."
+					step={2}
+					title="The ID in the title bar"
+					deciding="That the cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word &quot;cluster&quot; or &quot;engine&quot;, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
+					notDeciding="How an ID is shortened and copied, which is settled; a digest's identity, which is in the hovercard of its name (DI); the IDs of the things in a card, which are in their segments' hovercards."
+					note="The title bar names the application and its site, so the ID sits beside them, after a short gap, where it reads as part of where the page is."
 				>
 					<State
-						label="The cluster card's icon"
-						recommendation="Approve. An ID is for drilling down, which is what hovercards are for now, and the explainer's &quot;?&quot; at the bottom right leaves the icon free."
-						precedents={[
-							{
-								where: "On the cluster view, the cluster tile's icon",
-								status: "settled",
-								words: clusterAbout(atSite),
-							},
-						]}
+						label="An engine that clusters"
+						recommendation="Approve. The ID is on every view of the application, in one place, without belonging to one card."
+						wide
 					>
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="cluster"
-								kind="Cluster"
-								identifier={
+						<TitleBar
+							application={atSite}
+							identifier={
+								<>
+									cluster{" "}
 									<Identifier
 										id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
 										of="cluster"
+										named
 									/>
-								}
-							/>
-						</Panel>
+								</>
+							}
+						/>
 					</State>
 					<State
-						label="The engine card's icon"
-						recommendation="Approve, as for the cluster."
-						precedents={[
-							{
-								where: "On the cluster view, the engine tile's icon",
-								status: "settled",
-								words: engineAbout(atSite),
-							},
-						]}
+						label="An engine that doesn't cluster"
+						recommendation="Approve, as for a cluster."
+						wide
 					>
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="engine"
-								kind="Engine"
-								identifier={
+						<TitleBar
+							application={atSite}
+							identifier={
+								<>
+									engine{" "}
 									<Identifier
 										id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
 										of="engine"
+										named
 									/>
-								}
-							/>
-						</Panel>
+								</>
+							}
+						/>
 					</State>
 				</Part>
 			</Tile>
