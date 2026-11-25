@@ -1044,6 +1044,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
   what drills down (a segment's identity and amount), the statuses, as alert
   flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
+  The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
+  the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
   does. A thing with no name, such as a stream, a queue or a node, has its shortened ID in the place of the name, in the
   same style, with a copy button that says what it copied, such as "Copied queue ID", in a note above it that moves
