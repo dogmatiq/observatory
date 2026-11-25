@@ -1196,8 +1196,11 @@ func TestStream(t *testing.T) {
 			n.heartbeat(t)
 
 			after := since(w.events(t), "synced")
-			if _, ok := after[0].Data["expiry"]; len(after) != 1 || ok {
+			if len(after) != 1 {
 				t.Fatalf("unexpected events: %v", after)
+			}
+			if _, ok := after[0].Data["expiry"]; ok {
+				t.Fatalf("unexpected expiry: %v", after[0])
 			}
 		})
 	})
