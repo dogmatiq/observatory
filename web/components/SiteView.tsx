@@ -7,6 +7,7 @@ import { useElapsed } from "../lib/live.tsx";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { applicationSegments } from "../lib/segments.ts";
 import type { SiteApplication, SiteData } from "../model.ts";
+import { AlertFlag } from "./AlertFlag.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Explained } from "./Explainer.tsx";
 import {
@@ -38,6 +39,7 @@ import { StackedBar } from "./StackedBar.tsx";
 import {
 	noSignalFromApplications,
 	rateStatuses,
+	type Status,
 	someApplicationsReport,
 } from "./statuses.ts";
 import { subsystemColors } from "./subsystems.ts";
@@ -445,6 +447,16 @@ function CompactDigest({
 
 	const nameId = useId();
 
+	// With no signal, the figures are the last ones, so the flag says only that.
+	// Otherwise it says whether the rate of events can be given, if the engine
+	// reports one.
+	const { state } = useRate(app.events?.perMinute);
+	const statuses: Status[] = out
+		? [{ text: noSignalText, tone: "bad" }]
+		: app.events
+			? rateStatuses(state)
+			: [];
+
 	return (
 		<article
 			aria-labelledby={nameId}
@@ -462,19 +474,17 @@ function CompactDigest({
 				>
 					<span className="min-w-0 truncate">{app.application.name}</span>
 				</NameLink>
-				{out &&
-					(alert === "icon" ? (
-						<Popover content={noSignalText}>
-							<span className="ml-auto flex-none self-center text-bad">
-								<Icon name="alert" className="size-4" />
-								<span className="sr-only">No signal</span>
+				{alert === "icon"
+					? statuses.length > 0 && (
+							<span className="ml-auto flex flex-none self-center">
+								<AlertFlag statuses={statuses} />
 							</span>
-						</Popover>
-					) : (
-						<span className="ml-auto flex-none text-xs text-bad">
-							{alert.words}
-						</span>
-					))}
+						)
+					: out && (
+							<span className="ml-auto flex-none text-xs text-bad">
+								{alert.words}
+							</span>
+						)}
 			</span>
 			<Distrusted value={out}>
 				<Covered coverage={app.coverage ?? 1}>

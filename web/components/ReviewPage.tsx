@@ -672,6 +672,32 @@ export function ReviewPage() {
 						</FlaggedCard>
 					</State>
 					<State
+						label="Compact digests, while a rate isn't known yet"
+						note="A compact digest's flag says whether its rate of events can be given, as the events tile's does, and, with no signal, only that: the first has a rate, the second's rate isn't known yet, and the third has no signal. Its hovercard said this before the explainers were built."
+						recommendation="Approve. Every status that the hovercards held has a place, and a compact digest's flag works as a tile's does."
+						wide
+					>
+						<div className="max-w-xl">
+							<CompactDigests
+								data={siteOf(
+									[
+										siteApplications[0] as SiteApplication,
+										{
+											...(siteApplications[1] as SiteApplication),
+											events: { perMinute: undefined },
+										},
+										{
+											...(siteApplications[2] as SiteApplication),
+											nodes: 0,
+										},
+									],
+									euWest,
+								)}
+								alert="icon"
+							/>
+						</div>
+					</State>
+					<State
 						label="The events tile, with two statuses at once"
 						note="Only some nodes report it, and its rate isn't known yet: one flag, whose tooltip says both."
 						decided

@@ -9,7 +9,7 @@ import {
 import { formatCompact } from "../lib/format.ts";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { stubBrowser, tipOf } from "../test-support.ts";
-import { SiteBreakdown, SiteOverview } from "./SiteView.tsx";
+import { noSignalText, SiteBreakdown, SiteOverview } from "./SiteView.tsx";
 import { noSignalFromApplications } from "./statuses.ts";
 
 beforeEach(stubBrowser);
@@ -47,7 +47,7 @@ test("an application with no signal says so by an icon beside its name, and its 
 	const grid = screen.getByRole("region", { name: "Applications" });
 	const digest = within(grid).getByRole("article", { name });
 
-	expect(within(digest).getByText("No signal")).toBeDefined();
+	expect(within(digest).getByText(noSignalText)).toBeDefined();
 	expect(
 		within(digest).getAllByRole("img", { name: "not available" }).length,
 	).toBeGreaterThan(0);
@@ -95,7 +95,7 @@ test("the alert icon of an application with no signal says what that means", asy
 		<SiteOverview data={siteOf(withSignal(apps, { out: [name] }), euWest)} />,
 	);
 
-	const icon = screen.getByText("No signal").parentElement as HTMLElement;
+	const icon = screen.getByText(noSignalText).parentElement as HTMLElement;
 
 	expect(await tipOf(icon)).toContain(
 		"There is no signal from the application, so it's unknown whether it is working.",
@@ -135,4 +135,30 @@ test("the queues tile counts the queues of all the applications together", () =>
 	expect(tile.textContent).toMatch(
 		new RegExp(`messages in ${data.queues?.queues} queues, `),
 	);
+});
+
+test("a compact digest's flag says that its rate isn't known yet, while it isn't", async () => {
+	const app = siteApplications[0] as (typeof siteApplications)[number];
+	render(
+		<SiteBreakdown
+			data={siteOf([{ ...app, events: { perMinute: undefined } }], euWest)}
+			breakdown="compact-digests"
+		/>,
+	);
+
+	const digest = screen.getByRole("article", { name: app.application.name });
+	const flag = within(digest).getByText(/samples/).parentElement as HTMLElement;
+
+	expect(flag.className).toContain("text-fg-soft");
+	expect(await tipOf(flag)).toMatch(/samples/);
+});
+
+test("a compact digest has no flag while its rate is known and its application sends a signal", () => {
+	const app = siteApplications[0] as (typeof siteApplications)[number];
+	render(
+		<SiteBreakdown data={siteOf([app], euWest)} breakdown="compact-digests" />,
+	);
+
+	const digest = screen.getByRole("article", { name: app.application.name });
+	expect(within(digest).queryByText(/samples|signal/)).toBeNull();
 });
