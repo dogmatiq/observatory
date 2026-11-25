@@ -325,7 +325,7 @@ function ApplicationAtSite({
 						links={clusters.map((c) => ({
 							href: clusterPath(c.id),
 							label: c.id,
-							detail: c.reporting ? undefined : "out of contact",
+							detail: c.reporting ? undefined : "no signal",
 						}))}
 						notice={notice}
 					/>

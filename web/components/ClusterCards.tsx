@@ -7,17 +7,17 @@ import { InfoCard } from "./InfoCard.tsx";
  * is, and that the nodes together form a cluster, because the words are ordinary
  * ones that mean something narrower here.
  *
- * `live` is the number of nodes in contact. If there are none, the card says, as
- * a status, that every node is out of contact, so whether the application is
- * working is unknown.
+ * `live` is the number of nodes sending a signal. If there are none, the card
+ * says, as a status, that there is no signal from any of the nodes, so whether
+ * the application is working is unknown.
  */
 /** What the card of the cluster's nodes says the number counts. */
 export const nodesText =
-	"The number of nodes that are in contact now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work.";
+	"The number of nodes that are sending a signal now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work.";
 
-/** The status of the card of the cluster's nodes when no node is in contact. */
+/** The status of the card of the cluster's nodes when no nodes are sending a signal. */
 export const noNodesText =
-	"Every node is out of contact, so it's unknown whether the application is working.";
+	"There is no signal from any of the nodes, so it's unknown whether the application is working.";
 
 export function NodesCard({ live }: { live: number }) {
 	return (

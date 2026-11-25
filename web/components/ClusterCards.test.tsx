@@ -10,17 +10,17 @@ test("the card of the nodes says what a node and a cluster are", () => {
 
 	expect(text).toContain("Cluster nodes");
 	expect(text).toContain(
-		"The number of nodes that are in contact now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work.",
+		"The number of nodes that are sending a signal now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work.",
 	);
 	expect(text).not.toContain("believes");
 	expect(text).not.toContain("is offline");
 });
 
-test("the card of the nodes says that contact has been lost when no node is live", () => {
+test("the card of the nodes says that there is no signal when no node is live", () => {
 	const { container } = render(<NodesCard live={0} />);
 
 	expect(container.textContent).toContain(
-		"Every node is out of contact, so it's unknown whether the application is working.",
+		"There is no signal from any of the nodes, so it's unknown whether the application is working.",
 	);
 });
 

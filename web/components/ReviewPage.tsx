@@ -10,7 +10,7 @@ import {
 	euWest,
 	siteApplications,
 	siteOf,
-	withContact,
+	withSignal,
 } from "../fixtures/site.ts";
 import { cn } from "../lib/cn.ts";
 import { Covered } from "../lib/distrust.tsx";
@@ -46,7 +46,7 @@ import { SegmentCard } from "./SegmentCard.tsx";
 import {
 	ApplicationsTile,
 	CompactDigests,
-	contactLostText,
+	noSignalText,
 	SiteBreakdown,
 	SiteEventsTile,
 	SiteOverview,
@@ -84,12 +84,12 @@ export function ReviewPage() {
 						title="Tiles above, applications below"
 						deciding="Where the view's parts go: the three tiles above, in a row, and the applications below them, in the order of their names."
 						notDeciding={
-							"What the tiles and the compact digests say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or contact is lost (SS); whether the grid is of compact digests or of squares (SL 1)."
+							"What the tiles and the compact digests say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or the signal stops (SS); whether the grid is of compact digests or of squares (SL 1)."
 						}
 						recommendation="Approve the layout. The tiles answer how busy the site is and whether anything is wrong, and the grid below answers where, with every application one click from its view."
-						note="The three tiles are the events per minute, the messages waiting and the applications in contact. The applications are in the order of their names, so that an application keeps its place."
+						note="The three tiles are the events per minute, the messages waiting and the applications sending a signal. The applications are in the order of their names, so that an application keeps its place."
 					>
-						<State label="Every application in contact" wide>
+						<State label="All applications sending a signal" wide>
 							<SiteDemo data={siteOf(calm, euWest)} />
 						</State>
 					</Part>
@@ -98,7 +98,7 @@ export function ReviewPage() {
 						step={1}
 						title="The grid of applications"
 						deciding="Whether each application below the tiles is a compact digest, with its name and figures, or a square in a grid that names it only when pointed at."
-						notDeciding="What a compact digest's figures are, and its explainer, which is approved; the hovercard of its alert flag (SH 2); how a compact digest looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
+						notDeciding="What a compact digest's figures are, and its explainer, which is approved; the hovercard of its alert flag (SH 2); how a compact digest looks when its application's messages fail or its signal stops (SS); the order of the applications (SL 0)."
 						note="Each application is a compact digest with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
 					>
 						<State
@@ -132,12 +132,12 @@ export function ReviewPage() {
 				<Tile
 					code="SS"
 					title="Site view: states"
-					note="How the view looks as its applications' messages fail and as contact with them is lost: the accents, the blur and the words that take the place of a compact digest's figures. The words of the tiles' hovercards come in the next chunk."
+					note="How the view looks as its applications' messages fail and as their signal stops: the accents, the blur and the words that take the place of a compact digest's figures. The words of the tiles' hovercards come in the next chunk."
 				>
 					<Part
 						step={0}
 						title="The view in each state"
-						deciding="How the whole view looks in each state: when messages fail, when only some nodes report, and when contact with one application, or with all of them, is lost."
+						deciding="How the whole view looks in each state: when messages fail, when only some nodes report, and when the signal from one application, or from all of them, stops."
 						notDeciding="The layout (SL); the words on the tiles (SH 1) and their explainers (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
 					>
 						<State
@@ -149,22 +149,22 @@ export function ReviewPage() {
 							<SiteDemo data={siteOf(siteApplications, euWest)} />
 						</State>
 						<State
-							label="Two applications out of contact, and two with only some nodes in contact"
-							note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as tiles and handler digests have their icon there, and pointing at the icon shows a hovercard that says the application is out of contact, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
-							recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its hovercard gives the words, as the status of a hovercard does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
+							label="Two applications with no signal, and two with only some nodes sending a signal"
+							note="The two with no signal, kyc and payroll, have the red accent and a red alert icon at the right of their names, as tiles and handler digests have their icon there, and pointing at the icon shows a hovercard that says that there is no signal from the application, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when the signal stops. The blur says how far a figure is trusted, and the red says that there is no signal. The figures of the two with only some nodes sending a signal, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications sending a signal, with those that send none set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application sends no signal, because an application with no signal is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
+							recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its hovercard gives the words, as the status of a hovercard does elsewhere. The red accent and the icon mark an application with no signal as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 							wide
 						>
 							<SiteDemo data={siteOf(someOut, euWest)} />
 						</State>
 						<State
-							label="Every application out of contact"
-							note="The totals are the last ones, distrusted, as a cluster's are when every node is out of contact, and the applications tile's headline is a red 0 alone, with no &quot;+N&quot;, because when every application is out of contact there is nothing to set them apart from."
+							label="No applications sending a signal"
+							note="The totals are the last ones, distrusted, as a cluster's are when no nodes are sending a signal, and the applications tile's headline is a red 0 alone, with no &quot;+N&quot;, because when no applications are sending a signal there is nothing to set them apart from."
 							recommendation="Approve, as the cluster view does it."
 							wide
 						>
 							<SiteDemo
 								data={siteOf(
-									withContact(siteApplications.slice(0, 18), {
+									withSignal(siteApplications.slice(0, 18), {
 										out: siteApplications
 											.slice(0, 18)
 											.map((a) => a.application.name),
@@ -192,7 +192,7 @@ export function ReviewPage() {
 						</State>
 						<Choices
 							of="B"
-							title="how a compact digest says that contact is lost"
+							title="how a compact digest says that there is no signal"
 							framed={false}
 							choices={(
 								[
@@ -492,13 +492,13 @@ export function ReviewPage() {
 					<Part
 						step={1}
 						title="The applications tile's chart"
-						deciding="How the applications tile's heartbeat chart gives each application in contact a share, which heartbeats an application's share follows, and what happens to it when contact is lost."
+						deciding="How the applications tile's heartbeat chart gives each application sending a signal a share, which heartbeats an application's share follows, and what happens to it when the signal stops."
 						notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's (CL 5), including how a node's section falls to its deadline; the tile's words (SH 1) and its explainer (SW 3)."
-						note="Each application in contact has an equal share of the chart's width. Before, an application's share follows the heartbeats of whichever of its nodes sent the latest one, and falls over three of that node's usual intervals. After, it follows the application's deadline, which is the latest of its nodes' deadlines, because the application is in contact while any of its nodes is: a heartbeat raises it only if it moves that deadline later, and it falls to empty at the deadline, which is when the application goes out of contact. Its share then shrinks away. Each application here has the fixture's number of nodes, from one to six, which beat every two to five seconds, with a deadline 15 seconds after each heartbeat. Stop an application to see it go."
+						note="Each application sending a signal has an equal share of the chart's width. Before, an application's share follows the heartbeats of whichever of its nodes sent the latest one, and falls over three of that node's usual intervals. After, it follows the application's deadline, which is the latest of its nodes' deadlines, because the application is sending a signal while any of its nodes is: a heartbeat raises it only if it moves that deadline later, and it falls to empty at the deadline, which is when the application stops sending a signal. Its share then shrinks away. Each application here has the fixture's number of nodes, from one to six, which beat every two to five seconds, with a deadline 15 seconds after each heartbeat. Stop an application to see it go."
 					>
 						<State
-							label="Applications in contact, before and after"
-							recommendation="Approve the after. A share is empty exactly when its application goes out of contact, and no one node's pace stands for the application's."
+							label="Applications sending a signal, before and after"
+							recommendation="Approve the after. A share is empty exactly when its application stops sending a signal, and no one node's pace stands for the application's."
 							wide
 						>
 							<ApplicationBeats applications={siteApplications.slice(0, 12)} />
@@ -574,10 +574,10 @@ export function ReviewPage() {
 						title="The applications tile"
 						deciding="The words of the applications tile's explainer: its three annotations, its title, and the paragraph about the heartbeat chart under the card."
 						notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); the chart itself (SC 1)."
-						note="Its headline is the applications in contact, with those out of contact set apart in red, and its chart is the heartbeat chart, with a share for each application in contact."
+						note="Its headline is the applications sending a signal, with those that send none set apart in red, and its chart is the heartbeat chart, with a share for each application sending a signal."
 					>
 						<State
-							label="The applications tile, while two applications are out of contact"
+							label="The applications tile, while two applications are with no signal"
 							recommendation="Approve. It explains the heartbeat chart as the cluster view's explainer does, with an application's share in place of a node's."
 							wide
 						>
@@ -621,10 +621,10 @@ export function ReviewPage() {
 						title="The headlines and detail lines"
 						deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
 						notDeciding="The tiles' explainers (SW); the tooltip of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
-						note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
+						note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications sending a signal, with the number that send none set apart in red, and its detail line is the word &quot;applications&quot;."
 					>
 						<State
-							label="Two applications out of contact, three with failing messages"
+							label="Two applications with no signal, three with failing messages"
 							recommendation="Approve, with these words. The events and queues tiles' detail lines have the shape of the cluster view's, quoted below, and the applications tile's is its noun alone, because its headline says the rest."
 							precedents={[
 								{
@@ -647,26 +647,26 @@ export function ReviewPage() {
 					<Part
 						step={2}
 						title="The tooltip of a compact digest's alert flag"
-						deciding="The words of the tooltip of a compact digest's alert flag, which say what losing contact means."
+						deciding="The words of the tooltip of a compact digest's alert flag, which say what it means that there is no signal."
 						notDeciding={
 							"That an alert flag opens a tooltip, which is IC; the words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
 						}
-						note="The tooltip of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
+						note="The tooltip of the alert flag of a compact digest whose application sends no signal. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
 					>
 						<State
 							label="The tooltip of a compact digest's alert icon"
-							note="It says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
-							recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
+							note="It says what it means for the reader that there is no signal, in the words of the engine card's status, about the application."
+							recommendation="Approve, with this wording, which was chosen with the other wordings about a signal. It is the engine card's status about the application, with &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
 							precedents={[
 								{
 									where:
-										"On the cluster view, the status of the engine card while the engine is out of contact, for its words",
+										"On the cluster view, the status of the engine card while the engine sends no signal, for its words",
 									status: { underReview: "FL 1" },
 									words: <p>{engineOutText}</p>,
 								},
 							]}
 						>
-							<Tip>{contactLostText}</Tip>
+							<Tip>{noSignalText}</Tip>
 						</State>
 					</Part>
 				</Tile>
@@ -1004,13 +1004,13 @@ export function ReviewPage() {
 					<Part
 						step={5}
 						title="The chart"
-						deciding="How a node's section of the chart falls between its heartbeats: to empty at the deadline that its latest heartbeat gives, which is when the Observatory takes it to be out of contact."
+						deciding="How a node's section of the chart falls between its heartbeats: to empty at the deadline that its latest heartbeat gives, which is when the Observatory takes it to be with no signal."
 						notDeciding="The rest of how the chart moves, which is settled: the static and the lens with no node live, the ripple when the first comes back, and the line settling when the last goes."
 						note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. Today a node's section falls to empty over three of the usual intervals between its heartbeats, as the browser has seen them. With deadlines, it falls to empty at the deadline of its latest heartbeat: the time by which the node says that it sends the next, or, if it says none, three of the intervals that its engine gives. The nodes here beat every two to five seconds, with a deadline 15 seconds after each heartbeat, as the demo engine's do. Add nodes, and stop them, to see each."
 					>
 						<State
 							label="Nodes coming and going, before and after"
-							recommendation="Approve the after. A section is empty exactly when its node is out of contact, so the chart never shows a node as gone while it is in contact, or as there after it has gone."
+							recommendation="Approve the after. A section is empty exactly when its node sends no signal, so the chart never shows a node as gone while it is sending a signal, or as there after it has gone."
 							wide
 						>
 							<Nodes application={application} />
@@ -1101,7 +1101,7 @@ export function ReviewPage() {
 						step={4}
 						title="The explainer"
 						deciding="The words of the engine tile's explainer: its two annotations, its title, and the paragraph about heartbeats under the card."
-						notDeciding="The alert flag of the engine while it is out of contact, which is FL; how an explainer looks and opens, which is settled."
+						notDeciding="The alert flag of the engine while it sends no signal, which is FL; how an explainer looks and opens, which is settled."
 						note="It takes the place of the hovercards of the icon and the headline, by the rules of the cluster view's explainers. What &quot;online&quot; means, which the headline's hovercard said, is in its text."
 					>
 						<State
@@ -1215,7 +1215,7 @@ const flaggedCards = [
 		status: "No new samples are arriving, so this average is out of date.",
 	},
 	{
-		label: "The cluster tile, while every node is out of contact",
+		label: "The cluster tile, while no nodes are sending a signal",
 		note: "Today the status is in the hovercard of the nodes.",
 		recommendation:
 			"Approve, in red, because something is wrong, as the tile's red 0 and accent already say.",
@@ -1326,7 +1326,7 @@ function Tip({ children }: { children: ReactNode }) {
 const atSite = { ...application, site: "eu-west" };
 
 /**
- * The applications of the site view, all in contact, with no failing messages,
+ * The applications of the site view, all sending a signal, with no failing messages,
  * for judging its layout on its own.
  */
 const calm = siteApplications.map((a) =>
@@ -1339,17 +1339,17 @@ const calm = siteApplications.map((a) =>
 );
 
 /**
- * The applications of the site view with two out of contact, and two with only
- * some of their nodes in contact.
+ * The applications of the site view with two with no signal, and two with only
+ * some of their nodes sending a signal.
  */
-const someOut = withContact(siteApplications, {
+const someOut = withSignal(siteApplications, {
 	out: ["kyc", "payroll"],
 	partly: { orders: 0.5, payments: 0.67 },
 });
 
 /**
  * SiteDemo is the site view, or only its applications tile, with heartbeats that
- * arrive from each application that is in contact, each at its own pace, as they
+ * arrive from each application that is sending a signal, each at its own pace, as they
  * do on the view, so that its chart moves.
  */
 function SiteDemo({
@@ -1464,7 +1464,7 @@ function demoNode(id: string, now: number): DemoNode {
 /**
  * beat makes each node that is due beat, and takes away each node that has
  * stopped once its latest heartbeat has expired, as the Observatory takes it to
- * be out of contact then. It returns true if anything changed.
+ * be with no signal then. It returns true if anything changed.
  */
 function beat(nodes: DemoNode[], now: number): boolean {
 	let changed = false;
@@ -1622,7 +1622,7 @@ function Nodes({ application }: { application: Application }) {
  * drains. Each
  * application has as many nodes as the fixture gives it, and each node beats at
  * its own pace. An application can be stopped, which stops each of its nodes; it
- * is out of contact once the last of their heartbeats has expired.
+ * sends no signal once the last of their heartbeats has expired.
  */
 function ApplicationBeats({
 	applications,
@@ -1929,7 +1929,7 @@ function clusterExplainer(sentence: string): ExplainerSpec {
 		notes: [
 			{
 				at: ".text-4xl",
-				text: "the number of nodes in contact now",
+				text: "the number of nodes sending a signal now",
 				side: "left",
 				atText: true,
 				with: [{ at: ":scope > article > span", atText: "cluster nodes" }],
@@ -1964,8 +1964,8 @@ function clusterExplainer(sentence: string): ExplainerSpec {
 }
 
 /**
- * The site of the explainers of the site view's tiles: six applications in
- * contact, two of which have failing messages.
+ * The site of the explainers of the site view's tiles: six applications sending
+ * a signal, two of which have failing messages.
  */
 const explainedSite = siteOf(
 	siteApplications
@@ -1980,8 +1980,8 @@ const explainedSite = siteOf(
 );
 
 /**
- * The site of the applications tile's explainer, with two applications out of
- * contact.
+ * The site of the applications tile's explainer, with two applications that send
+ * no signal.
  */
 const explainedOut = siteOf(
 	someOut.map((a, i, all) =>
@@ -2203,8 +2203,8 @@ const siteApplicationsExplainer: ExplainerSpec = {
 	notes: [
 		{
 			at: ".text-4xl",
-			text: "the number of applications in contact now",
-			compare: "the number of nodes in contact now",
+			text: "the number of applications sending a signal now",
+			compare: "the number of nodes sending a signal now",
 			side: "left",
 			atText: String(
 				explainedOut.applications.filter((a) => a.nodes > 0).length,
@@ -2218,8 +2218,8 @@ const siteApplicationsExplainer: ExplainerSpec = {
 		},
 		{
 			at: ".text-4xl .text-bad",
-			text: "the number of applications out of contact",
-			compare: "nothing yet: the red count of nodes out of contact isn't built",
+			text: "the number of applications with no signal",
+			compare: "nothing yet: the red count of nodes with no signal isn't built",
 			side: "top",
 			atText: true,
 			keepInk: true,
@@ -2266,8 +2266,8 @@ const engineExplainer: ExplainerSpec = {
 	notes: [
 		{
 			at: ".text-4xl",
-			text: "whether the engine is in contact now",
-			compare: "the number of nodes in contact now",
+			text: "whether the engine is sending a signal now",
+			compare: "the number of nodes sending a signal now",
 			side: "left",
 			atText: true,
 			approach: "top-left",

@@ -401,11 +401,9 @@ test("an engine that doesn't cluster has an engine tile in place of the cluster 
 	expect(engine.className).not.toContain("--color-bad");
 
 	const tip = await tipOf(within(engine).getByText("Online"));
-	expect(tip).toContain(
-		"The engine is online while it is in contact, so the figures shown are current.",
-	);
+	expect(tip).toContain("The engine is online while it is sending a signal.");
 	expect(tip).not.toMatch(/node|cluster/i);
-	expect(tip).not.toContain("The engine is out of contact,");
+	expect(tip).not.toContain("There is no signal from the engine,");
 });
 
 test("the engine tile of an engine whose process isn't live says that it is offline, in red", async () => {
@@ -424,11 +422,11 @@ test("the engine tile of an engine whose process isn't live says that it is offl
 	expect(within(engine).getByText("Offline").className).toContain("text-bad");
 
 	const tip = await tipOf(within(engine).getByText("Offline"));
-	expect(tip).toContain("The engine is out of contact,");
+	expect(tip).toContain("There is no signal from the engine,");
 	expect(tip).not.toMatch(/node|cluster/i);
 });
 
-test("the card of the nodes of a cluster with none live says that contact has been lost", async () => {
+test("the card of the nodes of a cluster with none live says that there is no signal", async () => {
 	render(
 		<Overview
 			application={application}
@@ -438,7 +436,7 @@ test("the card of the nodes of a cluster with none live says that contact has be
 	);
 
 	const tip = await tipOf(screen.getByText("cluster nodes"));
-	expect(tip).toContain("Every node is out of contact,");
+	expect(tip).toContain("There is no signal from any of the nodes,");
 });
 
 test("the icon of the events tile has a card that says what it is about, and not what it shows", async () => {

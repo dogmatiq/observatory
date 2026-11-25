@@ -27,8 +27,8 @@ import {
 	cardClasses,
 	Failing,
 	MetricTile,
+	NoSignal,
 	Noun,
-	OutOfContact,
 	raisedClasses,
 } from "./MetricTile.tsx";
 import { NameLink } from "./NameLink.tsx";
@@ -94,7 +94,7 @@ export function SiteBreakdown({
  * are. A tile whose metrics no application's engine supports is not there.
  */
 export function SiteTotals({ data }: { data: SiteData }) {
-	// Every application is out of contact, so the totals are what they were when
+	// There is no signal from any of the applications, so the totals are what they were when
 	// a node last reported, and are not trusted.
 	const down = data.applications.every((a) => a.nodes === 0);
 
@@ -191,7 +191,7 @@ function AtTheSite({ site }: { site: SiteData["site"] }) {
 /**
  * sitePartialStatus is the status of the card of a tile's icon while only some of
  * the applications report what the tile shows in full: some of their nodes, or
- * all of them, don't report it, or are out of contact. Its numbers can then only
+ * all of them, don't report it, or send no signal. Its numbers can then only
  * appear lower than they really are. See [partialStatus] for a cluster's.
  */
 export const sitePartialStatus = {
@@ -403,8 +403,9 @@ export function SiteQueuesTile({
 /**
  * ApplicationsCard is the card of the headline of the applications tile, and of
  * the words of its detail line. It says what the number counts, and what it is
- * for an application to be in contact, for an engine that clusters and for one
- * that doesn't. If no application is in contact, it says so, as a status.
+ * for an application to be sending a signal, for an engine that clusters and for
+ * one that doesn't. If no applications are sending a signal, it says so, as a
+ * status.
  */
 export function ApplicationsCard({ live }: { live: number }) {
 	return (
@@ -416,19 +417,18 @@ export function ApplicationsCard({ live }: { live: number }) {
 				live === 0
 					? {
 							icon: "alert",
-							text: "Every application is out of contact, so it's unknown whether any application is working.",
+							text: "There is no signal from any of the applications, so it's unknown whether any of them are working.",
 						}
 					: undefined
 			}
 		>
 			<p>
-				The number of applications that are in contact now. An application is in
-				contact while its engine, or any node of its cluster, is in contact. If
-				any applications are out of contact, they are shown separately.
+				The number of applications that are sending a signal now. If there is no
+				signal from some applications, they are shown separately.
 			</p>
 			<SetApartExample
-				rest="in contact"
-				part="out of contact"
+				rest="sending a signal"
+				part="with no signal"
 				partInk="text-bad"
 			/>
 		</InfoCard>
@@ -437,16 +437,16 @@ export function ApplicationsCard({ live }: { live: number }) {
 
 /**
  * ApplicationsTile is the site's applications tile, whose headline is the number
- * of applications in contact, followed by the number out of contact, set apart
- * in red, such as "94 +2", as the queues tile sets apart its failing messages.
- * When every application is out of contact, the headline is a red "0" alone. Its chart is the heartbeat of each application in
- * contact, which drains to the application's deadline if it has one. It has no
- * bar.
+ * of applications sending a signal, followed by the number with no signal, set
+ * apart in red, such as "94 +2", as the queues tile sets apart its failing
+ * messages. When there is no signal from any of the applications, the headline
+ * is a red "0" alone. Its chart is the heartbeat of each application that is
+ * sending a signal, which drains to the application's deadline if it has one.
+ * It has no bar.
  *
- * While any application is out of contact, the tile has the red accent,
- * because an application out of contact is one
- * that nothing shows to be working, unlike a node, whose cluster's other nodes
- * carry on.
+ * While there is no signal from any application, the tile has the red accent,
+ * because an application with no signal is one that nothing shows to be working,
+ * unlike a node, whose cluster's other nodes carry on.
  */
 export function ApplicationsTile({ data }: { data: SiteData }) {
 	const live = data.applications.filter((a) => a.nodes > 0);
@@ -479,10 +479,11 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 						) : (
 							<Ramped value={live.length} format={String} />
 						)}
-						{/* When every application is out of contact, there is nothing to set
-						them apart from, so the headline is the red zero alone, as the
-						cluster tile's is when every node is out of contact. */}
-						<OutOfContact count={live.length === 0 ? 0 : out} />
+						{/* When there is no signal from any of the applications, there is
+						nothing to set them apart from, so the headline is the red zero
+						alone, as the cluster tile's is when there is no signal from any of
+						the nodes. */}
+						<NoSignal count={live.length === 0 ? 0 : out} />
 					</span>
 				</Popover>
 			}
@@ -501,7 +502,7 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 }
 
 /**
- * DigestAlert is how a compact digest says that its application is out of contact: by an
+ * DigestAlert is how a compact digest says that there is no signal from its application: by an
  * alert icon at the right of its name, whose popover says what is wrong, or by
  * words beside its name.
  */
@@ -519,7 +520,7 @@ export function CompactDigests({
 }: {
 	data: SiteData;
 
-	/** How a compact digest says that its application is out of contact. */
+	/** How a compact digest says that there is no signal from its application. */
 	alert: DigestAlert;
 }) {
 	return (
@@ -539,13 +540,13 @@ export function CompactDigests({
  * CompactDigest is the compact digest of one application in [CompactDigests]. Its
  * name is the link to its application view, and is the only part of it that is a
  * link. An
- * application that is out of contact has the red accent along its top, and says
- * so in red at the right of its name, as `alert` says. Its figures keep their places, as zeros that are not
- * available, which glitch when contact is lost, so that the blur alone says how
- * far a figure is trusted and the red alone says that contact is lost. An
- * application with failing messages has the orange accent. While only some of its
- * nodes are in contact, its figures are blurred by how few are, by the coverage
- * rule.
+ * application with no signal has the red accent along its top, and says so in
+ * red at the right of its name, as `alert` says. Its figures keep their places,
+ * as zeros that are not available, which glitch when the signal stops, so that
+ * the blur alone says how far a figure is trusted and the red alone says that
+ * there is no signal. An application with failing messages has the orange
+ * accent. While only some of its nodes are sending a signal, its figures are
+ * blurred by how few are, by the coverage rule.
  */
 function CompactDigest({
 	site,
@@ -581,10 +582,10 @@ function CompactDigest({
 				</NameLink>
 				{out &&
 					(alert === "icon" ? (
-						<Popover content={contactLostText}>
+						<Popover content={noSignalText}>
 							<span className="ml-auto flex-none self-center text-bad">
 								<Icon name="alert" className="size-4" />
-								<span className="sr-only">Contact lost</span>
+								<span className="sr-only">No signal</span>
 							</span>
 						</Popover>
 					) : (
@@ -603,12 +604,12 @@ function CompactDigest({
 }
 
 /**
- * contactLostText is the tooltip of the alert flag of a compact digest whose
- * application is out of contact, in the form of the engine card's status, with
- * the application as its subject.
+ * noSignalText is the tooltip of the alert flag of a compact digest whose
+ * application sends no signal, in the form of the engine card's status, about
+ * the application.
  */
-export const contactLostText =
-	"The application is out of contact, so it's unknown whether it is working.";
+export const noSignalText =
+	"There is no signal from the application, so it's unknown whether it is working.";
 
 /**
  * ApplicationFigures is the events per minute and the messages waiting of one
@@ -701,7 +702,7 @@ function ApplicationFigures({
  * squares, one for each application, in the order of the applications, in the
  * manner of a contribution graph. A square's shade is how busy its application
  * is, by its events per minute, in four steps. A square is orange while the
- * application has failing messages, and an outline while it is out of contact.
+ * application has failing messages, and an outline while there is no signal from it.
  * Pointing at a square shows the card of its application, and the square links
  * to its application view.
  */
@@ -759,8 +760,8 @@ function ApplicationSquares({ data }: { data: SiteData }) {
 
 /**
  * ApplicationCard is the card of a square of [ApplicationSquares]. It names the
- * application and gives its figures, or says, as a status, that it is out of
- * contact.
+ * application and gives its figures, or says, as a status, that there is no
+ * signal from it.
  */
 export function ApplicationCard({ app }: { app: SiteApplication }) {
 	const out = app.nodes === 0;
@@ -775,7 +776,7 @@ export function ApplicationCard({ app }: { app: SiteApplication }) {
 				out
 					? {
 							icon: "alert",
-							text: contactLostText,
+							text: noSignalText,
 						}
 					: undefined
 			}

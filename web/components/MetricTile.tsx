@@ -236,10 +236,10 @@ const setApart = {
 		ink: "text-failing",
 		spoken: (n: number) => ` and ${countOf(n, "message", "messages")} failing`,
 	},
-	"out-of-contact": {
+	"no-signal": {
 		ink: "text-bad",
 		spoken: (n: number) =>
-			` and ${countOf(n, "application", "applications")} out of contact`,
+			` and ${countOf(n, "application", "applications")} with no signal`,
 	},
 } as const;
 
@@ -259,19 +259,19 @@ export function Failing({
 }
 
 /**
- * OutOfContact is the number of applications that are out of contact, which
- * comes after the number of those that are in contact, such as "94 +2", in red.
+ * NoSignal is the number of applications with no signal, which comes after the
+ * number of those that are sending a signal, such as "94 +2", in red.
  * See [SetApart].
  */
-export function OutOfContact({ count }: { count: number }) {
-	return <SetApart kind="out-of-contact" count={count} size="headline" />;
+export function NoSignal({ count }: { count: number }) {
+	return <SetApart kind="no-signal" count={count} size="headline" />;
 }
 
 /**
  * SetApart is the part of a number that needs attention, which comes after the
  * rest of the number, such as the failing messages of "24 +1". It is smaller
  * than the number it follows, and has the color of its kind: orange for failing
- * messages, and red for what is out of contact.
+ * messages, and red for what there is no signal from.
  *
  * It is spoken in full, because "+1" says little to a screen reader.
  *

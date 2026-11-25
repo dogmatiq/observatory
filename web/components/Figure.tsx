@@ -127,7 +127,7 @@ export function Figure({
 
 	// A figure that covers only some of the nodes starts from as little trust as
 	// its coverage gives it, and glitches for a moment each time it loses trust in
-	// a step, such as when the cluster goes out of contact.
+	// a step, such as when the signal from the cluster stops.
 	const coverage = useCoverage();
 	const dropped = useTrustDropped();
 

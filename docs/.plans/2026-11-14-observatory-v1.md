@@ -20,11 +20,11 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
 - **Node**: one running process of an engine, as a member of its cluster. What has an ID, a heartbeat, a state of being
   online or offline, or workloads that it owns, is a node.
 - **Cluster**: the nodes that share the work of one application between them.
-- **Contact**: a node is in contact while its `WatchEngine` call is open and, if it heartbeats, while each heartbeat
-  arrives in time, as the Spec section defines it. The code calls this reporting. The page says "contact", and not
-  "reporting", which reads as sending samples, and not "heartbeats", because not every engine heartbeats. Losing contact
-  doesn't show that a node has stopped, so the page says that whether the application is working is
-  unknown, and doesn't say why.
+- **Signal**: a node is sending a signal while its `WatchEngine` call is open and, if it heartbeats, while each
+  heartbeat arrives before its deadline, as the Spec section defines it. The code calls this reporting. The page says
+  "signal", and not "reporting", which reads as sending samples, and not "heartbeats", because not every engine
+  heartbeats. No signal doesn't show that a node has stopped, so the page says that whether the application is working
+  is unknown, and doesn't say why.
 - The page says "node" only where there is a cluster. An engine that doesn't cluster has no nodes: its one process is
   "the engine", with the engine's ID and heartbeat, and the engine is online or offline. The spec says the same: an
   engine runs as a cluster or as a single instance, and only the instances of a cluster are nodes. The Observatory's
@@ -478,7 +478,7 @@ parts. An item that says "Done" is built.
   Its icon has a card that says what the tile is about, with the cluster's ID under its kind, as the cards of an event
   stream and a queue have theirs, because an application may run in several clusters and nothing else on the page says
   which one this is. A cluster has no name, only an ID, so the card has no scope line. The number of nodes and the words
-  "cluster nodes" in its detail line share one card, with the node's icon because the number counts nodes, which says what a node is, and that the nodes together form the cluster, with "Contact with every node has been lost, so it's unknown whether the application is working." as a status while no node is live, and the workloads have another, which says what a workload is. Neither card
+  "cluster nodes" in its detail line share one card, with the node's icon because the number counts nodes, which says what a node is, and that the nodes together form the cluster, with "There is no signal from any of the nodes, so it's unknown whether the application is working." as a status while no node is live, and the workloads have another, which says what a workload is. Neither card
   describes the bar: as on the other tiles, only the card of a segment of the bar does. Each card keeps to about forty words, as the others do. A segment of the bar has the card of its node, with the node's ID, the
   workloads that it owns and its share of them. If no node's engine divides its work into workloads, the tile leaves the
   workloads out, and has no bar, because a bar of the nodes alone would say only how many there are, which the
@@ -488,9 +488,9 @@ parts. An item that says "Done" is built.
   for work; one that divides its work and doesn't report the workloads, whose nodes assign themselves workloads and say
   that they don't report them, which is shown as the one before it, because the page can't give the number; and one
   whose nodes say that they report them, as above. The state document says whether the engine runs as a cluster, and
-  whether any node says that it reports its workloads, and a node's workloads are absent until it sends them. The engine tile's headline says whether the engine is online, which is while it is in contact:
+  whether any node says that it reports its workloads, and a node's workloads are absent until it sends them. The engine tile's headline says whether the engine is online, which is while it is sending a signal:
   "Online" or, in red with the red accent, "Offline", with no detail line, because the engine never changes from one
-  process to several. Its card says that online means in contact, with contact being lost, and so whether the application is working being unknown, as a status, both in words still to be settled at `/-/review`, and mentions
+  process to several. Its card says that online means sending a signal, with there being no signal, and so whether the application is working being unknown, as a status, both in words still to be settled at `/-/review`, and mentions
   neither nodes nor clusters. A page says "offline", and not "down" or "stopped", for an engine or a cluster that isn't reporting, because it
   can't tell a process that has stopped from one that it can't reach. The code and the state document call it `down`. Its chart is the process's
   heartbeat, and it has no bar. Its icon has a card that says what the tile is about, with the engine's ID. Such an
@@ -514,7 +514,7 @@ parts. An item that says "Done" is built.
   application and site in the title bar and the cluster tile, and nothing else, because nothing about it is current. The
   page comes alive when a node connects, as the stream goes on. A cluster that it has no record of is unknown, and its page
   says so with a 404 from the API, and asks again every five seconds, so that it comes alive when the cluster becomes
-  known. The clusters page lists a cluster that is not reporting after those that are, marked "out of contact".
+  known. The clusters page lists a cluster that is not reporting after those that are, marked "no signal".
 - The grey line of the cluster tile with no live node is quiet, then breaks into a short burst of static, and
   then a lens passes along it for ten seconds or more, to and fro at different speeds and with pauses, as of something
   searching the line for the cluster, and then gives up: it stops where it is and shrinks to nothing, slowly, as it loses
@@ -892,7 +892,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   cluster's ID, so two clusters of one application at one site, as in a blue/green deploy, are side by side and not
   merged; with one cluster, the application's page can show it directly. An engine that doesn't run as a cluster gets a
   new ID each time it starts, so each run is a drill-down beneath the application's page by that ID, and a restart is
-  a new run under the same page, not a new page that leaves the old one out of contact until it is forgotten.
+  a new run under the same page, not a new page that leaves the old one with no signal until it is forgotten.
   Done, with the permalinks below in place of drill-downs: the clusters page links each cluster to the application view
   of its application at its site, which shows its cluster directly, and lists the clusters, each linking to
   `/-/cluster/{id}`, while more than one runs it. `Observer.ClustersOf` says which clusters those are: each cluster of
@@ -932,28 +932,28 @@ Tick each item when it is done, and write the pull request or commit that did it
   heading "Clusters" of the root list, whose entries are now applications at sites, are placeholders until then, and
   are settled as those pages are designed on `/-/review`. Every page that waits
   for something to become known asks again every second.
-- Decided, to build next: a member of a cluster that is out of contact counts toward a figure's coverage as a node that
-  doesn't report, on every view, so the cluster view's figures blur while some nodes are out of contact, as the site
+- Decided, to build next: a member of a cluster that sends no signal counts toward a figure's coverage as a node that
+  doesn't report, on every view, so the cluster view's figures blur while some nodes send no signal, as the site
   view's do, rather than shrinking with no sign. Today `Coverage` counts only the nodes that are reporting. Its new
   state is reviewed under the cluster tile.
-- Decided, to build with the item above: the cluster tile's headline sets apart the members that are out of contact as a
-  red "+N", as in "4 +1", as the site view's applications tile does, without the red accent, which stays for when every
-  node is out of contact, because the other nodes still work. The members are those of the membership rule, from the
+- Decided, to build with the item above: the cluster tile's headline sets apart the members that send no signal as a
+  red "+N", as in "4 +1", as the site view's applications tile does, without the red accent, which stays for when no nodes
+  are sending a signal, because the other nodes still work. The members are those of the membership rule, from the
   nodes' sets of live nodes, so a node that leaves cleanly isn't counted. An engine that doesn't report its live nodes
   has no "+N". The headline's card gets the worked example of a number set apart. The cluster explainer then gets an
-  annotation of its own for the "+N", along the lines of "the number of nodes out of contact", placed by the rules for a
+  annotation of its own for the "+N", along the lines of "the number of nodes with no signal", placed by the rules for a
   figure beside the headline, and a mockup variant, whose wording is reviewed then.
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with the events in the event streams of all the applications together, and the number of
   those streams, which is how widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
   that are failing, and a bar of which applications have the most, and the number of queues of all the
-  applications together, which says roughly how widely the site's work can be spread; and the number of applications in contact, with the
-  number out of contact, whose chart is the heartbeat chart with a share for each application in contact. Below them,
+  applications together, which says roughly how widely the site's work can be spread; and the number of applications sending a signal, with the
+  number with no signal, whose chart is the heartbeat chart with a share for each application sending a signal. Below them,
   each application in the order of their names, as a small card with its name, its events per minute and its messages
   waiting, linking to its application view; the plan's first idea, a grid of squares like a contribution graph, is the
-  alternative. An application is in contact while its engine, or any node of its cluster, is. The coverage rule
+  alternative. An application is sending a signal while its engine, or any node of its cluster, is. The coverage rule
   applies across the site: a total's coverage is the share of the nodes at the site that report it, and an application
-  out of contact counts as nodes that don't. The view of the applications at no site is the same, at the nil UUID's
+  with no signal counts as nodes that don't. The view of the applications at no site is the same, at the nil UUID's
   address. The backend is built once the design is settled.
 - What a cluster's page shows of `HandlerEventStreamLag`. The spec gives no rule for combining it across nodes, on
   purpose: what makes sense to show is for the Observatory to work out. Until then a cluster shows it only if
@@ -1012,7 +1012,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   workloads. Each workload is given to one node at a time.", and "Each node sends heartbeats to show that it is running. Its
   section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats
   stop." Its paragraphs describe
-  what happens rather than define terms, as the events and queues explainers' do. Its annotations are "the number of nodes in contact now", "the number of workloads in the
+  what happens rather than define terms, as the events and queues explainers' do. Its annotations are "the number of nodes sending a signal now", "the number of workloads in the
   cluster", "how the workloads are spread across the nodes" and "how recently each node sent a heartbeat".
   The aggregate's digest explainer is approved. Its arrows point at the figures themselves: the handler's name from
   above the card, the kind and the instances level from the left, the commands waiting from above, and the failing
@@ -1047,14 +1047,18 @@ Tick each item when it is done, and write the pull request or commit that did it
   The node hovercard's sentence "Workloads vary in size, so two nodes with the same number of workloads can have very
   different amounts of work to do." moves to the end of the cluster explainer's paragraph about workloads (approved);
   its words are under review (CL 6).
+  Decided: the views say "signal" where they said "contact". A node is sending a signal, or there is no signal from
+  it; an application sends one, for brevity, though its engine does; a status reads "There is no signal from the
+  engine, so it's unknown whether the application is working". The wordings were chosen row by row on a temporary
+  page, and the design doc's glossary has the term. Done.
   Under review (CL 5, SC 1), shown before and after: a section of the heartbeat chart falls to empty at the deadline of
   its latest heartbeat, which is the time by which the node says that it sends the next, or three of the intervals that
-  its engine gives, as the server already works out to tell whether the node is in contact. Today it falls over three of
-  the usual intervals that the browser has seen, so it can empty while the node is in contact. An application's section
+  its engine gives, as the server already works out to tell whether the node is sending a signal. Today it falls over three of
+  the usual intervals that the browser has seen, so it can empty while the node is still sending one. An application's section
   on the site view follows the latest deadline of its nodes, and a heartbeat raises it only if it moves that deadline
   later. To build if approved: the server sends each node's deadline with its heartbeats, and the page drops the
   fallback to the usual intervals; a node that gives no way to tell when its heartbeats expire stays full while it is
-  connected, as the server takes it to be in contact.
+  connected, as the server takes it to be sending a signal.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest

@@ -5,11 +5,11 @@ import { InfoCard } from "./InfoCard.tsx";
  * content of the popover of the headline. It says what "online" means, and what
  * follows from it, and, if the engine is offline, what is unknown, as a status.
  *
- * `online` is whether the engine is in contact.
+ * `online` is whether the engine is sending a signal.
  */
-/** The status of the engine's card while the engine is out of contact. */
+/** The status of the engine's card while there is no signal from the engine. */
 export const engineOutText =
-	"The engine is out of contact, so it's unknown whether the application is working.";
+	"There is no signal from the engine, so it's unknown whether the application is working.";
 
 export function EngineCard({ online }: { online: boolean }) {
 	return (
@@ -26,10 +26,7 @@ export function EngineCard({ online }: { online: boolean }) {
 						}
 			}
 		>
-			<p>
-				The engine is online while it is in contact, so the figures shown are
-				current.
-			</p>
+			<p>The engine is online while it is sending a signal.</p>
 		</InfoCard>
 	);
 }

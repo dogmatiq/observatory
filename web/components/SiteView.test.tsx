@@ -4,7 +4,7 @@ import {
 	euWest,
 	siteApplications,
 	siteOf,
-	withContact,
+	withSignal,
 } from "../fixtures/site.ts";
 import { formatCompact } from "../lib/format.ts";
 import { applicationAtSitePath } from "../lib/route.ts";
@@ -37,31 +37,31 @@ test("each application is in the order given, and links to its application view"
 	);
 });
 
-test("an application that is out of contact says so by an icon beside its name, and its figures are not available", () => {
+test("an application that sends no signal says so by an icon beside its name, and its figures are not available", () => {
 	const name = apps[1]?.application.name as string;
 	render(
-		<SiteOverview data={siteOf(withContact(apps, { out: [name] }), euWest)} />,
+		<SiteOverview data={siteOf(withSignal(apps, { out: [name] }), euWest)} />,
 	);
 
 	const grid = screen.getByRole("region", { name: "Applications" });
 	const digest = within(grid).getByRole("article", { name });
 
-	expect(within(digest).getByText("Contact lost")).toBeDefined();
+	expect(within(digest).getByText("No signal")).toBeDefined();
 	expect(
 		within(digest).getAllByRole("img", { name: "not available" }).length,
 	).toBeGreaterThan(0);
 });
 
-test("the applications tile counts those in contact, with those out of contact set apart", () => {
+test("the applications tile counts those sending a signal, with those that send none set apart", () => {
 	const names = apps.slice(0, 1).map((a) => a.application.name);
 	render(
-		<SiteOverview data={siteOf(withContact(apps, { out: names }), euWest)} />,
+		<SiteOverview data={siteOf(withSignal(apps, { out: names }), euWest)} />,
 	);
 
 	const tile = screen.getByRole("article", { name: "Applications" });
 
-	expect(tile.textContent).toMatch(/^3\+1 and 1 application out of contact/);
-	expect(tile.textContent).toMatch(/out of contactapplications$/);
+	expect(tile.textContent).toMatch(/^3\+1 and 1 application with no signal/);
+	expect(tile.textContent).toMatch(/with no signalapplications$/);
 });
 
 test("the applications at no site link to the site whose key is the nil UUID", () => {
@@ -88,23 +88,23 @@ test("each square names its application to assistive technology", () => {
 	).toEqual(apps.map((a) => a.application.name));
 });
 
-test("the alert icon of an application out of contact says what losing contact means", async () => {
+test("the alert icon of an application that sends no signal says what that means", async () => {
 	const name = apps[1]?.application.name as string;
 	render(
-		<SiteOverview data={siteOf(withContact(apps, { out: [name] }), euWest)} />,
+		<SiteOverview data={siteOf(withSignal(apps, { out: [name] }), euWest)} />,
 	);
 
-	const icon = screen.getByText("Contact lost").parentElement as HTMLElement;
+	const icon = screen.getByText("No signal").parentElement as HTMLElement;
 
 	expect(await tipOf(icon)).toContain(
-		"The application is out of contact, so it's unknown whether it is working.",
+		"There is no signal from the application, so it's unknown whether it is working.",
 	);
 });
 
-test("the applications tile is a red zero alone when every application is out of contact", () => {
+test("the applications tile is a red zero alone when no applications are sending a signal", () => {
 	const names = apps.map((a) => a.application.name);
 	render(
-		<SiteOverview data={siteOf(withContact(apps, { out: names }), euWest)} />,
+		<SiteOverview data={siteOf(withSignal(apps, { out: names }), euWest)} />,
 	);
 
 	const tile = screen.getByRole("article", { name: "Applications" });

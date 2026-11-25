@@ -70,7 +70,7 @@ export interface SiteData {
 		/**
 		 * The share of the nodes at the site that report the events recorded, if
 		 * only some of them do, as it is for a cluster's events tile. An application
-		 * whose nodes are all out of contact counts as nodes that don't report.
+		 * with no signal from any of its nodes counts as nodes that don't report.
 		 */
 		coverage?: number;
 
@@ -117,13 +117,13 @@ export interface SiteApplication {
 	application: { name: string; key: string };
 
 	/**
-	 * The number of the application's nodes that are in contact. Zero if every
-	 * node is out of contact.
+	 * The number of the application's nodes that are sending a signal. Zero if
+	 * there is no signal from any of them.
 	 */
 	nodes: number;
 
 	/**
-	 * The share of the application's nodes that are in contact, if only some of
+	 * The share of the application's nodes that are sending a signal, if only some of
 	 * them are. The application's figures are then the sums of those nodes.
 	 */
 	coverage?: number;
@@ -133,13 +133,13 @@ export interface SiteApplication {
 	 * follows arrived, as [LiveNode.heartbeats] are: with a deadline, each
 	 * heartbeat of any of the application's nodes that moved the deadline
 	 * later, and without one, those of the node that sent the latest heartbeat.
-	 * Empty while out of contact.
+	 * Empty while there is no signal from it.
 	 */
 	heartbeats: number[];
 
 	/**
 	 * The latest of the deadlines of the application's nodes, as
-	 * [LiveNode.deadline] is, because the application is in contact while any of
+	 * [LiveNode.deadline] is, because the application is sending a signal while any of
 	 * its nodes is. Absent if its nodes give no way to tell when their
 	 * heartbeats expire.
 	 */

@@ -441,7 +441,7 @@ test("the application view lists the clusters when more than one runs the applic
 	expect(screen.getByRole("link", { name: "c2" }).getAttribute("href")).toBe(
 		"/-/cluster/c2",
 	);
-	expect(screen.getByText("out of contact")).toBeDefined();
+	expect(screen.getByText("no signal")).toBeDefined();
 	expect(watching()).toEqual([]);
 });
 

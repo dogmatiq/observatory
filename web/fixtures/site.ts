@@ -148,7 +148,7 @@ function historyOf(last: number, seed: number): Chart {
 }
 
 /**
- * applicationAt returns the application at the given position, in contact, with
+ * applicationAt returns the application at the given position, sending a signal, with
  * figures that vary from one application to another as a real site's do: most
  * are quiet, and a few are busy.
  */
@@ -177,7 +177,7 @@ function applicationAt(i: number): SiteApplication {
 }
 
 /**
- * The applications of a site whose applications are all in contact. Three have
+ * The applications of a site whose applications are all sending a signal. Three have
  * failing messages.
  */
 export const siteApplications: SiteApplication[] = names.map((_, i) => {
@@ -198,11 +198,11 @@ export const siteApplications: SiteApplication[] = names.map((_, i) => {
 });
 
 /**
- * withContact returns the given applications, with every node of each that is
- * named in `out` out of contact, and only some of the nodes of each that is named
- * in `partly` in contact, with the given share.
+ * withSignal returns the given applications, with no signal from any node of each
+ * that is named in `out`, and a signal from only some of the nodes of each that
+ * is named in `partly`, with the given share.
  */
-export function withContact(
+export function withSignal(
 	applications: SiteApplication[],
 	{
 		out = [],
@@ -238,9 +238,8 @@ export const euWest = {
 /**
  * siteOf returns what the page of a site shows, with its totals worked out from
  * the given applications, as the Observatory works them out, at the given site,
- * or at no site if it is undefined. An application that
- * is out of contact adds its last figures, and counts as nodes that don't
- * report, as `coverage` says.
+ * or at no site if it is undefined. An application with no signal adds its last
+ * figures, and counts as nodes that don't report, as `coverage` says.
  */
 export function siteOf(
 	applications: SiteApplication[],

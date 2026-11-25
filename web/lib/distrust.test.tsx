@@ -63,7 +63,7 @@ test("a number glitches for a moment each time its trust falls in a step, and no
 	expect(glitching(container)).toBe(false);
 });
 
-test("a number glitches as the cluster goes out of contact, and is then the zero that is not available", () => {
+test("a number glitches as the signal from the cluster stops, and is then the zero that is not available", () => {
 	const { container, to } = shown(1);
 
 	to(1, true);
