@@ -155,9 +155,19 @@ export function streamOf(
 		recorded(`handlers/${h.key}`, h.history);
 	}
 
+	// Each heartbeat expires as long after it arrived as the latest does, which
+	// is what the server sends, because it keeps only the latest's expiry.
 	for (const n of nodesOf(overview)) {
+		const last = n.heartbeats.at(-1);
+		const expiry =
+			last === undefined || n.deadline === undefined
+				? undefined
+				: n.deadline + last;
 		for (const msBefore of n.heartbeats) {
-			messages.push(["heartbeat", { node: n.id, msBefore }]);
+			messages.push([
+				"heartbeat",
+				{ node: n.id, msBefore, ...(expiry !== undefined && { expiry }) },
+			]);
 		}
 	}
 

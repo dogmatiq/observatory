@@ -17,6 +17,7 @@ const empty: Snapshot = {
 	document: {},
 	series: new Map(),
 	beats: new Map(),
+	expiries: new Map(),
 };
 
 const changed = (patch: Record<string, unknown>): StreamEvent => ({
@@ -849,4 +850,52 @@ test("the instances of a process that are bound to no queue are a segment of the
 		{ id: undefined, instances: 3 },
 	]);
 	expect(other?.summary.bindings).toEqual([{ id: "q1", instances: 1 }]);
+});
+
+test("a node's deadline is when its latest heartbeat expires, after the moment that the page reads the snapshot", () => {
+	const s = applied(
+		[
+			changed({
+				application: { name: "a", key: "k" },
+				cluster: {},
+				nodes: { n: {} },
+			}),
+			0,
+		],
+		[{ kind: "heartbeat", node: "n", msBefore: 0, expiry: 15_000 }, 1000],
+	);
+
+	// The heartbeat arrived at 1 s and expires 15 s later, at 16 s, which is
+	// 12 s after the page reads the snapshot at 4 s.
+	const [node] = selectCluster(s, 4000)?.overview.cluster?.nodes ?? [];
+	expect(node?.deadline).toBe(12_000);
+});
+
+test("a node whose latest heartbeat gives no way to calculate when it expires has no deadline", () => {
+	const s = applied(
+		[
+			changed({
+				application: { name: "a", key: "k" },
+				cluster: {},
+				nodes: { n: {} },
+			}),
+			0,
+		],
+		[{ kind: "heartbeat", node: "n", msBefore: 0, expiry: 15_000 }, 1000],
+		[{ kind: "heartbeat", node: "n", msBefore: 0 }, 2000],
+	);
+
+	const [node] = selectCluster(s, 4000)?.overview.cluster?.nodes ?? [];
+	expect(node?.deadline).toBeUndefined();
+});
+
+test("a heartbeat event gives the expiry that the stream sends with it", () => {
+	expect(
+		parseEvent("heartbeat", '{"node":"n","msBefore":0,"expiry":15000}'),
+	).toEqual({ kind: "heartbeat", node: "n", msBefore: 0, expiry: 15_000 });
+	expect(parseEvent("heartbeat", '{"node":"n","msBefore":0}')).toEqual({
+		kind: "heartbeat",
+		node: "n",
+		msBefore: 0,
+	});
 });

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { heartbeatLevel } from "../lib/levels.ts";
+import { levelOf } from "../lib/levels.ts";
 import {
 	apply,
 	parseEvent,
@@ -10,12 +10,7 @@ import { application, overview } from "./overview.ts";
 import { streamOf } from "./stream.ts";
 
 test("the fixture's heartbeats give the levels that the prototype's page was captured with", () => {
-	const levels = overview.cluster.nodes.map((n) =>
-		heartbeatLevel(
-			n.heartbeats.map((ago) => -ago),
-			0,
-		),
-	);
+	const levels = overview.cluster.nodes.map((n) => levelOf(n, 0));
 
 	expect(levels[0]).toBe(1);
 	expect(levels[1]).toBeCloseTo(0.62, 10);
@@ -27,6 +22,7 @@ test("the fixture survives the stream: the page selects from the burst what the 
 		document: {},
 		series: new Map(),
 		beats: new Map(),
+		expiries: new Map(),
 	};
 	for (const [name, data] of streamOf(application, overview)) {
 		const event = parseEvent(name, JSON.stringify(data));

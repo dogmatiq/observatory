@@ -1,4 +1,4 @@
-import { drainBeats, riseTime } from "../lib/levels.ts";
+import { riseTime } from "../lib/levels.ts";
 import type { OverviewData } from "../model.ts";
 
 /**
@@ -14,21 +14,21 @@ import type { OverviewData } from "../model.ts";
  */
 
 /**
- * heartbeatsAt returns the times of the heartbeats of a node that sends one
- * every second, whose heartbeat level is the given one at the moment of the
- * page. The prototype's page was captured with the levels of its three nodes
- * partway down, and a level is only given by the times of heartbeats.
- *
- * A node whose level is full has sent only one heartbeat, so its level stays
- * full.
+ * How long after it arrives a heartbeat of the fixture's nodes expires, in
+ * milliseconds.
  */
-function heartbeatsAt(level: number): number[] {
-	if (level === 1) {
-		return [1000];
-	}
+const fixtureExpiry = 3000;
 
-	const since = riseTime + (1 - level) * drainBeats * 1000;
-	return [since + 1000, since];
+/**
+ * beatsAt returns the heartbeats, and the deadline of the latest, of a node that
+ * sends one every second, whose heartbeat level is the given one at the moment of
+ * the page. The prototype's page was captured with the levels of its three nodes
+ * partway down. A level drains from full, once it has risen, to empty at the
+ * deadline, so the latest heartbeat arrived as long ago as gives that level.
+ */
+function beatsAt(level: number): { heartbeats: number[]; deadline: number } {
+	const since = riseTime + (1 - level) * (fixtureExpiry - riseTime);
+	return { heartbeats: [since + 1000, since], deadline: fixtureExpiry - since };
 }
 
 /** The application that the cluster runs. */
@@ -246,17 +246,17 @@ export const overview: OverviewData & {
 			{
 				id: "113cbdc3-a2d7-4415-b428-9cdce48b5dc0",
 				workloads: 3,
-				heartbeats: heartbeatsAt(1),
+				...beatsAt(1),
 			},
 			{
 				id: "4aeaa462-27b3-4caf-b626-ca4c88fa560f",
 				workloads: 1,
-				heartbeats: heartbeatsAt(0.62),
+				...beatsAt(0.62),
 			},
 			{
 				id: "f2cc5362-f4ea-4603-b9da-4c0b0e873f6b",
 				workloads: 1,
-				heartbeats: heartbeatsAt(0.3),
+				...beatsAt(0.3),
 			},
 		],
 	},

@@ -21,10 +21,11 @@ import type {
 export const chartWindow = 70_000;
 
 /**
- * How many of a node's recent heartbeats the page keeps. They give the node's
- * usual interval between heartbeats.
+ * How many of a node's recent heartbeats the page keeps: the latest, whose
+ * deadline its section of the heartbeat chart drains to, and the one before it,
+ * from whose level the latest rises.
  */
-export const recentBeats = 9;
+export const recentBeats = 2;
 
 /**
  * RatePoint is the value of a chart's number at a moment, as the page keeps it.
@@ -54,12 +55,20 @@ export interface Snapshot {
 
 	/** When each node's recent heartbeats arrived, by node ID, oldest first. */
 	beats: ReadonlyMap<string, readonly number[]>;
+
+	/**
+	 * How long after it arrived each node's latest heartbeat expires, in
+	 * milliseconds, by node ID, for a node whose heartbeats give a way to
+	 * calculate it.
+	 */
+	expiries: ReadonlyMap<string, number>;
 }
 
 const emptySnapshot: Snapshot = {
 	document: {},
 	series: new Map(),
 	beats: new Map(),
+	expiries: new Map(),
 };
 
 /**
@@ -74,8 +83,11 @@ export type StreamEvent =
 			series: string;
 			points: [msBefore: number, value: number][];
 	  }
-	/** A heartbeat from the node arrived, this long before the message. */
-	| { kind: "heartbeat"; node: string; msBefore: number }
+	/**
+	 * A heartbeat from the node arrived, this long before the message, and
+	 * expires this long after it arrived, if it gives a way to calculate that.
+	 */
+	| { kind: "heartbeat"; node: string; msBefore: number; expiry?: number }
 	/** The burst of messages that begins each connection is complete. */
 	| { kind: "synced" };
 
@@ -137,7 +149,12 @@ export function parseEvent(
 
 		case "heartbeat":
 			if (typeof body.node === "string" && isNumber(body.msBefore)) {
-				return { kind: "heartbeat", node: body.node, msBefore: body.msBefore };
+				return {
+					kind: "heartbeat",
+					node: body.node,
+					msBefore: body.msBefore,
+					...(isNumber(body.expiry) && { expiry: body.expiry }),
+				};
 			}
 			return undefined;
 
@@ -247,7 +264,13 @@ export function apply(
 					-recentBeats,
 				),
 			);
-			return { ...snapshot, beats };
+			const expiries = new Map(snapshot.expiries);
+			if (event.expiry === undefined) {
+				expiries.delete(event.node);
+			} else {
+				expiries.set(event.node, event.expiry);
+			}
+			return { ...snapshot, beats, expiries };
 		}
 
 		case "synced":
@@ -665,15 +688,20 @@ export function selectCluster(
 		attempt(() =>
 			entries(doc.nodes, "nodes")
 				.sort(byId)
-				.map(
-					([id, n]): LiveNode => ({
+				.map(([id, n]): LiveNode => {
+					const beats = snapshot.beats.get(id) ?? [];
+					const last = beats.at(-1);
+					const expiry = snapshot.expiries.get(id);
+					return {
 						id,
 						workloads: maybeNumber(n.workloads, "workloads"),
-						heartbeats: (snapshot.beats.get(id) ?? []).map((t) =>
-							Math.max(0, ref - t),
-						),
-					}),
-				),
+						heartbeats: beats.map((t) => Math.max(0, ref - t)),
+						// The deadline of the latest heartbeat, as a time after the
+						// moment that the page reads the snapshot.
+						...(last !== undefined &&
+							expiry !== undefined && { deadline: last + expiry - ref }),
+					};
+				}),
 		) ?? [];
 
 	// An engine that runs as a cluster has the cluster tile, and one that doesn't

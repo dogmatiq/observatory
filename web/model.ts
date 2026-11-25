@@ -130,10 +130,9 @@ export interface SiteApplication {
 
 	/**
 	 * The times at which the heartbeats that the applications tile's chart
-	 * follows arrived, as [LiveNode.heartbeats] are: with a deadline, each
-	 * heartbeat of any of the application's nodes that moved the deadline
-	 * later, and without one, those of the node that sent the latest heartbeat.
-	 * Empty while there is no signal from it.
+	 * follows arrived, as [LiveNode.heartbeats] are: each heartbeat of any of the
+	 * application's nodes that moved its deadline later. Empty while there is no
+	 * signal from it.
 	 */
 	heartbeats: number[];
 

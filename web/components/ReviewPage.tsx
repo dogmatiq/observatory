@@ -475,10 +475,10 @@ export function ReviewPage() {
 					title="The applications tile's chart"
 					deciding="How the applications tile's heartbeat chart gives each application sending a signal a share, which heartbeats an application's share follows, and what happens to it when the signal stops."
 					notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's (CL 5), including how a node's section falls to its deadline; the tile's words (SH 1) and its explainer (SW 3)."
-					note="Each application sending a signal has an equal share of the chart's width. Before, an application's share follows the heartbeats of whichever of its nodes sent the latest one, and falls over three of that node's usual intervals. After, it follows the application's deadline, which is the latest of its nodes' deadlines, because the application is sending a signal while any of its nodes is: a heartbeat raises it only if it moves that deadline later, and it falls to empty at the deadline, which is when the application stops sending a signal. Its share then shrinks away. Each application here has the fixture's number of nodes, from one to six, which beat every two to five seconds, with a deadline 15 seconds after each heartbeat. Stop an application to see it go."
+					note="Each application sending a signal has an equal share of the chart's width. An application's share follows the application's deadline, which is the latest of its nodes' deadlines, because the application is sending a signal while any of its nodes is: a heartbeat raises it only if it moves that deadline later, and it falls to empty at the deadline, which is when the application stops sending a signal. Its share then shrinks away. Each application here has the fixture's number of nodes, from one to six, which beat every two to five seconds, with a deadline 15 seconds after each heartbeat. Stop an application to see it go."
 				>
 					<State
-						label="Applications sending a signal, before and after"
+						label="Applications sending a signal"
 						recommendation="Approve the after. A share is empty exactly when its application stops sending a signal, and no one node's pace stands for the application's."
 						wide
 					>
@@ -1154,10 +1154,10 @@ export function ReviewPage() {
 					title="The chart"
 					deciding="How a node's section of the chart falls between its heartbeats: to empty at the deadline that its latest heartbeat gives, which is when the Observatory takes it to be with no signal."
 					notDeciding="The rest of how the chart moves, which is settled: the static and the lens with no node live, the ripple when the first comes back, and the line settling when the last goes."
-					note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. Today a node's section falls to empty over three of the usual intervals between its heartbeats, as the browser has seen them. With deadlines, it falls to empty at the deadline of its latest heartbeat: the time by which the node says that it sends the next, or, if it says none, three of the intervals that its engine gives. The nodes here beat every two to five seconds, with a deadline 15 seconds after each heartbeat, as the demo engine's do. Add nodes, and stop them, to see each."
+					note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. A node's section falls to empty at the deadline of its latest heartbeat: the time by which the node says that it sends the next, or, if it says none, three of the intervals that its engine gives. A node whose heartbeats give neither stays full while it is connected. The nodes here beat every two to five seconds, with a deadline 15 seconds after each heartbeat, as the demo engine's do. Add nodes, and stop them, to see each."
 				>
 					<State
-						label="Nodes coming and going, before and after"
+						label="Nodes coming and going"
 						recommendation="Approve the after. A section is empty exactly when there is no signal from its node, so the chart never shows a node as gone while it is sending a signal, or as there after it has gone."
 						wide
 					>
@@ -1512,15 +1512,20 @@ function SiteDemo({
 
 	const live: SiteData = {
 		...data,
-		applications: data.applications.map((a) => ({
-			...a,
-			heartbeats:
-				a.nodes === 0
-					? []
-					: (beats.current.get(a.application.key)?.beats ?? []).map(
-							(t) => receivedAt - t,
-						),
-		})),
+		applications: data.applications.map((a) => {
+			const b = beats.current.get(a.application.key);
+			const last = b?.beats.at(-1);
+			if (a.nodes === 0 || b === undefined || last === undefined) {
+				return { ...a, heartbeats: [] };
+			}
+			// Each heartbeat expires after three of the application's intervals, as
+			// the Observatory takes one that gives no expiry of its own to.
+			return {
+				...a,
+				heartbeats: b.beats.map((t) => receivedAt - t),
+				deadline: last + 3 * b.interval - receivedAt,
+			};
+		}),
 	};
 
 	return (
@@ -1604,32 +1609,10 @@ function beat(nodes: DemoNode[], now: number): boolean {
 }
 
 /**
- * SideBySide shows two things side by side, each with a caption above it,
- * such as a chart before and after a change.
- */
-function SideBySide({
-	items,
-}: {
-	items: readonly (readonly [string, ReactNode])[];
-}) {
-	return (
-		<div className="flex flex-wrap items-start gap-8">
-			{items.map(([caption, item]) => (
-				<div key={caption} className="flex w-[360px] flex-col gap-2">
-					<span className="text-sm font-semibold">{caption}</span>
-					{item}
-				</div>
-			))}
-		</div>
-	);
-}
-
-/**
  * Nodes is a cluster tile that has no node, to which nodes can be added, and
- * whose nodes can be stopped, as nodes join and leave a cluster, drawn twice
- * from the same heartbeats, once with no deadlines, so that each node's level
- * drains over three of its usual intervals, and once with the deadline of each
- * node's latest heartbeat, to which its level drains. Each node beats at its own pace while it runs, and each beat is
+ * whose nodes can be stopped, as nodes join and leave a cluster. Each node's
+ * section drains to the deadline of its latest heartbeat. Each node beats at its
+ * own pace while it runs, and each beat is
  * data that arrives, as it does on the cluster's page. A node that is stopped
  * doesn't send any more heartbeats, and leaves when its latest one expires.
  */
@@ -1671,7 +1654,7 @@ function Nodes() {
 		setReceivedAt(performance.now());
 	};
 
-	const tile = (deadlines: boolean) => (
+	const tile = (
 		<ClusterTile
 			data={{
 				reportsWorkloads: true,
@@ -1679,9 +1662,7 @@ function Nodes() {
 					id: n.id,
 					workloads: n.workloads,
 					heartbeats: n.beats.map((t) => receivedAt - t),
-					deadline: deadlines
-						? (n.beats.at(-1) ?? receivedAt) + demoExpiry - receivedAt
-						: undefined,
+					deadline: (n.beats.at(-1) ?? receivedAt) + demoExpiry - receivedAt,
 				})),
 			}}
 			href={undefined}
@@ -1691,12 +1672,7 @@ function Nodes() {
 	return (
 		<div className="flex flex-col gap-3">
 			<LiveData receivedAt={receivedAt}>
-				<SideBySide
-					items={[
-						["Before: over three of the usual intervals", tile(false)],
-						["After: to the deadline", tile(true)],
-					]}
-				/>
+				<div className="w-[360px]">{tile}</div>
 			</LiveData>
 			<div className="flex flex-wrap gap-2">
 				<button
@@ -1729,11 +1705,8 @@ function Nodes() {
 }
 
 /**
- * ApplicationBeats is the applications tile of a site's applications, drawn
- * twice from the same heartbeats: once with each application's section
- * following the node that sent the latest heartbeat, with no deadline, and once
- * with the latest deadline of the application's nodes, to which its section
- * drains. Each
+ * ApplicationBeats is the applications tile of a site's applications, whose
+ * sections drain to the latest deadline of each application's nodes. Each
  * application has as many nodes as the fixture gives it, and each node beats at
  * its own pace. An application can be stopped, which stops each of its nodes; it
  * has no signal once the last of their heartbeats has expired.
@@ -1801,7 +1774,7 @@ function ApplicationBeats({
 		setReceivedAt(now);
 	};
 
-	const tile = (deadlines: boolean) => (
+	const tile = (
 		<ApplicationsTile
 			data={siteOf(
 				applications.map((a) => {
@@ -1809,12 +1782,7 @@ function ApplicationBeats({
 					if (ns.length === 0) {
 						return { ...a, nodes: 0, heartbeats: [] };
 					}
-					return {
-						...a,
-						...(deadlines
-							? deadlineBeats(ns, receivedAt)
-							: { heartbeats: latestNodeBeats(ns, receivedAt) }),
-					};
+					return { ...a, ...deadlineBeats(ns, receivedAt) };
 				}),
 				euWest,
 			)}
@@ -1824,12 +1792,7 @@ function ApplicationBeats({
 	return (
 		<div className="flex flex-col gap-3">
 			<LiveData receivedAt={receivedAt}>
-				<SideBySide
-					items={[
-						["Before: the node that sent the latest heartbeat", tile(false)],
-						["After: the latest deadline of its nodes", tile(true)],
-					]}
-				/>
+				<div className="w-[360px]">{tile}</div>
 			</LiveData>
 			<div className="flex flex-wrap gap-2">
 				<button
@@ -1851,20 +1814,6 @@ function ApplicationBeats({
 			</div>
 		</div>
 	);
-}
-
-/**
- * latestNodeBeats returns the times of the heartbeats of the node that sent the
- * latest one, in milliseconds before `now`.
- */
-function latestNodeBeats(nodes: DemoNode[], now: number): number[] {
-	let latest: DemoNode | undefined;
-	for (const n of nodes) {
-		if ((n.beats.at(-1) ?? -1) > (latest?.beats.at(-1) ?? -1)) {
-			latest = n;
-		}
-	}
-	return (latest?.beats ?? []).map((t) => now - t);
 }
 
 /**
