@@ -700,7 +700,7 @@ export function ReviewPage() {
 						</State>
 						<State
 							label="Nodes that give different engines"
-							note="Some nodes give one name of the engine's software and some another, so the cluster has no name: the trail and the hovercard show its shortened ID in the name's place, and the hovercard gives a tag for each engine, with its version."
+							note="Some nodes give one name of the engine's software and some another, so the cluster has no name: the trail and the hovercard show its shortened ID in the name's place, and the hovercard's tag says &quot;multiple engines&quot;."
 							recommendation="Approve. A name that the nodes disagree on isn't the cluster's name, so the cluster is shown as a thing with no name."
 							wide
 						>
@@ -1378,7 +1378,7 @@ interface TrailStep {
 	 * application's version, or "multiple versions" while the nodes give
 	 * different ones; or the version of the engine's software, as the range from
 	 * the lowest to the highest by semantic versioning while the nodes give
-	 * different ones, with the engine's name while they give different engines. A version that some nodes give
+	 * different ones, or "multiple engines" while they give different engines. A version that some nodes give
 	 * and others don't says on how many nodes it runs.
 	 */
 	versions?: string[];
@@ -1599,7 +1599,7 @@ const mixedEngineSteps: TrailStep[] = [
 		kind: "Cluster",
 		href: "#",
 		id: { id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58", what: "cluster ID" },
-		versions: ["runkit 0.3.1", "veritas 1.0.0"],
+		versions: ["multiple engines"],
 	},
 ];
 
