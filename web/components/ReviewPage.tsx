@@ -2234,7 +2234,7 @@ const siteApplicationsExplainer: ExplainerSpec = {
 	],
 	paragraphs: [
 		{
-			text: "Each application's nodes send heartbeats to show that they are running. An application's section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
+			text: "Each application's engine sends heartbeats to show that it is running. An application's section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
 			compare:
 				"Each node sends heartbeats to show that it is running. Its section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
 		},
