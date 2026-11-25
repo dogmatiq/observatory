@@ -1064,6 +1064,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   engine tiles (c354465, 258341f): the stream sends each heartbeat's expiry with it, the page drains each node's section
   to its deadline, and a node that gives no way to tell when its heartbeats expire stays full while it is connected; the
   fallback to the usual intervals is gone. The site view's applications tile follows once its server side is built.
+  Decided: the demo engine keeps its 15-second expiry, though its chart barely moves between heartbeats, because
+  runkit's own heartbeats, every second with a 5-second expiry, drain a section by about as much. Ideas to give the
+  chart character from real data (a blip when a heartbeat arrives, a glitch while one is late, a mark where the next
+  is due) are on a temporary page, undecided.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
