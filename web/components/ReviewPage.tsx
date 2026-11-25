@@ -544,7 +544,7 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The bars"
-					deciding="What the bars of the events and queues tiles show, a segment for each of the busiest applications and one for the rest, and what a segment's hovercard says when it is pointed at."
+					deciding="What the bars of the events and queues tiles show: a segment for each of the busiest applications and one for the rest, where the events tile's bar divides the rate of new events, as its headline does, and not the events stored, as the cluster view's bar of streams does; and what a segment's hovercard says when it is pointed at."
 					notDeciding="How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' explainers (SW) and the alert flag's hovercard (SH 2)."
 					note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's hovercard drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
 				>
