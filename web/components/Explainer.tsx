@@ -8,6 +8,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../lib/cn.ts";
+import { Still } from "../lib/live.tsx";
 import { Icon } from "./Icon.tsx";
 import { MoonHolder } from "./Sky.tsx";
 
@@ -784,11 +785,15 @@ export function Explainer({
 					>
 						{/* The card is isolated, so that the layers inside it stay under the veil. */}
 						<div ref={card} inert className="isolate">
-							{moon ? (
-								<MoonHolder>{explainer.card}</MoonHolder>
-							) : (
-								explainer.card
-							)}
+							{/* The copy's figures are fixed, so its chart doesn't scroll
+							with the live page around it. */}
+							<Still>
+								{moon ? (
+									<MoonHolder>{explainer.card}</MoonHolder>
+								) : (
+									explainer.card
+								)}
+							</Still>
 						</div>
 						{/* While a part is pointed at, the rest of the card fades back, as
 					the other annotations do: a veil in the color of a card's ground
@@ -816,11 +821,15 @@ export function Explainer({
 								WebkitMaskComposite: "source-in",
 							}}
 						>
-							{moon ? (
-								<MoonHolder>{explainer.card}</MoonHolder>
-							) : (
-								explainer.card
-							)}
+							{/* The copy's figures are fixed, so its chart doesn't scroll
+							with the live page around it. */}
+							<Still>
+								{moon ? (
+									<MoonHolder>{explainer.card}</MoonHolder>
+								) : (
+									explainer.card
+								)}
+							</Still>
 						</div>
 						<div
 							className="pointer-events-auto absolute inset-0"

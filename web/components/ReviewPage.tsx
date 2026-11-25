@@ -126,7 +126,7 @@ export function ReviewPage() {
 			<Tile
 				code="SS"
 				title="Site view: states"
-				note="How the view looks as its applications' messages fail and as their signal stops: the accents, the blur and the words that take the place of a compact digest's figures. The words of the tiles' hovercards come in the next chunk."
+				note="How the view looks as its applications' messages fail and as their signal stops: the accents, the blur and the words that take the place of a compact digest's figures."
 			>
 				<Part
 					step={0}
@@ -1190,7 +1190,7 @@ function Flagged({
 const flaggedCards = [
 	{
 		label: "The events tile, while only some nodes report it",
-		note: "Today the status is in the hovercard of the tile's icon.",
+		note: "The status was in the hovercard of the tile's icon, which the explainer replaced, so the views don't show it until the flags are built.",
 		recommendation:
 			"Approve. The status shows only while it applies, in grey, because the figures are still worth reading.",
 		width: 360,
@@ -1205,7 +1205,7 @@ const flaggedCards = [
 	},
 	{
 		label: "The queues tile, while no new samples are arriving",
-		note: "Today the status is in the hovercard of the rate.",
+		note: "The status was in the hovercard of the rate, which the explainer replaced.",
 		recommendation: "Approve, as for the events tile.",
 		width: 360,
 		tone: "qualifies" as const,
@@ -1214,7 +1214,7 @@ const flaggedCards = [
 	},
 	{
 		label: "The cluster tile, while no nodes are sending a signal",
-		note: "Today the status is in the hovercard of the nodes.",
+		note: "The status was in the hovercard of the nodes, which the explainer replaced.",
 		recommendation:
 			"Approve, in red, because something is wrong, as the tile's red 0 and accent already say.",
 		width: 360,
@@ -1226,7 +1226,7 @@ const flaggedCards = [
 	},
 	{
 		label: "A handler digest, while only some nodes report it",
-		note: "Today the status is in the hovercard of the kind icon. The flag goes to the left of the kind icon, where a compact digest has its flag, and clear of the chevron that follows the name when it is pointed at.",
+		note: "The status was in the hovercard of the kind icon, which the explainer replaced. The flag goes to the left of the kind icon, where a compact digest has its flag, and clear of the chevron that follows the name when it is pointed at.",
 		recommendation: "Approve, as for the events tile.",
 		width: 360,
 		anchor: "svg.size-5",

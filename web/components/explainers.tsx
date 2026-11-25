@@ -124,8 +124,6 @@ export const variants: Which[] = [
 	"queuesRate deadlines handled",
 ];
 
-/** The application of the cluster view's fixture, at a site. */
-
 /**
  * cardExplainers returns the explainer of each card of the cluster view and of a
  * compact digest, by which card it is, for the given application at its site,

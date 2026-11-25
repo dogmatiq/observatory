@@ -96,6 +96,20 @@ export function LiveData({
 }
 
 /**
+ * Still shows its children as they were at the moment that their data arrived,
+ * even inside {@link LiveData}, so that nothing in them moves with time, such as
+ * the copy of a card in an explainer, whose made-up figures are fixed.
+ */
+export function Still({ children }: { children: ReactNode }) {
+	const { reduced } = useContext(ElapsedContext);
+	return (
+		<ElapsedContext.Provider value={{ elapsed: 0, reduced }}>
+			{children}
+		</ElapsedContext.Provider>
+	);
+}
+
+/**
  * useElapsed returns the time since the page's data arrived, in milliseconds,
  * which changes as time passes. It is 0 outside {@link LiveData}.
  */

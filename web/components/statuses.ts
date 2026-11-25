@@ -1,8 +1,7 @@
 /*
- * The statuses that the views' cards say while something is so. Each is said by
- * a card's alert flag, which is built next; until then, the review page shows
- * them. See the Hovercards section of docs/ui-design.md: a status has one fixed
- * text for each cause.
+ * The statuses that the views' cards say while something is so, which the
+ * review page's alert flags show. See the Hovercards section of
+ * docs/ui-design.md: a status has one fixed text for each cause.
  */
 
 /** The status of the cluster tile when no nodes are sending a signal. */
