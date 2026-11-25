@@ -520,11 +520,25 @@ export function ReviewPage() {
 					>
 						<State
 							label="The events tile"
-							recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines."
+							recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines. The bar's annotation says that the bar divides the rate of new events, as the headline's annotation names that rate."
 							wide
 						>
 							<Explained spec={siteEventsExplainer} />
 						</State>
+						<Choices
+							of="A"
+							title="the bar's annotation"
+							framed={false}
+							choices={siteEventsBar.slice(1).map(([label, text]) => [
+								label,
+								<p
+									key={label}
+									className="w-fit max-w-md rounded-card bg-panel px-4 py-3 font-hand text-[15px] leading-[16px] tracking-[-0.03em] text-fg-soft [box-shadow:var(--shadow-raised)]"
+								>
+									{text}
+								</p>,
+							])}
+						/>
 					</Part>
 					<Part
 						step={2}
@@ -1977,6 +1991,30 @@ function siteTitle(what: string) {
 	);
 }
 
+/**
+ * The wordings of the annotation of the bar of the site's events tile, which SW
+ * 1A chooses between, the recommended one first. The bar divides the rate of new
+ * events among the applications, as the headline is that rate.
+ */
+const siteEventsBar = [
+	[
+		"Each application's share",
+		"each application's share of the rate of new events",
+	],
+	[
+		"Split between the applications",
+		"how the rate of new events is split between the applications",
+	],
+	[
+		"The fastest applications",
+		"which applications are recording new events fastest",
+	],
+	[
+		"As before, without the rate",
+		"how the new events are spread across the applications",
+	],
+] as const;
+
 const siteEventsExplainer: ExplainerSpec = {
 	label: "site's events tile",
 	icon: "svg.size-5",
@@ -2013,7 +2051,7 @@ const siteEventsExplainer: ExplainerSpec = {
 		},
 		{
 			at: "div.h-2",
-			text: "how the new events are spread across the applications",
+			text: siteEventsBar[0][1],
 			compare: "how the events are spread across the streams",
 			side: "left",
 			dy: 6,
