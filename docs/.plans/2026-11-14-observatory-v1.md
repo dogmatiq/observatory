@@ -1037,7 +1037,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   messages, is the queues card's first paragraph and advice. The orange accent along the top of a card has no
   annotation.
   The "?" that opens an explainer, at the bottom right of a card while it is pointed at, is a filled circle in the
-  color of the card's chart, or in the accent color on a card with no chart, a step larger than before, after a viewer
+  color of the card's chart, or of the ground of the sky in its place, or in the accent color on a card with neither, a
+  step larger than before, after a viewer
   didn't notice the muted outline. It doesn't depend on whether the viewer has used an explainer before. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
