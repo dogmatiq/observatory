@@ -1081,7 +1081,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   the engine, each a link to its own page, by name; the cluster or engine is named by the name of the engine's software
   that its nodes give, with its shortened ID after the name in the trail, and has no name, so shows the word cluster or
   engine and its shortened ID, while its nodes give different ones (decided); in the hovercard, each version is a tag
-  after the name, and each step has the icon of its kind, as a card's heading has (decided), with a globe or a pin for
+  at the right of the name, above the key or ID (decided), and each step has the icon of its kind, as a card's heading has (decided), with a globe or a pin for
   the site, which ID 2 shows; pointing at the
   trail shows a hovercard of every key and ID, each copyable, so that the keys have a place to be copied from without
   showing beside a name. Decided: once an application's views have links, the links take the title bar and
