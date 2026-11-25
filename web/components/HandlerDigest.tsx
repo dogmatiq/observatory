@@ -78,21 +78,30 @@ export function HandlerDigest({
 	const content = (
 		<>
 			<div className="flex min-w-0 items-center gap-3">
-				<span className="flex min-w-0 flex-col">
-					<Tooltip text={handler.name}>
-						<span
-							id={nameId}
-							className="min-w-0 truncate text-sm font-bold tracking-[0.04em] uppercase"
-						>
-							{href === undefined ? (
+				{/* On a screen that is touched, the name and the kind are one place to
+				tap, for the link of the name. */}
+				<span className="relative flex min-w-0 flex-col">
+					{href === undefined ? (
+						<Tooltip text={handler.name}>
+							<span
+								id={nameId}
+								className="min-w-0 truncate text-sm font-bold tracking-[0.04em] uppercase"
+							>
 								<HandlerName name={handler.name} />
-							) : (
-								<NameLink href={href}>
+							</span>
+						</Tooltip>
+					) : (
+						<NameLink
+							href={href}
+							className="text-sm font-bold tracking-[0.04em] uppercase"
+						>
+							<Tooltip text={handler.name}>
+								<span id={nameId} className="min-w-0 truncate">
 									<HandlerName name={handler.name} />
-								</NameLink>
-							)}
-						</span>
-					</Tooltip>
+								</span>
+							</Tooltip>
+						</NameLink>
+					)}
 					<span className="flex min-w-0 items-center gap-3 text-2xs font-medium tracking-[0.08em] text-muted uppercase">
 						<span className="min-w-0 truncate">
 							{handler.disabled ? `${handler.kind}, disabled` : handler.kind}

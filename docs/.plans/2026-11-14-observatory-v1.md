@@ -1058,7 +1058,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   or "engine", shortened and copyable, because it is the same for every part of the view.
   Under review (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole
   doesn't react to the pointer; the name is underlined, with a chevron after it, while it is pointed at or has the
-  keyboard's focus. The digests are built that way, so that the review can try it.
+  keyboard's focus. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows
+  the link. The digests are built that way, so that the review can try it.
   `/review` no longer reviews the words of the hovercards that explain (it retired EV 1, CL 1–3, EN 1–2, WD, and SH 2's
   headline hovercards), and reviews the site view's explainers (SW) and the engine tile's (EN 4). Done: the segment hovercards' advice says
   "An even spread is better".

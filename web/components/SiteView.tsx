@@ -573,13 +573,13 @@ function CompactDigest({
 				"group/digest flex flex-col gap-1.5 px-3.5 pt-3 pb-2.5 text-fg",
 			)}
 		>
-			<span className="flex items-center gap-2">
+			<span className="relative flex items-center gap-2">
 				<NameLink
 					id={nameId}
 					href={applicationAtSitePath(site?.key, app.application.key)}
-					className="min-w-0 truncate text-xs font-bold tracking-[0.04em] uppercase"
+					className="text-xs font-bold tracking-[0.04em] uppercase"
 				>
-					{app.application.name}
+					<span className="min-w-0 truncate">{app.application.name}</span>
 				</NameLink>
 				{out &&
 					(alert === "icon" ? (

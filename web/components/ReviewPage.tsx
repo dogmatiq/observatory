@@ -378,9 +378,9 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="A card's name is its link"
-					deciding="That on a card that leads to another page, only the thing's name is a link, and the card as a whole doesn't react to the pointer; and that the name shows that it leads to another page while it is pointed at or has the keyboard's focus: it is underlined, and a chevron appears after it."
+					deciding="That on a card that leads to another page, only the thing's name is a link, and the card as a whole doesn't react to the pointer; and that the name shows that it leads to another page while it is pointed at or has the keyboard's focus: it is underlined, and a chevron appears after it. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows the link."
 					notDeciding="How a vital card links to its page, as it shows no name, and none links anywhere yet."
-					note="A finger can tap a little past the name, so that a short name is still easy to tap. The handler digest here links nowhere, as no handler has a page yet."
+					note="A screen that is touched can't point, so the chevron is what says there that a name leads elsewhere. The handler digest here links nowhere, as no handler has a page yet."
 				>
 					<State
 						label="Compact digests"
