@@ -520,7 +520,7 @@ export function ReviewPage() {
 					>
 						<State
 							label="The events tile"
-							recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines. The bar's annotation says that the bar divides the rate of new events, as the headline's annotation names that rate."
+							recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines. The bar's annotation says how fast each application records new events, which is what the widths of the segments compare, in words that need nothing else to be understood."
 							wide
 						>
 							<Explained spec={siteEventsExplainer} />
@@ -1997,21 +1997,19 @@ function siteTitle(what: string) {
  * events among the applications, as the headline is that rate.
  */
 const siteEventsBar = [
+	["How fast each one is", "how fast each application is recording new events"],
 	[
-		"Each application's share",
+		"Where they come from",
+		"which applications the new events are coming from, and how fast",
+	],
+	[
+		"How much of the rate",
+		"how much of the rate of new events comes from each application",
+	],
+	["The fastest applications", "which applications record new events fastest"],
+	[
+		"As before: a share of the rate",
 		"each application's share of the rate of new events",
-	],
-	[
-		"Split between the applications",
-		"how the rate of new events is split between the applications",
-	],
-	[
-		"The fastest applications",
-		"which applications are recording new events fastest",
-	],
-	[
-		"As before, without the rate",
-		"how the new events are spread across the applications",
 	],
 ] as const;
 
