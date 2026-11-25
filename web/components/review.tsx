@@ -536,7 +536,9 @@ export function State({
 	return (
 		<figure
 			className={cn(
-				"row-span-2 grid grid-rows-subgrid",
+				// A state is no wider than its column, so that a wide example, such as a
+				// title bar, scrolls or wraps inside it rather than widening the page.
+				"row-span-2 grid min-w-0 grid-rows-subgrid",
 				wide && "col-span-full",
 			)}
 		>
@@ -568,7 +570,7 @@ export function State({
 					</Recommendation>
 				)}
 			</figcaption>
-			<div className="mb-6">
+			<div className="mb-6 min-w-0">
 				{open && children}
 				{open &&
 					precedents?.map((p) => (

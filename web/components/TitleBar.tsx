@@ -119,7 +119,17 @@ export function TitleBar({
 	);
 }
 
-function NavGroup({ items, divided }: { items: NavItem[]; divided: boolean }) {
+/**
+ * NavGroup is a group of the page's links, with a line before it if it isn't the
+ * first group.
+ */
+export function NavGroup({
+	items,
+	divided,
+}: {
+	items: NavItem[];
+	divided: boolean;
+}) {
 	return (
 		<>
 			{divided && (

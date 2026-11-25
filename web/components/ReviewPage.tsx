@@ -54,7 +54,7 @@ import {
 	SiteQueuesTile,
 	SiteTotals,
 } from "./SiteView.tsx";
-import { type NavItem, TitleBar } from "./TitleBar.tsx";
+import { NavGroup, type NavItem, TitleBar } from "./TitleBar.tsx";
 
 /**
  * ReviewPage shows every state of the tiles that are being worked on, or that
@@ -679,86 +679,46 @@ export function ReviewPage() {
 				>
 					<Part
 						step={2}
-						title="Where the page is, in the title bar"
-						deciding="That the title bar says where the page is as a trail: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
+						title="Where the page is, under the title bar"
+						deciding="That the title bar has the view's links, and a row under it says where the page is as a trail: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
 						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
-						note="Every page has its own address, so each step of the trail is a page to go to, and the trail reads in the order of the address: the site, then the application, then the cluster. The application and the site have names, so the trail shows their names and no keys; the cluster has no name, so it shows its shortened ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links after the trail are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the title bar has to leave room for them."
+						note="Every page has its own address, so each step of the trail is a page to go to, and the trail reads in the order of the address: the site, then the application, then the cluster. The application and the site have names, so the trail shows their names and no keys; the cluster has no name, so it shows its shortened ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the page has to leave room for them. In one row with the trail they fit a wide window only just, so the links are in the title bar and the trail is in a row of its own under it."
 					>
 						<State
 							label="An engine that clusters"
-							recommendation="Approve. The title bar says where the page is, every step of it is a link, and every key and ID can be copied from one place, without showing a key beside a name."
+							recommendation="Approve. The title bar has the view's links, with the room that they need, and the row under it says where the page is: every step of it is a link, and every key and ID can be copied from one place, without showing a key beside a name."
 							wide
 						>
-							<TitleBar
-								nav={exampleNav}
-								trail={
-									<PageTrail
-										steps={[
-											{
-												kind: "Site",
-												name: "eu-west",
-												href: "#",
-												id: { id: siteKey, what: "site key" },
-											},
-											{
-												kind: "Application",
-												name: atSite.name,
-												href: "#",
-												id: { id: atSite.key, what: "application key" },
-											},
-											{
-												kind: "Cluster",
-												href: "#",
-												id: {
-													id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58",
-													what: "cluster ID",
-												},
-											},
-										]}
-									/>
-								}
-							/>
+							<TwoRows trail={<PageTrail steps={clusterSteps} />} />
 						</State>
 						<State
 							label="An engine that doesn't cluster"
 							recommendation="Approve, as for a cluster."
 							wide
 						>
-							<TitleBar
-								nav={exampleNav}
-								trail={
-									<PageTrail
-										steps={[
-											{
-												kind: "Site",
-												name: "eu-west",
-												href: "#",
-												id: { id: siteKey, what: "site key" },
-											},
-											{
-												kind: "Application",
-												name: atSite.name,
-												href: "#",
-												id: { id: atSite.key, what: "application key" },
-											},
-											{
-												kind: "Engine",
-												href: "#",
-												id: {
-													id: "2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24",
-													what: "engine ID",
-												},
-											},
-										]}
-									/>
-								}
-							/>
+							<TwoRows trail={<PageTrail steps={engineSteps} />} />
 						</State>
 						<Choices
 							of="A"
 							title="where the page is"
 							framed={false}
 							choices={[
+								[
+									"The trail in the title bar, and the links under it",
+									<TwoRows
+										key="trail-first"
+										trailFirst
+										trail={<PageTrail steps={clusterSteps} />}
+									/>,
+								],
+								[
+									"One row: the trail and the links",
+									<TitleBar
+										key="one-row"
+										nav={exampleNav}
+										trail={<PageTrail steps={clusterSteps} />}
+									/>,
+								],
 								[
 									"As before: the name, the site and the ID",
 									<TitleBar
@@ -1328,6 +1288,50 @@ const exampleNav: NavItem[][] = [
 	],
 ];
 
+/**
+ * TwoRows is the title bar with the view's links, and a row under it that says
+ * where the page is, as ID 2 proposes, or, with `trailFirst`, the other way
+ * around. It is a mockup, and becomes part of the page if it is accepted.
+ */
+function TwoRows({
+	trail,
+	trailFirst = false,
+}: {
+	trail: ReactNode;
+	trailFirst?: boolean;
+}) {
+	const row = (content: ReactNode, label: string) => (
+		<div className="border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)]">
+			<nav
+				aria-label={label}
+				className="mx-auto flex h-11 max-w-page items-center gap-0.5 overflow-x-auto px-6 [scrollbar-width:none] max-narrow:px-4"
+			>
+				{content}
+			</nav>
+		</div>
+	);
+	const links = exampleNav.map((group, g) => (
+		// biome-ignore lint/suspicious/noArrayIndexKey: a group has no identity but its position
+		<NavGroup key={g} items={group} divided={g > 0} />
+	));
+
+	return trailFirst ? (
+		<div>
+			<TitleBar trail={trail} />
+			{row(links, "Views")}
+		</div>
+	) : (
+		<div>
+			<TitleBar nav={exampleNav} />
+			<div className="border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)]">
+				<div className="mx-auto flex h-10 max-w-page items-center px-6 max-narrow:px-4">
+					{trail}
+				</div>
+			</div>
+		</div>
+	);
+}
+
 /** The key of the site of the review page's examples. */
 const siteKey = "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43";
 
@@ -1474,6 +1478,37 @@ function Tip({ children }: { children: ReactNode }) {
 
 /** The application of the cluster view's fixture, at a site. */
 const atSite = { ...application, site: "eu-west" };
+
+/** The steps of the trail of a page about a cluster, for ID 2. */
+const clusterSteps = [
+	{
+		kind: "Site",
+		name: "eu-west",
+		href: "#",
+		id: { id: siteKey, what: "site key" },
+	},
+	{
+		kind: "Application",
+		name: atSite.name,
+		href: "#",
+		id: { id: atSite.key, what: "application key" },
+	},
+	{
+		kind: "Cluster",
+		href: "#",
+		id: { id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58", what: "cluster ID" },
+	},
+];
+
+/** The steps of the trail of a page about an engine that doesn't cluster, for ID 2. */
+const engineSteps = [
+	...clusterSteps.slice(0, 2),
+	{
+		kind: "Engine",
+		href: "#",
+		id: { id: "2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24", what: "engine ID" },
+	},
+];
 
 /**
  * The applications of the site view, all sending a signal, with no failing messages,
