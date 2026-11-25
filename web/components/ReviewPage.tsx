@@ -16,15 +16,15 @@ import { cn } from "../lib/cn.ts";
 import { Covered } from "../lib/distrust.tsx";
 import { formatCompact, formatPercent } from "../lib/format.ts";
 import { LiveData } from "../lib/live.tsx";
-import type { Application, OverviewData, SiteData } from "../model.ts";
+import type {
+	Application,
+	LiveNode,
+	OverviewData,
+	SiteData,
+} from "../model.ts";
 import { ApplicationName } from "./ApplicationName.tsx";
-import {
-	NodesCard,
-	nodesText,
-	noNodesText,
-	WorkloadsCard,
-} from "./ClusterCards.tsx";
-import { EngineCard, engineOutText } from "./EngineCard.tsx";
+import { noNodesText } from "./ClusterCards.tsx";
+import { engineOutText } from "./EngineCard.tsx";
 import { Explained, type ExplainerSpec } from "./Explainer.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import {
@@ -39,11 +39,9 @@ import { messagesWaitingText } from "./MessagesWaitingCard.tsx";
 import {
 	ClusterTile,
 	clusterAbout,
-	countedWords,
 	EngineTile,
 	EventsTile,
 	engineAbout,
-	eventRateWords,
 	eventsAbout,
 	QueuesTile,
 	Totals,
@@ -51,11 +49,9 @@ import {
 import { Popover } from "./Popover.tsx";
 import { partialStatus } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
-import { RateCard } from "./RateCard.tsx";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
 import { SegmentCard, things } from "./SegmentCard.tsx";
 import {
-	ApplicationsCard,
 	ApplicationsTile,
 	CompactDigests,
 	ContactLostCard,
@@ -514,122 +510,27 @@ export function ReviewPage() {
 
 				<Part
 					step={2}
-					title="The hovercards of the headlines"
+					title="The hovercard of a compact digest's alert flag"
 					notDeciding={
-						"The words on the tiles themselves (SH 1); the hovercard of the messages waiting, which is the cluster view's and settled; the hovercards of the icons (SW); the hovercards of the bars' segments (SB)."
+						"The words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
 					}
-					note="The hovercard that opens when a tile's headline, or the words of its detail line, are pointed at, and the hovercard of the alert icon of a compact digest whose application is out of contact."
+					note="The hovercard of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
 				>
 					<State
 						label="The hovercard of a compact digest's alert icon"
-						note="It names the application, and its status says what losing contact means for the reader. Its form follows the engine hovercard's status, which is under review at WD 5, so it follows whatever WD 5 decides."
+						note="It names the application, and its status says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
 						recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
 						precedents={[
 							{
 								where:
-									"On the cluster view, the hovercard of a handler digest's kind icon, for its shape",
-								status: "settled",
-								words: (
-									<>
-										{handlerKindAbout(atSite, "account", "aggregate")}
-										<p>
-											With a status, while only some nodes report it:{" "}
-											{partialStatus.text}
-										</p>
-									</>
-								),
-							},
-							{
-								where:
-									"On the cluster view, the status of the engine hovercard, for its words",
-								status: { underReview: "WD 5" },
+									"On the cluster view, the status of the engine card while the engine is out of contact, for its words",
+								status: { underReview: "FL 1" },
 								words: <p>{engineOutText}</p>,
 							},
 						]}
 					>
 						<Panel>
 							<ContactLostCard app={contactLostExample} />
-						</Panel>
-					</State>
-					<State
-						label="The hovercard of the applications in contact"
-						precedents={[
-							{
-								where:
-									"On the cluster view, the hovercard of the cluster nodes",
-								status: { underReview: "CL 2 and WD 1" },
-								words: <p>{nodesText}</p>,
-							},
-							{
-								where: "Its status",
-								status: { underReview: "WD 2" },
-								words: <p>{noNodesText}</p>,
-							},
-							{
-								where: "The hovercard of the messages waiting",
-								status: "settled",
-								words: <p>{messagesWaitingText}</p>,
-							},
-						]}
-						note="Its status is there only while every application is out of contact."
-						recommendation="Approve, with this wording and example. It covers an engine that clusters and one that doesn't, so it says &quot;its engine, or any node of its cluster&quot;, and its example is the messages waiting hovercard's, with red in place of orange. The status follows the cluster's &quot;Every node is out of contact, so it's unknown whether the application is working&quot;."
-					>
-						<Panel>
-							<ApplicationsCard live={0} />
-						</Panel>
-					</State>
-					<State
-						label="The hovercard of the events per minute"
-						precedents={[
-							{
-								where:
-									"On the cluster view, the hovercard of the events per minute",
-								status: "settled",
-								words: (
-									<p>
-										{eventRateWords.description}, averaged over the last minute.
-									</p>
-								),
-							},
-						]}
-						recommendation="Approve, with this wording, which is the cluster's with &quot;the applications&quot; in place of &quot;the application&quot;."
-					>
-						<Panel>
-							<RateCard
-								subsystem="streams"
-								icon="event"
-								words={siteEventRateWords}
-								state="known"
-							/>
-						</Panel>
-					</State>
-					<State
-						label="The hovercard of the messages handled per minute"
-						precedents={[
-							{
-								where:
-									"On the cluster view, the hovercard of the messages handled per minute",
-								status: "settled",
-								words: (
-									<>
-										<p>
-											{countedWords.handled.description}, averaged over the last
-											minute.
-										</p>
-										<p>{countedWords.handled.note}</p>
-									</>
-								),
-							},
-						]}
-						recommendation="Approve, with this wording, as for the events."
-					>
-						<Panel>
-							<RateCard
-								subsystem="queues"
-								icon="message"
-								words={siteHandlingWords}
-								state="known"
-							/>
 						</Panel>
 					</State>
 				</Part>
@@ -774,26 +675,6 @@ export function ReviewPage() {
 						recommendation="Approve. The reader keeps the numbers and their trend while a deploy is under way, and the blur says how far to trust them, by the same means as a figure that is going stale."
 					>
 						<CoverageDemo />
-					</State>
-				</Part>
-
-				<Part
-					step={1}
-					title="The icon"
-					notDeciding={
-						"The blur and the glitch (EV 0); the hovercard's first paragraph, which is settled."
-					}
-					decided={false}
-					note="While only some of the cluster's nodes report what the tile shows, its numbers are the sums of the nodes that do, blurred by how few they are, and they glitch for a moment each time another node stops reporting. The hovercard of the icon says why, as a status. The queues tile and the kind icon of a handler digest show the same status in the same case."
-				>
-					<State
-						label="Only some of the nodes report what the tile shows"
-						note="One fixed text, whatever the cause. The status no longer says anything about versions, which belong wherever the views come to show versions."
-						recommendation="Approve, with the wording given in review. It says what the nodes do, and then what follows for the numbers as the reader sees them: every number that the section shows is a sum, or the greatest of the nodes' values, so it can only appear lower than it really is."
-					>
-						<Panel>
-							<EventsIconCard status={partialStatus.text} />
-						</Panel>
 					</State>
 				</Part>
 
@@ -960,192 +841,6 @@ export function ReviewPage() {
 							href={undefined}
 						/>
 					</State>
-				</Part>
-
-				<Part
-					step={1}
-					title="The icon"
-					decided={true}
-					note="The same in every state: what the tile is about, and which cluster this is."
-				>
-					<State label="Pointing at the icon">
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="cluster"
-								kind="Cluster"
-								identifier={
-									<Identifier
-										id="3f6c1a52-9d1b-4c52-8f0a-2a7d6b1e9c04"
-										of="cluster"
-									/>
-								}
-							>
-								{clusterAbout(application)}
-							</InfoCard>
-						</Panel>
-					</State>
-				</Part>
-
-				<Part
-					step={2}
-					title="The headline"
-					notDeciding={
-						"The words for contact in the hovercard's first sentence and in its status (WD 1 and WD 2); the hovercard of the workloads (CL 3)."
-					}
-					decided={false}
-					recommendation="Approve. The hovercard counts nodes, so it has the node's icon, as the hovercard of each node on the bar does, and its words never change."
-					note="Its words never change. Its icon is the node's, because the number counts nodes. The status at the bottom shows only while no node is live, so the hovercard is shown with it."
-				>
-					<State
-						label="Pointing at the number of nodes"
-						recommendation="Approve, with this wording. It starts by saying what the number is, as the hovercards of the rates and of the messages waiting do, and says that it counts the nodes in contact, so that a count during an outage of one node isn't read as the size of the cluster. The words for contact are reviewed on their own, at WD."
-					>
-						<Panel>
-							<NodesCard live={0} />
-						</Panel>
-					</State>
-					<Choices
-						of="A"
-						title="what the hovercard says about the count"
-						choices={[
-							[
-								"As it was",
-								<InfoCard
-									key="As it was"
-									subsystem="cluster"
-									icon="node"
-									kind="Cluster nodes"
-									status={{
-										icon: "alert",
-										text: "Contact with every node has been lost, so it's unknown whether the application is working.",
-									}}
-								>
-									<p key="0">
-										A node is one running process of the application's engine.
-										Together, the nodes form a cluster that shares the
-										application's work.
-									</p>
-								</InfoCard>,
-							],
-							[
-								"In the same paragraph",
-								<InfoCard
-									key="In the same paragraph"
-									subsystem="cluster"
-									icon="node"
-									kind="Cluster nodes"
-									status={{
-										icon: "alert",
-										text: "Contact with every node has been lost, so it's unknown whether the application is working.",
-									}}
-								>
-									<p key="0">
-										A node is one running process of the application's engine.
-										Together, the nodes form a cluster that shares the
-										application's work. The number counts the nodes that are in
-										contact now.
-									</p>
-								</InfoCard>,
-							],
-							[
-								"As a paragraph of its own",
-								<InfoCard
-									key="As a paragraph of its own"
-									subsystem="cluster"
-									icon="node"
-									kind="Cluster nodes"
-									status={{
-										icon: "alert",
-										text: "Contact with every node has been lost, so it's unknown whether the application is working.",
-									}}
-								>
-									<p key="0">
-										A node is one running process of the application's engine.
-										Together, the nodes form a cluster that shares the
-										application's work.
-									</p>
-									<p key="1">
-										The number counts the nodes that are in contact now.
-									</p>
-								</InfoCard>,
-							],
-							[
-								"As a node that is not counted",
-								<InfoCard
-									key="As a node that is not counted"
-									subsystem="cluster"
-									icon="node"
-									kind="Cluster nodes"
-									status={{
-										icon: "alert",
-										text: "Contact with every node has been lost, so it's unknown whether the application is working.",
-									}}
-								>
-									<p key="0">
-										A node is one running process of the application's engine.
-										Together, the nodes form a cluster that shares the
-										application's work.
-									</p>
-									<p key="1">A node that has lost contact is not counted.</p>
-								</InfoCard>,
-							],
-						]}
-					/>
-				</Part>
-
-				<Part
-					step={3}
-					title="The detail line"
-					notDeciding={
-						"The hovercard of the words “cluster nodes”, which is the headline's (CL 2); the bar (CL 4)."
-					}
-					decided={false}
-					recommendation="Approve. Its words never change. While only some of the nodes report their workloads, the number counts the workloads of the nodes that do, blurred by how few they are, and the hovercard says so, as a status, which is shown here."
-					note="The line under the headline, such as “cluster nodes, 5 workloads”. The words “cluster nodes” have the hovercard of the headline, above. The workloads have their own, which never changes, and are left out for an engine that doesn't divide its work."
-				>
-					<State
-						label="Pointing at “5 workloads”"
-						recommendation="Approve, with this wording. A task that goes on is something anyone can picture, and it says that a node owns each workload, which the bar shows."
-					>
-						<Panel>
-							<WorkloadsCard whole={false} />
-						</Panel>
-					</State>
-					<Choices
-						of="A"
-						title="what a workload is"
-						choices={(
-							[
-								[
-									"As it was",
-									"A workload is one unit of the work that the cluster's nodes share, such as delivering messages to one of the application's handlers.",
-								],
-								[
-									"Carried out continually",
-									"A workload is a task that a node carries out continually for the cluster, such as delivering messages to one of the application's handlers.",
-								],
-								[
-									"With sizes",
-									"A workload is an ongoing task that the cluster gives to one of its nodes, such as delivering messages to one of the application's handlers. Some workloads take much more work than others.",
-								],
-							] as const
-						).map(([label, text]) => [
-							label,
-							<InfoCard
-								key={label}
-								subsystem="cluster"
-								icon="workload"
-								kind="Workloads"
-								status={{
-									icon: "alert",
-									text: "Only some of the cluster's nodes report their workloads, so the total counts only the workloads of those nodes.",
-								}}
-							>
-								<p>{text}</p>
-							</InfoCard>,
-						])}
-					/>
 				</Part>
 
 				<Part
@@ -1339,377 +1034,24 @@ export function ReviewPage() {
 				</Part>
 
 				<Part
-					step={1}
-					title="The icon"
-					decided
-					note="The same in every state: what the tile is about, and the engine's ID."
-				>
-					<State label="Pointing at the icon">
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="engine"
-								kind="Engine"
-								identifier={
-									<Identifier
-										id="113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93"
-										of="engine"
-									/>
-								}
-							>
-								{engineAbout(application)}
-							</InfoCard>
-						</Panel>
-					</State>
-				</Part>
-
-				<Part
-					step={2}
-					title="The headline"
-					notDeciding={
-						"The words for contact in the hovercard (WD 3 to WD 5); the chart (EN 3)."
-					}
-					decided={false}
-					recommendation="Approve. The hovercard says what being online means for the reader, and the status says what is unknown once contact is lost. Neither mentions nodes or clusters."
-					note="Its words never change. The status at the bottom shows only while the engine is offline, so the hovercard is shown with it."
-				>
-					<State
-						label="Pointing at “Online” or “Offline”"
-						recommendation="Approve, with this wording. It says what online is and what follows for the reader: the figures can be trusted. The status says what is unknown when contact is lost. The words for contact are reviewed on their own, at WD."
-					>
-						<Panel>
-							<EngineCard online={false} />
-						</Panel>
-					</State>
-					<Choices
-						of="A"
-						title="what online means"
-						choices={[
-							[
-								"Online defined as in contact",
-								<InfoCard
-									key="Online defined as in contact"
-									subsystem="cluster"
-									icon="engine"
-									kind="Engine"
-									status={{
-										icon: "alert",
-										text: "Contact with the engine has been lost, so it's unknown whether the application is working.",
-									}}
-								>
-									<p>The engine is online while it is in contact.</p>
-								</InfoCard>,
-							],
-							[
-								"Defined, then what follows",
-								<InfoCard
-									key="Defined, then what follows"
-									subsystem="cluster"
-									icon="engine"
-									kind="Engine"
-									status={{
-										icon: "alert",
-										text: "Contact with the engine has been lost, so it's unknown whether the application is working.",
-									}}
-								>
-									<p>
-										Online means that the engine is in contact, so the figures
-										on this page are current.
-									</p>
-								</InfoCard>,
-							],
-							[
-								"What the reader can rely on",
-								<InfoCard
-									key="What the reader can rely on"
-									subsystem="cluster"
-									icon="engine"
-									kind="Engine"
-									status={{
-										icon: "alert",
-										text: "Contact with the engine has been lost, so it's unknown whether the application is working.",
-									}}
-								>
-									<p>
-										While the engine is online, this page shows what the engine
-										is doing now.
-									</p>
-								</InfoCard>,
-							],
-						]}
-					/>
-				</Part>
-
-				<Part
 					step={3}
 					title="The chart"
 					decided={true}
 					note="The heartbeat of the engine, which behaves as the cluster tile's does for one node."
 				/>
-			</Tile>
-
-			<Tile
-				code="WD"
-				title="Words for contact"
-				note="Each place where a hovercard says what is in contact with the nodes, or with the engine, reviewed on its own until there is a consensus. The user is using an app, so a hovercard doesn't say &quot;this page&quot;. Each state shows the hovercard with that one place changed, and its other words as recommended."
-			>
-				<Part
-					step={1}
-					title="The cluster nodes card: what the number counts"
-					notDeciding={
-						"The status of the same hovercard (WD 2); the rest of the hovercard (CL 2)."
-					}
-					note="The first sentence of the hovercard on the cluster tile's headline."
-				>
-					<State
-						label="In contact, with no one named"
-						wide
-						recommendation={
-							'Approve, with this wording. "In contact" needs no one named, as in "stay in contact", so the sentence holds without naming the app.'
-						}
-					>
-						<ContactCard
-							card="nodes-paragraph"
-							text="The number of nodes that are in contact now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work."
-						/>
-					</State>
-					<Choices
-						of="A"
-						title="the words"
-						framed={false}
-						choices={[
-							[
-								"Visible",
-								<ContactCard
-									key="Visible"
-									card="nodes-paragraph"
-									text="The number of nodes that are visible now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work."
-								/>,
-							],
-							[
-								"Reporting",
-								<ContactCard
-									key="Reporting"
-									card="nodes-paragraph"
-									text="The number of nodes that are reporting now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work."
-								/>,
-							],
-							[
-								"Connected",
-								<ContactCard
-									key="Connected"
-									card="nodes-paragraph"
-									text="The number of nodes that are connected now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work."
-								/>,
-							],
-							[
-								"Naming the Observatory",
-								<ContactCard
-									key="Naming the Observatory"
-									card="nodes-paragraph"
-									text="The number of nodes in contact with the Observatory now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work."
-								/>,
-							],
-						]}
-					/>
-				</Part>
-				<Part
-					step={2}
-					title="The cluster nodes card: the status when no node is in contact"
-					notDeciding={
-						"The hovercard's first sentence (WD 1); the rest of the hovercard (CL 2)."
-					}
-					note="The status of the same hovercard while no node is in contact."
-				>
-					<State
-						label="Out of contact"
-						wide
-						recommendation={
-							'Approve, with this wording. "Out of contact" says what is known, names no one, and is about the nodes, which are what the hovercard counts.'
-						}
-					>
-						<ContactCard
-							card="nodes-status"
-							text="Every node is out of contact, so it's unknown whether the application is working."
-						/>
-					</State>
-					<Choices
-						of="A"
-						title="the words"
-						framed={false}
-						choices={[
-							[
-								"Contact lost",
-								<ContactCard
-									key="Contact lost"
-									card="nodes-status"
-									text="Contact with every node has been lost, so it's unknown whether the application is working."
-								/>,
-							],
-							[
-								"Out of sight",
-								<ContactCard
-									key="Out of sight"
-									card="nodes-status"
-									text="Every node is out of sight, so it's unknown whether the application is working."
-								/>,
-							],
-							[
-								"Naming the Observatory",
-								<ContactCard
-									key="Naming the Observatory"
-									card="nodes-status"
-									text="The Observatory has lost contact with every node, so it's unknown whether the application is working."
-								/>,
-							],
-						]}
-					/>
-				</Part>
-				<Part
-					step={3}
-					title="The engine card: what online means"
-					notDeciding={
-						"The second half of the sentence (WD 4); the status (WD 5); the rest of the hovercard (EN 2)."
-					}
-					note="The first half of the hovercard on the engine tile's headline."
-				>
-					<State
-						label="In contact, with no one named"
-						wide
-						recommendation="Approve, with this wording. It defines online by contact, as the cluster's hovercard counts nodes by it, without naming the app."
-					>
-						<ContactCard
-							card="engine-online"
-							text="The engine is online while it is in contact, so the figures shown are current."
-						/>
-					</State>
-					<Choices
-						of="A"
-						title="the words"
-						framed={false}
-						choices={[
-							[
-								"Visible",
-								<ContactCard
-									key="Visible"
-									card="engine-online"
-									text="The engine is online while it is visible, so the figures shown are current."
-								/>,
-							],
-							[
-								"Reporting",
-								<ContactCard
-									key="Reporting"
-									card="engine-online"
-									text="The engine is online while it is reporting, so the figures shown are current."
-								/>,
-							],
-							[
-								"Naming the Observatory",
-								<ContactCard
-									key="Naming the Observatory"
-									card="engine-online"
-									text="The engine is online while it is in contact with the Observatory, so the figures shown are current."
-								/>,
-							],
-						]}
-					/>
-				</Part>
 				<Part
 					step={4}
-					title="The engine card: which figures are current"
-					notDeciding={
-						"The first half of the sentence (WD 3); the status (WD 5); the rest of the hovercard (EN 2)."
-					}
-					note={
-						'The second half of the same sentence, which said "the figures on this page".'
-					}
+					title="The explainer"
+					notDeciding="The alert flag of the engine while it is out of contact, which is FL; how an explainer looks and opens, which is settled."
+					note="It takes the place of the hovercards of the icon and the headline, by the rules of the cluster view's explainers. What &quot;online&quot; means, which the headline's hovercard said, is in its text."
 				>
 					<State
-						label="The figures shown"
+						label="Online"
+						recommendation="Approve. It keeps the hovercard's words about what &quot;online&quot; means, and explains the heartbeat chart as the cluster card's explainer does, for one process."
 						wide
-						recommendation={
-							'Approve, with this wording. "Shown" points at what the user sees without naming a page or a screen.'
-						}
 					>
-						<ContactCard
-							card="engine-figures"
-							text="The engine is online while it is in contact, so the figures shown are current."
-						/>
+						<Explained spec={engineExplainer} />
 					</State>
-					<Choices
-						of="A"
-						title="the words"
-						framed={false}
-						choices={[
-							[
-								"These figures",
-								<ContactCard
-									key="These figures"
-									card="engine-figures"
-									text="The engine is online while it is in contact, so these figures are current."
-								/>,
-							],
-							[
-								"The figures here",
-								<ContactCard
-									key="The figures here"
-									card="engine-figures"
-									text="The engine is online while it is in contact, so the figures here are current."
-								/>,
-							],
-							[
-								"The engine's figures",
-								<ContactCard
-									key="The engine's figures"
-									card="engine-figures"
-									text="The engine is online while it is in contact, so the engine's figures are current."
-								/>,
-							],
-						]}
-					/>
-				</Part>
-				<Part
-					step={5}
-					title="The engine card: the status when the engine is out of contact"
-					notDeciding={
-						"The hovercard's sentence (WD 3 and WD 4); the rest of the hovercard (EN 2)."
-					}
-					note="The status of the same hovercard while the engine is offline."
-				>
-					<State
-						label="Out of contact"
-						wide
-						recommendation="Approve, with this wording. It matches the cluster's status, and says what is known without naming anyone."
-					>
-						<ContactCard
-							card="engine-status"
-							text="The engine is out of contact, so it's unknown whether the application is working."
-						/>
-					</State>
-					<Choices
-						of="A"
-						title="the words"
-						framed={false}
-						choices={[
-							[
-								"Contact lost",
-								<ContactCard
-									key="Contact lost"
-									card="engine-status"
-									text="Contact with the engine has been lost, so it's unknown whether the application is working."
-								/>,
-							],
-							[
-								"Naming the Observatory",
-								<ContactCard
-									key="Naming the Observatory"
-									card="engine-status"
-									text="The Observatory has lost contact with the engine, so it's unknown whether the application is working."
-								/>,
-							],
-						]}
-					/>
 				</Part>
 			</Tile>
 		</Review>
@@ -2144,71 +1486,6 @@ function clusterTile(nodes: number): NonNullable<OverviewData["cluster"]> {
 /** A figure at the size of a headline, with buttons that do things to it. */
 /** A handler digest of a process, with buttons that change the numbers on it. */
 /** A count of failing messages after a number, with buttons that change it. */
-/**
- * ContactCard draws the hovercard of the cluster's nodes or of the engine, with `text`
- * in the place that `card` names, and the hovercard's other words as recommended, so
- * that one place's words can be judged on their own.
- */
-function ContactCard({
-	card,
-	text,
-}: {
-	card:
-		| "nodes-paragraph"
-		| "nodes-status"
-		| "engine-online"
-		| "engine-figures"
-		| "engine-status";
-	text: string;
-}) {
-	if (card === "nodes-paragraph" || card === "nodes-status") {
-		return (
-			<Panel>
-				<InfoCard
-					subsystem="cluster"
-					icon="node"
-					kind="Cluster nodes"
-					status={{
-						icon: "alert",
-						text:
-							card === "nodes-status"
-								? text
-								: "Every node is out of contact, so it's unknown whether the application is working.",
-					}}
-				>
-					<p>
-						{card === "nodes-paragraph"
-							? text
-							: "The number of nodes that are in contact now. A node is one running process of the application's engine. Together, the nodes form a cluster that shares the application's work."}
-					</p>
-				</InfoCard>
-			</Panel>
-		);
-	}
-
-	return (
-		<Panel>
-			<InfoCard
-				subsystem="cluster"
-				icon="engine"
-				kind="Engine"
-				status={{
-					icon: "alert",
-					text:
-						card === "engine-status"
-							? text
-							: "The engine is out of contact, so it's unknown whether the application is working.",
-				}}
-			>
-				<p>
-					{card === "engine-status"
-						? "The engine is online while it is in contact, so the figures shown are current."
-						: text}
-				</p>
-			</InfoCard>
-		</Panel>
-	);
-}
 
 /** The look of a button that drives a demonstration on this page. */
 const button =
@@ -2294,20 +1571,6 @@ function NodeCardWith({
 			{paragraphs?.map((p) => (
 				<p key={p}>{p}</p>
 			))}
-		</InfoCard>
-	);
-}
-
-/** EventsIconCard is the hovercard of the events tile's icon, with `status`. */
-function EventsIconCard({ status }: { status: string }) {
-	return (
-		<InfoCard
-			subsystem="streams"
-			icon="event"
-			kind="Events"
-			status={{ icon: "alert", text: status }}
-		>
-			{eventsAbout(application)}
 		</InfoCard>
 	);
 }
@@ -2521,5 +1784,53 @@ const siteApplicationsExplainer: ExplainerSpec = {
 	],
 	before: [
 		"Icon: This section shows information about the applications at the eu-west site.",
+	],
+};
+
+const engineExplainer: ExplainerSpec = {
+	label: "engine tile",
+	icon: "svg.size-5",
+	title: (
+		<>
+			The engine that runs the <ApplicationName application={atSite} />
+		</>
+	),
+	width: 360,
+	card: (
+		<EngineTile
+			application={application}
+			data={{
+				// It has just sent a heartbeat, so that its chart is full.
+				node: {
+					...(overview.cluster.nodes[0] as LiveNode),
+					heartbeats: [1000],
+				},
+			}}
+			href={undefined}
+		/>
+	),
+	notes: [
+		{
+			at: ".text-4xl",
+			text: "whether the engine is in contact now",
+			side: "left",
+			atText: true,
+			approach: "top-left",
+			dy: -40,
+		},
+		{
+			at: "canvas",
+			text: "how recently the engine sent a heartbeat",
+			side: "right",
+			into: "chart",
+		},
+	],
+	paragraphs: [
+		"The engine is online while it is in contact, so the figures shown are current.",
+		"The engine sends heartbeats to show that it is running. The heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
+	],
+	before: [
+		"Icon: This section shows information about the engine that runs the statements application at the eu-west site.",
+		"Headline: The engine is online while it is in contact, so the figures shown are current.",
 	],
 };
