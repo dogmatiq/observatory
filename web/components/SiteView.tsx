@@ -191,7 +191,7 @@ function AtTheSite({ site }: { site: SiteData["site"] }) {
 /**
  * sitePartialStatus is the status of the card of a tile's icon while only some of
  * the applications report what the tile shows in full: some of their nodes, or
- * all of them, don't report it, or send no signal. Its numbers can then only
+ * all of them, don't report it, or have no signal. Its numbers can then only
  * appear lower than they really are. See [partialStatus] for a cluster's.
  */
 export const sitePartialStatus = {
@@ -605,7 +605,7 @@ function CompactDigest({
 
 /**
  * noSignalText is the tooltip of the alert flag of a compact digest whose
- * application sends no signal, in the form of the engine card's status, about
+ * application has no signal, in the form of the engine card's status, about
  * the application.
  */
 export const noSignalText =

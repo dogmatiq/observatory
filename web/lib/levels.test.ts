@@ -6,7 +6,7 @@ import {
 	riseTime,
 } from "./levels.ts";
 
-test("a node that has sent no heartbeat is empty", () => {
+test("a node that hasn't sent a heartbeat is empty", () => {
 	expect(heartbeatLevel([], 5000)).toBe(0);
 });
 

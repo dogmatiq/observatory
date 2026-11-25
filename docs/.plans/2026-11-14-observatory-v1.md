@@ -185,7 +185,7 @@ These are the terms that this plan uses. A person who is new to Dogma does not n
   Observatory calls it again after 5 seconds, or, for `WatchClusterMetrics`, calls another node at once. The message
   of the status is for people and must hold no secrets. When a call ends, the Observatory discards its values, and shows
   a series again once the next call sends a sample of it, so it never takes a value from an ended call for a current
-  one. A node that is over the observation budget measures less often, and sends no signal, because the engine is
+  one. A node that is over the observation budget measures less often, and doesn't send anything to say so, because the engine is
   responsible for how often metrics arrive.
 - A cumulative count is comparable only with values of the same count from the same call, so the Observatory derives
   rates only within one call. Event stream lengths are not cumulative counts, and are comparable across calls and
@@ -932,11 +932,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   heading "Clusters" of the root list, whose entries are now applications at sites, are placeholders until then, and
   are settled as those pages are designed on `/-/review`. Every page that waits
   for something to become known asks again every second.
-- Decided, to build next: a member of a cluster that sends no signal counts toward a figure's coverage as a node that
-  doesn't report, on every view, so the cluster view's figures blur while some nodes send no signal, as the site
+- Decided, to build next: a member of a cluster with no signal counts toward a figure's coverage as a node that
+  doesn't report, on every view, so the cluster view's figures blur while some nodes have no signal, as the site
   view's do, rather than shrinking with no sign. Today `Coverage` counts only the nodes that are reporting. Its new
   state is reviewed under the cluster tile.
-- Decided, to build with the item above: the cluster tile's headline sets apart the members that send no signal as a
+- Decided, to build with the item above: the cluster tile's headline sets apart the members with no signal as a
   red "+N", as in "4 +1", as the site view's applications tile does, without the red accent, which stays for when no nodes
   are sending a signal, because the other nodes still work. The members are those of the membership rule, from the
   nodes' sets of live nodes, so a node that leaves cleanly isn't counted. An engine that doesn't report its live nodes

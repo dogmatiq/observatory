@@ -150,7 +150,7 @@ export function ReviewPage() {
 						</State>
 						<State
 							label="Two applications with no signal, and two with only some nodes sending a signal"
-							note="The two with no signal, kyc and payroll, have the red accent and a red alert icon at the right of their names, as tiles and handler digests have their icon there, and pointing at the icon shows a hovercard that says that there is no signal from the application, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when the signal stops. The blur says how far a figure is trusted, and the red says that there is no signal. The figures of the two with only some nodes sending a signal, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications sending a signal, with those that send none set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application sends no signal, because an application with no signal is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
+							note="The two with no signal, kyc and payroll, have the red accent and a red alert icon at the right of their names, as tiles and handler digests have their icon there, and pointing at the icon shows a hovercard that says that there is no signal from the application, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when the signal stops. The blur says how far a figure is trusted, and the red says that there is no signal. The figures of the two with only some nodes sending a signal, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications sending a signal, with those that send none set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application has no signal, because an application with no signal is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
 							recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its hovercard gives the words, as the status of a hovercard does elsewhere. The red accent and the icon mark an application with no signal as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
 							wide
 						>
@@ -651,7 +651,7 @@ export function ReviewPage() {
 						notDeciding={
 							"That an alert flag opens a tooltip, which is IC; the words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
 						}
-						note="The tooltip of the alert flag of a compact digest whose application sends no signal. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
+						note="The tooltip of the alert flag of a compact digest whose application has no signal. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
 					>
 						<State
 							label="The tooltip of a compact digest's alert icon"
@@ -660,7 +660,7 @@ export function ReviewPage() {
 							precedents={[
 								{
 									where:
-										"On the cluster view, the status of the engine card while the engine sends no signal, for its words",
+										"On the cluster view, the status of the engine card while there is no signal from the engine, for its words",
 									status: { underReview: "FL 1" },
 									words: <p>{engineOutText}</p>,
 								},
@@ -1010,7 +1010,7 @@ export function ReviewPage() {
 					>
 						<State
 							label="Nodes coming and going, before and after"
-							recommendation="Approve the after. A section is empty exactly when its node sends no signal, so the chart never shows a node as gone while it is sending a signal, or as there after it has gone."
+							recommendation="Approve the after. A section is empty exactly when there is no signal from its node, so the chart never shows a node as gone while it is sending a signal, or as there after it has gone."
 							wide
 						>
 							<Nodes application={application} />
@@ -1101,7 +1101,7 @@ export function ReviewPage() {
 						step={4}
 						title="The explainer"
 						deciding="The words of the engine tile's explainer: its two annotations, its title, and the paragraph about heartbeats under the card."
-						notDeciding="The alert flag of the engine while it sends no signal, which is FL; how an explainer looks and opens, which is settled."
+						notDeciding="The alert flag of the engine while there is no signal from it, which is FL; how an explainer looks and opens, which is settled."
 						note="It takes the place of the hovercards of the icon and the headline, by the rules of the cluster view's explainers. What &quot;online&quot; means, which the headline's hovercard said, is in its text."
 					>
 						<State
@@ -1516,7 +1516,7 @@ function SideBySide({
  * drains over three of its usual intervals, and once with the deadline of each
  * node's latest heartbeat, to which its level drains. Each node beats at its own pace while it runs, and each beat is
  * data that arrives, as it does on the cluster's page. A node that is stopped
- * sends no more heartbeats, and leaves when its latest one expires.
+ * doesn't send any more heartbeats, and leaves when its latest one expires.
  */
 function Nodes({ application }: { application: Application }) {
 	const nodes = useRef<DemoNode[]>([]);
@@ -1622,7 +1622,7 @@ function Nodes({ application }: { application: Application }) {
  * drains. Each
  * application has as many nodes as the fixture gives it, and each node beats at
  * its own pace. An application can be stopped, which stops each of its nodes; it
- * sends no signal once the last of their heartbeats has expired.
+ * has no signal once the last of their heartbeats has expired.
  */
 function ApplicationBeats({
 	applications,

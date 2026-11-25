@@ -37,7 +37,7 @@ test("each application is in the order given, and links to its application view"
 	);
 });
 
-test("an application that sends no signal says so by an icon beside its name, and its figures are not available", () => {
+test("an application with no signal says so by an icon beside its name, and its figures are not available", () => {
 	const name = apps[1]?.application.name as string;
 	render(
 		<SiteOverview data={siteOf(withSignal(apps, { out: [name] }), euWest)} />,
@@ -88,7 +88,7 @@ test("each square names its application to assistive technology", () => {
 	).toEqual(apps.map((a) => a.application.name));
 });
 
-test("the alert icon of an application that sends no signal says what that means", async () => {
+test("the alert icon of an application with no signal says what that means", async () => {
 	const name = apps[1]?.application.name as string;
 	render(
 		<SiteOverview data={siteOf(withSignal(apps, { out: [name] }), euWest)} />,
