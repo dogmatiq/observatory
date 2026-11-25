@@ -21,11 +21,13 @@ export type IconName =
 	| "engine"
 	| "event"
 	| "event-stream"
+	| "globe"
 	| "integration"
 	| "message"
 	| "minimize-concurrency"
 	| "moon"
 	| "node"
+	| "pin"
 	| "process"
 	| "projection"
 	| "queue"
@@ -73,6 +75,19 @@ const shapes: Record<IconName, ReactNode> = {
 		</>
 	),
 	engine: <Cpu />,
+	globe: (
+		<>
+			<circle cx="12" cy="12" r="10" />
+			<path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+			<path d="M2 12h20" />
+		</>
+	),
+	pin: (
+		<>
+			<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+			<circle cx="12" cy="10" r="3" />
+		</>
+	),
 	// The cluster's icon, with the box of one of its members filled.
 	node: (
 		<>
