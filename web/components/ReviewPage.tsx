@@ -224,12 +224,12 @@ export function ReviewPage() {
 			<Tile
 				code="SW"
 				title="Site view: the explainers"
-				note="The explainer of each of the site view's tiles, which takes the place of the hovercards that explained them, by the rules of the cluster view's explainers. Point at a tile and press its &quot;?&quot;. The compact digest's explainer is approved on the cluster view's review of explainers."
+				note="The words of the explainer of each of the site view's tiles: its annotations, its title and the text under the card. How an explainer looks and works is settled, by the cluster view's explainers; only these words are new, because they speak of all the applications at the site together. Point at a tile and press its &quot;?&quot; to read them."
 			>
 				<Part
 					step={1}
 					title="The events tile"
-					notDeciding="The words on the tile, which are SH 1; the alert flag of a status, which is FL; how an explainer looks and opens, which is settled."
+					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself, which are SH 1; the alert flag of a status, which is FL."
 					note="It is the cluster view's events card for all the applications at the site together. Its bar is of the applications, and has no advice, because applications record events at whatever rate their work needs."
 				>
 					<State
