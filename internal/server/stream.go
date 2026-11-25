@@ -73,7 +73,10 @@ func serveStream(w http.ResponseWriter, req *http.Request, o *observe.Observer, 
 			if !ok || beat.Cluster != id {
 				continue
 			}
-			err = s.write("heartbeat", heartbeat{Node: beat.Node})
+			err = s.write("heartbeat", heartbeat{
+				Node:   beat.Node,
+				Expiry: float64(beat.Expiry) / float64(time.Millisecond),
+			})
 		}
 
 		if err != nil {
@@ -100,6 +103,12 @@ type stream struct {
 type heartbeat struct {
 	Node     string  `json:"node"`
 	MsBefore float64 `json:"msBefore"`
+
+	// Expiry is how long after it arrived the heartbeat expires, in
+	// milliseconds, which is when the node stops sending a signal unless
+	// another heartbeat arrives first. It is left out if the heartbeat gives no
+	// way to calculate it.
+	Expiry float64 `json:"expiry,omitempty"`
 }
 
 // write sends an event, and flushes it to the client.
@@ -124,10 +133,11 @@ func (s *stream) burst(now time.Time, view observe.ClusterView, series observe.S
 		return err
 	}
 
-	// A node's heartbeats are sent oldest first.
+	// A node's heartbeats are sent oldest first. The Observer keeps only the
+	// expiry of a node's latest heartbeat, so each is sent with that one.
 	for _, n := range membersOf(view.Overview) {
 		for _, ms := range n.Heartbeats {
-			if err := s.write("heartbeat", heartbeat{n.ID, ms}); err != nil {
+			if err := s.write("heartbeat", heartbeat{n.ID, ms, n.Expiry}); err != nil {
 				return err
 			}
 		}

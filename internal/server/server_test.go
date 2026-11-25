@@ -18,6 +18,7 @@ import (
 	"github.com/dogmatiq/protobuf/uuidpb"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/dogmatiq/observatory/internal/observe"
 	"github.com/dogmatiq/observatory/internal/observe/stubs"
@@ -200,6 +201,17 @@ func (n *node) heartbeat(t *testing.T) {
 
 	n.sendEngine(t, enginegrpc.WatchEngineResponse_builder{
 		Heartbeat: enginegrpc.WatchEngineResponse_Heartbeat_builder{}.Build(),
+	})
+}
+
+// heartbeatExpiring sends a heartbeat that expires after d.
+func (n *node) heartbeatExpiring(t *testing.T, d time.Duration) {
+	t.Helper()
+
+	n.sendEngine(t, enginegrpc.WatchEngineResponse_builder{
+		Heartbeat: enginegrpc.WatchEngineResponse_Heartbeat_builder{
+			ExpiresAfter: durationpb.New(d),
+		}.Build(),
 	})
 }
 
@@ -983,6 +995,32 @@ func TestStream(t *testing.T) {
 			})
 		})
 
+		t.Run("it gives each heartbeat of the burst the expiry of the node's latest one", func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+
+				o, r := observe.NewObserver(), observe.NewRecorder()
+				cluster := uuidpb.Generate()
+				n := connectNode(t, ctx, o, cluster, uuidpb.Generate(), application("a"))
+
+				n.heartbeatExpiring(t, 10*time.Second)
+				time.Sleep(time.Second)
+				n.heartbeatExpiring(t, 15*time.Second)
+
+				w := startWatch(ctx, New(o, r), cluster.AsString())
+				synctest.Wait()
+
+				beats := named(w.events(t), "heartbeat")
+				if len(beats) != 2 || beats[0].Data["expiry"] != 15000.0 || beats[1].Data["expiry"] != 15000.0 {
+					t.Fatalf("unexpected heartbeats: %v", beats)
+				}
+
+				w.Cancel()
+				<-w.Done
+			})
+		})
+
 		t.Run("it gives a node's heartbeats as the time before the burst, oldest first", func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
@@ -1138,6 +1176,28 @@ func TestStream(t *testing.T) {
 			}
 			if rate != 0.323 {
 				t.Fatalf("unexpected rate: got %v, want 0.323", rate)
+			}
+		})
+	})
+
+	t.Run("it tells a page how long after it arrived a heartbeat expires", func(t *testing.T) {
+		withStream(t, func(_ *observe.Observer, _ *observe.Recorder, n *node, w *watchRequest) {
+			n.heartbeatExpiring(t, 15*time.Second)
+
+			after := since(w.events(t), "synced")
+			if len(after) != 1 || after[0].Data["expiry"] != 15000.0 {
+				t.Fatalf("unexpected events: %v", after)
+			}
+		})
+	})
+
+	t.Run("it leaves out the expiry of a heartbeat that gives no way to calculate one", func(t *testing.T) {
+		withStream(t, func(_ *observe.Observer, _ *observe.Recorder, n *node, w *watchRequest) {
+			n.heartbeat(t)
+
+			after := since(w.events(t), "synced")
+			if _, ok := after[0].Data["expiry"]; len(after) != 1 || ok {
+				t.Fatalf("unexpected events: %v", after)
 			}
 		})
 	})

@@ -106,6 +106,12 @@ type Heartbeat struct {
 
 	// Node is the ID of the node, as a UUID.
 	Node string
+
+	// Expiry is how long after it arrived the heartbeat expires, which is when
+	// the node stops sending a signal unless another heartbeat arrives first. It
+	// is zero if the heartbeat gives no way to calculate it. See
+	// [Node.Reporting].
+	Expiry time.Duration
 }
 
 // WatchHeartbeats returns a channel that receives each heartbeat that a node
@@ -633,6 +639,7 @@ func (o *Observer) apply(id string, c *connection, res *enginegrpc.WatchEngineRe
 		beat := Heartbeat{
 			Cluster: clusterOf(e.node.Preamble),
 			Node:    e.node.Preamble.GetId().AsString(),
+			Expiry:  e.expiry,
 		}
 		for ch := range o.heartbeats {
 			select {

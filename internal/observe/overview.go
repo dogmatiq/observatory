@@ -506,6 +506,12 @@ type Member struct {
 	// in milliseconds before the moment that the view was made, oldest first. It
 	// is empty for a node that isn't connected.
 	Heartbeats []float64 `json:"heartbeats"`
+
+	// Expiry is how long after its latest heartbeat arrived that heartbeat
+	// expires, in milliseconds, which is when the node stops sending a signal
+	// unless another arrives first. It is zero if the node's heartbeats give no
+	// way to calculate it, or if it isn't connected. See [Node.Reporting].
+	Expiry float64 `json:"expiry,omitempty"`
 }
 
 // Chart is the history of a number, to be drawn as a sparkline.
@@ -979,6 +985,9 @@ func memberOf(now time.Time, n Node) Member {
 	if n.Connected {
 		for _, at := range n.Heartbeats {
 			m.Heartbeats = append(m.Heartbeats, millisecondsBefore(now, at))
+		}
+		if !n.Deadline.IsZero() {
+			m.Expiry = float64(n.Deadline.Sub(n.HeartbeatAt)) / float64(time.Millisecond)
 		}
 	}
 

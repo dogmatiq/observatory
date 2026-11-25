@@ -709,6 +709,63 @@ func TestObserver(t *testing.T) {
 }
 
 func TestWatchHeartbeats(t *testing.T) {
+	t.Run("it gives the expiry that a heartbeat says it has", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			watch := o.WatchHeartbeats(ctx)
+
+			c := connect(ctx, o)
+			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), time.Second))
+			send(t, c, heartbeat(15*time.Second))
+
+			if got := (<-watch).Expiry; got != 15*time.Second {
+				t.Fatalf("unexpected expiry: got %v, want 15s", got)
+			}
+
+			cancel()
+			<-c.Done
+		})
+	})
+
+	t.Run("it gives three heartbeat intervals as the expiry of a heartbeat that doesn't say", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			watch := o.WatchHeartbeats(ctx)
+
+			c := connect(ctx, o)
+			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 2*time.Second))
+			send(t, c, heartbeat(0))
+
+			if got := (<-watch).Expiry; got != 6*time.Second {
+				t.Fatalf("unexpected expiry: got %v, want 6s", got)
+			}
+
+			cancel()
+			<-c.Done
+		})
+	})
+
+	t.Run("it gives no expiry for a heartbeat that gives no way to calculate one", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			watch := o.WatchHeartbeats(ctx)
+
+			c := connect(ctx, o)
+			send(t, c, preamble(uuidpb.Generate(), uuidpb.Generate(), 0))
+			send(t, c, heartbeat(0))
+
+			if got := (<-watch).Expiry; got != 0 {
+				t.Fatalf("unexpected expiry: got %v, want none", got)
+			}
+
+			cancel()
+			<-c.Done
+		})
+	})
+
 	t.Run("it tells a watcher the cluster and the node of each heartbeat", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())
@@ -734,9 +791,9 @@ func TestWatchHeartbeats(t *testing.T) {
 				got = append(got, <-watch)
 			}
 			want := []Heartbeat{
-				{a.AsString(), na.AsString()},
-				{b.AsString(), nb.AsString()},
-				{b.AsString(), nb.AsString()},
+				{Cluster: a.AsString(), Node: na.AsString()},
+				{Cluster: b.AsString(), Node: nb.AsString()},
+				{Cluster: b.AsString(), Node: nb.AsString()},
 			}
 			for i := range want {
 				if got[i] != want[i] {
@@ -761,7 +818,7 @@ func TestWatchHeartbeats(t *testing.T) {
 			send(t, c, preamble(engine, nil, 0))
 			send(t, c, heartbeat(0))
 
-			want := Heartbeat{engine.AsString(), engine.AsString()}
+			want := Heartbeat{Cluster: engine.AsString(), Node: engine.AsString()}
 			if got := <-watch; got != want {
 				t.Fatalf("unexpected heartbeat: got %v, want %v", got, want)
 			}
