@@ -1,10 +1,11 @@
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useContext, useId } from "react";
 import { cn } from "../lib/cn.ts";
 import { Trusted, useCurrent } from "../lib/distrust.tsx";
 import { formatCompact, nounFor } from "../lib/format.ts";
 import { useRamped } from "../lib/ramped.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { Application, HandlerData, HandlerSummary } from "../model.ts";
+import { ExplainersBuilt } from "./explained.ts";
 import { HandlerKindCard } from "./HandlerKindCard.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
@@ -60,6 +61,7 @@ export function HandlerDigest({
 	href?: string;
 }) {
 	const nameId = useId();
+	const explainersBuilt = useContext(ExplainersBuilt);
 	const { summary, history } = handler;
 	const failing = useCurrent(summary.failing) > 0;
 
@@ -118,20 +120,10 @@ export function HandlerDigest({
 						</span>
 					</span>
 				</span>
-				<Popover
-					card
-					content={
-						<HandlerKindCard
-							application={application}
-							name={handler.name}
-							kind={handler.kind}
-							partial={handler.coverage !== undefined}
-						/>
-					}
-				>
+				{explainersBuilt ? (
 					<span
 						className={cn(
-							"ml-auto flex-none self-start transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none",
+							"ml-auto flex-none self-start",
 							kindColors[handler.kind],
 						)}
 					>
@@ -140,7 +132,31 @@ export function HandlerDigest({
 							className="inline size-5 align-text-bottom"
 						/>
 					</span>
-				</Popover>
+				) : (
+					<Popover
+						card
+						content={
+							<HandlerKindCard
+								application={application}
+								name={handler.name}
+								kind={handler.kind}
+								partial={handler.coverage !== undefined}
+							/>
+						}
+					>
+						<span
+							className={cn(
+								"ml-auto flex-none self-start transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none",
+								kindColors[handler.kind],
+							)}
+						>
+							<Icon
+								name={handler.kind}
+								className="inline size-5 align-text-bottom"
+							/>
+						</span>
+					</Popover>
+				)}
 			</div>
 			<Summary handler={handler} summary={summary} />
 			<Presence shape="fade" className="absolute inset-x-0 bottom-0">

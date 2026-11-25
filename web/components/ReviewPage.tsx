@@ -26,6 +26,7 @@ import { ApplicationName } from "./ApplicationName.tsx";
 import { noNodesText } from "./ClusterCards.tsx";
 import { engineOutText } from "./EngineCard.tsx";
 import { Explained, type ExplainerSpec } from "./Explainer.tsx";
+import { ExplainersBuilt } from "./explained.ts";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import { Icon } from "./Icon.tsx";
 import { Identifier } from "./Identifier.tsx";
@@ -380,7 +381,7 @@ export function ReviewPage() {
 					title="A card's name is its link"
 					deciding="That on a card that leads to another page, only the thing's name is a link, and the card as a whole doesn't react to the pointer; and that the name shows that it leads to another page while it is pointed at or has the keyboard's focus: it is underlined, and a chevron appears after it. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows the link."
 					notDeciding="How a vital card links to its page, as it shows no name, and none links anywhere yet."
-					note="A screen that is touched can't point, so the chevron is what says there that a name leads elsewhere. The handler digest here links nowhere, as no handler has a page yet."
+					note="A screen that is touched can't point, so the chevron is what says there that a name leads elsewhere. The handler digest here links nowhere, as no handler has a page yet, and is drawn as it will be once the explainers are in the views, with an icon that opens nothing."
 				>
 					<State
 						label="Compact digests"
@@ -399,13 +400,15 @@ export function ReviewPage() {
 						recommendation="Approve, as for compact digests."
 					>
 						<div className="w-80">
-							<HandlerDigest
-								application={application}
-								handler={
-									overview.handlers[0] as OverviewData["handlers"][number]
-								}
-								href="#"
-							/>
+							<ExplainersBuilt value={true}>
+								<HandlerDigest
+									application={application}
+									handler={
+										overview.handlers[0] as OverviewData["handlers"][number]
+									}
+									href="#"
+								/>
+							</ExplainersBuilt>
 						</div>
 					</State>
 					<Choices
@@ -567,7 +570,7 @@ export function ReviewPage() {
 					title="An alert flag while a status applies"
 					deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
 					notDeciding="The words of each status, which are settled; that a flag opens a tooltip of its status, which is IC; the compact digest's alert flag, which it already has and whose tooltip is SH 2."
-					note="On a vital card, which has no label that shows, the flag goes to the left of its icon. On a digest it goes after the name, as the compact digest's does. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
+					note="On a vital card or a handler digest, the flag goes to the left of the card's icon, at the right of its top row, which is where a compact digest, which has no icon, has its flag. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
 				>
 					{flaggedCards.map((f) => (
 						<State
@@ -585,13 +588,13 @@ export function ReviewPage() {
 			<Tile
 				code="SH"
 				title="Site view: the headlines' words"
-				note="What each tile's headline and detail line say, and then what the hovercard of each headline says."
+				note="What each tile's headline and detail line say, and then what the tooltip of a compact digest's alert flag says."
 			>
 				<Part
 					step={1}
 					title="The headlines and detail lines"
 					deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
-					notDeciding="The tiles' explainers (SW); the hovercard of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
+					notDeciding="The tiles' explainers (SW); the tooltip of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
 					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
 				>
 					<State
@@ -618,9 +621,9 @@ export function ReviewPage() {
 				<Part
 					step={2}
 					title="The tooltip of a compact digest's alert flag"
-					deciding="That a compact digest's alert flag opens a tooltip, not a hovercard, as the application's name is beside it; and the words of the tooltip, which say what losing contact means."
+					deciding="The words of the tooltip of a compact digest's alert flag, which say what losing contact means."
 					notDeciding={
-						"The words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
+						"That an alert flag opens a tooltip, which is IC; the words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
 					}
 					note="The tooltip of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
 				>
@@ -696,7 +699,7 @@ export function ReviewPage() {
 			<Tile
 				code="EV"
 				title="Events tile"
-				note="Under review: the status on the hovercard of the icon while only some nodes report what the tile shows, and the hovercard of a segment of the bar, which drills down, with its figures apart from its words. The rest of the tile is settled, including the tile of an engine that appends every event to one stream."
+				note="Under review: the hovercard of a segment of the bar, which drills down to one stream. The rest of the tile is settled, including the tile of an engine that appends every event to one stream, and the tile while only some nodes report what it shows."
 			>
 				<Part
 					step={0}
@@ -838,7 +841,7 @@ export function ReviewPage() {
 			<Tile
 				code="CL"
 				title="Cluster tile"
-				note="The tile of an engine that clusters, in each of its states, and then its parts, from the least specific to the most: what its icon, its headline, its detail line and its bar show when they are pointed at, and its chart."
+				note="The tile of an engine that clusters, in each of its states, then the hovercards of its bar's segments, and its chart. The explainer, which is approved, says what the rest of the tile shows."
 			>
 				<Part
 					step={0}
@@ -1116,27 +1119,23 @@ export function ReviewPage() {
 
 /** An application of the site view's fixture, out of contact. */
 /**
- * Flagged draws a card with an alert flag beside its anchor: to the left of a
- * vital card's icon, or after a digest's name. Pointing at the flag shows the
- * status in a hovercard. It shows how a status would look once the hovercards
- * that explain stop carrying statuses.
+ * Flagged draws a card with an alert flag to the left of its anchor, which is the
+ * card's icon. Pointing at the flag shows the status in a tooltip. It shows how a
+ * status would look once the hovercards that explain stop carrying statuses, so
+ * the card is drawn as it will be once the explainers are in the views.
  */
 function Flagged({
 	card,
 	width,
 	anchor,
-	after,
 	tone,
 	status,
 }: {
 	card: ReactNode;
 	width: number;
 
-	/** A CSS selector for what the flag goes beside. */
+	/** A CSS selector for what the flag goes to the left of. */
 	anchor: string;
-
-	/** True to put the flag after the anchor, as after a digest's name. */
-	after?: true;
 
 	/** "bad" for red, "qualifies" for the grey of a status that qualifies. */
 	tone: "bad" | "qualifies";
@@ -1155,13 +1154,13 @@ function Flagged({
 		const box = el.getBoundingClientRect();
 		const r = target.getBoundingClientRect();
 		setAt({
-			x: after ? r.right - box.left + 6 : r.left - box.left - 22,
+			x: r.left - box.left - 22,
 			y: r.top + r.height / 2 - box.top - 8,
 		});
-	}, [anchor, after]);
+	}, [anchor]);
 	return (
 		<div ref={ref} className="relative" style={{ width }}>
-			{card}
+			<ExplainersBuilt value={true}>{card}</ExplainersBuilt>
 			{at && (
 				<span className="absolute z-20" style={{ left: at.x, top: at.y }}>
 					<Popover content={status}>
@@ -1235,11 +1234,10 @@ const flaggedCards = [
 	},
 	{
 		label: "A handler digest, while only some nodes report it",
-		note: "Today the status is in the hovercard of the kind icon. The flag goes after the name, as on a compact digest.",
+		note: "Today the status is in the hovercard of the kind icon. The flag goes to the left of the kind icon, where a compact digest has its flag, and clear of the chevron that follows the name when it is pointed at.",
 		recommendation: "Approve, as for the events tile.",
 		width: 360,
-		anchor: "span[id]",
-		after: true as const,
+		anchor: "svg.size-5",
 		tone: "qualifies" as const,
 		card: (
 			<HandlerDigest
@@ -1248,6 +1246,7 @@ const flaggedCards = [
 					...(overview.handlers[0] as OverviewData["handlers"][number]),
 					coverage: 0.5,
 				}}
+				href="#"
 			/>
 		),
 		status: partialStatus.text,

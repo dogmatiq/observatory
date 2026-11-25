@@ -1,9 +1,10 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { useCurrent } from "../lib/distrust.tsx";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
 import { type Readout, ReadoutContext } from "../lib/readout.tsx";
+import { ExplainersBuilt } from "./explained.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { Popover } from "./Popover.tsx";
@@ -126,6 +127,8 @@ export function MetricTile({
 	}
 	const shownReadout = readout ?? lastReadout.current;
 
+	const explainersBuilt = useContext(ExplainersBuilt);
+
 	const content = (
 		<ReadoutContext.Provider value={setReadout}>
 			<div className="flex items-center justify-between gap-3">
@@ -152,29 +155,35 @@ export function MetricTile({
 							</>
 						)}
 					</span>
-					<Popover
-						card={about !== undefined}
-						interactive={id !== undefined}
-						content={
-							about === undefined ? (
-								label
-							) : (
-								<InfoCard
-									subsystem={subsystem}
-									icon={icon}
-									kind={label}
-									id={id}
-									status={aboutStatus}
-								>
-									{about}
-								</InfoCard>
-							)
-						}
-					>
-						<span className="flex-none text-(--subsystem) transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none">
+					{explainersBuilt ? (
+						<span className="flex-none text-(--subsystem)">
 							<Icon name={icon} className="inline size-5 align-text-bottom" />
 						</span>
-					</Popover>
+					) : (
+						<Popover
+							card={about !== undefined}
+							interactive={id !== undefined}
+							content={
+								about === undefined ? (
+									label
+								) : (
+									<InfoCard
+										subsystem={subsystem}
+										icon={icon}
+										kind={label}
+										id={id}
+										status={aboutStatus}
+									>
+										{about}
+									</InfoCard>
+								)
+							}
+						>
+							<span className="flex-none text-(--subsystem) transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none">
+								<Icon name={icon} className="inline size-5 align-text-bottom" />
+							</span>
+						</Popover>
+					)}
 				</div>
 			</div>
 			<span className="relative z-10 mt-1 min-h-[calc(2*1.5em)] text-sm text-muted">

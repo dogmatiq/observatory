@@ -1052,17 +1052,20 @@ Tick each item when it is done, and write the pull request or commit that did it
   On a screen that is touched, a tap on an element opens its hovercard or tooltip, such as a bar's segment's or an
   alert flag's, and a tap on it again, or anywhere but the panel, closes it; a segment is a finger's height to tap.
   Done.
-  Under review (IC 1B):
-  the segments of a handler digest's bars, whose tooltips today have the ID inside a sentence, become drill-down cards
-  that follow the same rule, with the ID, the kind and the figure, and no paragraphs. A segment that is about no one
-  thing, such as the merged last segment, keeps a tooltip of one line. No card's icon opens a
-  hovercard, so an icon no longer grows when it is pointed at. The cluster's ID, or the engine's for an engine that
-  doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word "cluster"
-  or "engine", shortened and copyable, because it is the same for every part of the view.
-  Under review (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole
+  Approved (IC 1B, IC 1C), to build after the review: the segments of a handler digest's bars, whose tooltips today
+  have the ID inside a sentence, become drill-down cards that follow the same rule, with the ID, the kind and the
+  figure, and no paragraphs. A segment that is about no one thing, such as the merged last segment, keeps a tooltip of
+  one line.
+  Under review (ID 2): no card's icon opens a hovercard, so an icon no longer grows when it is pointed at. The
+  cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name
+  and site, small and faint, after the word "cluster" or "engine", shortened and copyable, because it is the same for
+  every part of the view. `/review` draws the cards of LK and FL that way, so that they look as they will.
+  Under review (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
+  at the right of its top row, where a compact digest has its flag, and so clear of the chevron after a linked name.
+  Approved (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole
   doesn't react to the pointer; the name is underlined, with a chevron after it, while it is pointed at or has the
   keyboard's focus. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows
-  the link. The digests are built that way, so that the review can try it.
+  the link. Done.
   `/review` no longer reviews the words of the hovercards that explain (it retired EV 1, CL 1–3, EN 1–2, WD, and SH 2's
   headline hovercards), and reviews the site view's explainers (SW) and the engine tile's (EN 4). Done: the segment hovercards' advice says
   "An even spread is better".
