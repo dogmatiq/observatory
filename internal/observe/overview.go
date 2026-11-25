@@ -302,7 +302,8 @@ type Software struct {
 
 	// EngineVersions is the range of the versions of the engine's software that
 	// the nodes give, by the precedence of Semantic Versioning, which the spec
-	// promises for them. It is nil if no node gives a version, or if the nodes
+	// promises for them. A version that isn't a semantic version is left out of
+	// the range. It is nil if no node gives a semantic version, or if the nodes
 	// give different engine names, whose versions aren't comparable.
 	EngineVersions *VersionRange `json:"engineVersions,omitempty"`
 

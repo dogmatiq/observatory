@@ -1080,7 +1080,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   figure, and no paragraphs. A segment that is about no one thing, such as the merged last segment, keeps a tooltip of
   one line.
   Done with the explainers: no card's icon opens a hovercard, so an icon no longer grows when it is pointed at.
-  Approved and done (ID 2): the title bar says where the page is as a trail, which is the page's address: the site
+  Approved and done (ID 2; daab9a7, 9f153b0): the title bar says where the page is as a trail, which is the page's address: the site
   and the application, and, on a cluster's own page, the cluster or the engine, each a link to its own page. An
   application at no site has no site step: its trail starts with the application, and its hovercard has no site. On
   an application's page, the cluster that runs it is only in the trail's hovercard, because a reader asks to see the
