@@ -1057,14 +1057,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   it; an application sends one, for brevity, though its engine does; a status reads "There is no signal from the
   engine, so it's unknown whether the application is working". The wordings were chosen row by row on a temporary
   page, and the design doc's glossary has the term. Done.
-  Under review (CL 5, SC 1), shown before and after: a section of the heartbeat chart falls to empty at the deadline of
-  its latest heartbeat, which is the time by which the node says that it sends the next, or three of the intervals that
-  its engine gives, as the server already works out to tell whether the node is sending a signal. Today it falls over three of
-  the usual intervals that the browser has seen, so it can empty while the node is still sending one. An application's section
-  on the site view follows the latest deadline of its nodes, and a heartbeat raises it only if it moves that deadline
-  later. To build if approved: the server sends each node's deadline with its heartbeats, and the page drops the
-  fallback to the usual intervals; a node that gives no way to tell when its heartbeats expire stays full while it is
-  connected, as the server takes it to be sending a signal.
+  Approved (CL 5, SC 1): a section of the heartbeat chart falls to empty at the deadline of its latest heartbeat, which
+  is the time by which the node says that it sends the next, or three of the intervals that its engine gives, as the
+  server works out to tell whether the node is sending a signal. An application's section on the site view follows the
+  latest deadline of its nodes, and a heartbeat raises it only if it moves that deadline later. Done for the cluster and
+  engine tiles (c354465, 258341f): the stream sends each heartbeat's expiry with it, the page drains each node's section
+  to its deadline, and a node that gives no way to tell when its heartbeats expire stays full while it is connected; the
+  fallback to the usual intervals is gone. The site view's applications tile follows once its server side is built.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
