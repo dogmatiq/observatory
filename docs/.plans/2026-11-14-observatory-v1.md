@@ -1030,7 +1030,12 @@ Tick each item when it is done, and write the pull request or commit that did it
   The projection digest's explainer is approved. Its bar's annotation is "how the recently handled events were spread
   across the nodes". Neither the integration's nor the projection's bar of nodes has advice, whatever the handler's
   concurrency preference, because nothing promises how an engine spreads a handler's work across its nodes. Advice
-  could rest on the engine's `ClusterModel`, if a view reads it. Done: the segment hovercards' advice says
+  could rest on the engine's `ClusterModel`, if a view reads it.
+  The compact digest's explainer is approved. The digest keeps its own width, centred over the text under it. Its
+  annotations are "the application's name", "the rate of new events, averaged over the last minute", "the number of
+  messages ready to be delivered now" and "the number of messages that are failing", and its text, when it shows
+  messages, is the queues card's first paragraph and advice. The orange accent along the top of a card has no
+  annotation. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
