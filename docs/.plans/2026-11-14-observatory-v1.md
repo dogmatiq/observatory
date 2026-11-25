@@ -1048,7 +1048,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   does. A thing with no name, such as a stream, a queue or a node, has its shortened ID in the place of the name, in the
   same style, with a copy button that says what it copied, such as "Copied queue ID", in a note above it that moves
   nothing. A thing that has a name shows no ID or key, on a hovercard or a digest, so only the bars' drill-down
-  hovercards and the title bar show IDs. An alert flag opens a tooltip of its status, not a hovercard. No card's icon opens a
+  hovercards and the title bar show IDs. An alert flag opens a tooltip of its status, not a hovercard. Under review (IC 1B):
+  the segments of a handler digest's bars, whose tooltips today have the ID inside a sentence, become drill-down cards
+  that follow the same rule, with the ID, the kind and the figure, and no paragraphs. A segment that is about no one
+  thing, such as the merged last segment, keeps a tooltip of one line. No card's icon opens a
   hovercard, so an icon no longer grows when it is pointed at. The cluster's ID, or the engine's for an engine that
   doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word "cluster"
   or "engine", shortened and copyable, because it is the same for every part of the view.

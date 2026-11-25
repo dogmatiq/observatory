@@ -222,36 +222,142 @@ export function ReviewPage() {
 					note="Once the explainers are built, the hovercards that stay are the drill-downs of a bar's segments, each about one stream, queue, node or application. The moon's hovercard follows the same rule. No icon opens a hovercard, an alert flag opens a tooltip of its status, a digest shows no key, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
 				>
 					<State
-						label="The hovercards that stay, by what opens them"
-						note="The segments' hovercards are as they are today, with the name or ID where this rule puts it."
+						label="The hovercards of the cluster view's and the site view's bars"
+						note="Every hovercard of a segment about one thing, on the cluster view's and the site view's bars, as they are today, with the name or ID where this rule puts it."
 						recommendation="Approve the rule as these hovercards show it: the name, or for a thing with no name its ID, first, in bold capitals, then the kind; no key for a thing with a name."
 						wide
 					>
+						<div className="flex flex-col gap-8">
+							<Captioned2 title="The cluster view's bars">
+								<Captioned caption="A stream, on the events bar">
+									<SegmentCard
+										about={{
+											thing: "event-stream",
+											id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
+											amount: 612,
+											share: 0.42,
+											total: { amount: 1457, things: 3 },
+										}}
+									/>
+								</Captioned>
+								<Captioned caption="A queue, on the queues bar">
+									<SegmentCard
+										about={{
+											thing: "queue",
+											id: "c42e7a19-5d0b-4f3a-8e61-7b2d9f0a3c85",
+											amount: 240,
+											share: 0.65,
+											total: { amount: 370, things: 2 },
+										}}
+									/>
+								</Captioned>
+								<Captioned caption="A node, on the cluster bar">
+									<SegmentCard
+										about={{
+											thing: "node",
+											id: nodeId,
+											amount: 2,
+											share: 0.4,
+											total: { amount: 5, things: 3 },
+										}}
+									/>
+								</Captioned>
+								<Captioned caption="A node that doesn't report its workloads, on the cluster bar">
+									<SegmentCard
+										about={{ thing: "node", id: nodeId, unreported: true }}
+									/>
+								</Captioned>
+							</Captioned2>
+							<Captioned2 title="The site view's bars">
+								<Captioned caption="An application, on the events bar">
+									<SegmentCard
+										about={{
+											thing: "application",
+											of: "events",
+											application: {
+												name: "payments",
+												key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+											},
+											amount: 2140,
+											share: 0.1834,
+										}}
+									/>
+								</Captioned>
+								<Captioned caption="An application, on the queues bar">
+									<SegmentCard
+										about={{
+											thing: "application",
+											of: "messages",
+											application: {
+												name: "payments",
+												key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+											},
+											amount: 38,
+											share: 0.12,
+										}}
+									/>
+								</Captioned>
+							</Captioned2>
+						</div>
+					</State>
+					<State
+						label="The handler digests' bars"
+						note="Today each segment of a handler digest's bar has a tooltip of one line, with the ID inside the sentence: &quot;100 instances on event stream 8b0081fd ⧉&quot; on an aggregate's bar, &quot;20 instances on deadline queue c42e7a19 ⧉&quot; on a process's, and &quot;120 commands/min on node 113cbdc3 ⧉&quot; on an integration's or a projection's. These follow the rule instead, as cards with the ID in the place of a name, the kind, and the figure. They have no paragraphs, as the digest's explainer says what the bar is."
+						recommendation="Approve: make these segments drill down the way the cluster view's do, so that every segment about one thing follows the rule."
+						wide
+					>
 						<div className="flex flex-wrap items-start gap-6">
-							<Captioned caption="Opened by a segment, about a thing with a name: an application on the site's events bar">
-								<SegmentCard
-									about={{
-										thing: "application",
-										of: "events",
-										application: {
-											name: "payments",
-											key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
-										},
-										amount: 2140,
-										share: 0.1834,
+							<Captioned caption="A stream, on an aggregate's bar">
+								<InfoCard
+									subsystem="streams"
+									icon="event-stream"
+									kind="Event stream"
+									id={{
+										id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
+										what: "event stream ID",
+									}}
+									figure={{ value: "100", unit: "instances", aside: "50%" }}
+								/>
+							</Captioned>
+							<Captioned caption="A deadline queue, on a process's bar">
+								<InfoCard
+									subsystem="queues"
+									icon="queue"
+									kind="Deadline queue"
+									id={{
+										id: "c42e7a19-5d0b-4f3a-8e61-7b2d9f0a3c85",
+										what: "deadline queue ID",
+									}}
+									figure={{ value: "20", unit: "instances", aside: "100%" }}
+								/>
+							</Captioned>
+							<Captioned caption="A node, on an integration's bar">
+								<InfoCard
+									subsystem="cluster"
+									icon="node"
+									kind="Node"
+									id={{ id: nodeId, what: "node ID" }}
+									figure={{
+										value: "120",
+										unit: "commands per minute",
+										aside: "60%",
 									}}
 								/>
 							</Captioned>
-							<Captioned caption="Opened by a segment, about a thing with only an ID: a stream on the events bar">
-								<SegmentCard
-									about={{
-										thing: "event-stream",
-										id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
-										amount: 612,
-										share: 0.42,
-										total: { amount: 1457, things: 3 },
-									}}
-								/>
+						</div>
+					</State>
+					<State
+						label="Segments that are about no one thing"
+						note="The last segment of a bar that has more things than it can draw merges the rest, and a handler's instances that aren't bound yet have a segment of their own. Neither is about one thing, so the rule doesn't apply, and each has a tooltip of one line, as today."
+						recommendation="Approve: these keep their tooltips."
+						wide
+					>
+						<div className="flex flex-wrap items-start gap-6">
+							<Captioned caption="The merged segment, on the cluster view's events bar">
+								<Tip>1.2K events on 4 other event streams</Tip>
+							</Captioned>
+							<Captioned caption="Instances not yet bound, on an aggregate's bar">
+								<Tip>3 instances with no event stream yet</Tip>
 							</Captioned>
 						</div>
 					</State>
@@ -549,9 +655,7 @@ export function ReviewPage() {
 							},
 						]}
 					>
-						<div className={cn(panelClasses, "w-max max-w-xs px-2.5 py-1.5")}>
-							{contactLostText}
-						</div>
+						<Tip>{contactLostText}</Tip>
 					</State>
 				</Part>
 			</Tile>
@@ -1204,6 +1308,34 @@ function Captioned({
 		<div className="flex flex-col gap-2">
 			<span className="text-xs text-muted">{caption}</span>
 			<Panel>{children}</Panel>
+		</div>
+	);
+}
+
+/**
+ * Captioned2 is a group of captioned hovercards, under a title that says where
+ * they are.
+ */
+function Captioned2({
+	title,
+	children,
+}: {
+	title: string;
+	children: ReactNode;
+}) {
+	return (
+		<div className="flex flex-col gap-3">
+			<span className="text-xs font-semibold text-fg-soft">{title}</span>
+			<div className="flex flex-wrap items-start gap-6">{children}</div>
+		</div>
+	);
+}
+
+/** Tip is a tooltip, drawn where it stands. */
+function Tip({ children }: { children: ReactNode }) {
+	return (
+		<div className={cn(panelClasses, "w-max max-w-xs px-2.5 py-1.5")}>
+			{children}
 		</div>
 	);
 }
