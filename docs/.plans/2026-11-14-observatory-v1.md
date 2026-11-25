@@ -1044,6 +1044,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
   what drills down (a segment's identity and amount, and the cluster's and the engine's IDs), the statuses, as alert
   flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
+  A digest's name opens an identity hovercard, as a preview of the page that the digest leads to: the thing's kind, its
+  name in bold, its identity key, shortened and copyable, and where it is, with no figures. No card's icon opens a
+  hovercard, so an icon no longer grows when it is pointed at.
   `/review` no longer reviews the words of the hovercards that explain (it retired EV 1, CL 1–3, EN 1–2, WD, and SH 2's
   headline hovercards), and reviews the site view's explainers (SW) and the engine tile's (EN 4). Done: the segment hovercards' advice says
   "An even spread is better".

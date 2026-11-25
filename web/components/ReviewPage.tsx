@@ -274,6 +274,80 @@ export function ReviewPage() {
 			</Tile>
 
 			<Tile
+				code="DI"
+				title="A digest's identity"
+				note="Every digest stands for something with its own page, and a compact digest is a link to it, so pointing at a digest's name opens a hovercard that says exactly what the thing is, as a preview of where the digest leads. Its icon opens nothing, as no card's icon does."
+			>
+				<Part
+					step={1}
+					title="The hovercard of a digest's name"
+					deciding="That pointing at a digest's name opens a hovercard with the thing's kind, its name in bold, its identity key, shortened and copyable, and where it is; and that it has no figures."
+					notDeciding="The rule that a hovercard shows the thing's name, or its ID, under its kind, which is IC; the digest's explainer, which is approved; the hovercard of a compact digest's alert flag, which is SH 2."
+					note="The hovercard follows IC, with the identity key under the name, because previewing a thing is when its key is wanted. Its line about where the thing is says which application and site it is in, which the digest doesn't."
+				>
+					<State
+						label="A handler digest's name"
+						recommendation="Approve. It previews the handler that the digest stands for, and gives its key, which nothing else shows."
+					>
+						<Panel>
+							<InfoCard
+								subsystem={handlerSubsystem("aggregate")}
+								icon="aggregate"
+								iconColor={kindColors.aggregate}
+								kind="aggregate"
+								identifier={
+									<>
+										<span className="font-semibold text-fg">account</span>
+										<Identifier
+											id={
+												(
+													overview
+														.handlers[0] as OverviewData["handlers"][number]
+												).key
+											}
+											of="aggregate"
+										/>
+									</>
+								}
+							>
+								<p>
+									In the <ApplicationName application={atSite} />.
+								</p>
+							</InfoCard>
+						</Panel>
+					</State>
+					<State
+						label="A compact digest's name"
+						recommendation="Approve, as for a handler digest."
+					>
+						<Panel>
+							<InfoCard
+								subsystem="cluster"
+								icon="application"
+								kind="Application"
+								identifier={
+									<>
+										<span className="font-semibold text-fg">
+											{contactLostExample.application.name}
+										</span>
+										<Identifier
+											id={contactLostExample.application.key}
+											of="application"
+										/>
+									</>
+								}
+							>
+								<p>
+									At the <span className="font-semibold text-fg">eu-west</span>{" "}
+									site.
+								</p>
+							</InfoCard>
+						</Panel>
+					</State>
+				</Part>
+			</Tile>
+
+			<Tile
 				code="SB"
 				title="Site view: the bars"
 				note="The hovercard of a segment of the events and queues tiles' bars."
