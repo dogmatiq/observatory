@@ -1,3 +1,4 @@
+import { type ReactNode, useMemo } from "react";
 import { Covered, Distrusted, useCurrent } from "../lib/distrust.tsx";
 import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
 import { levelOf } from "../lib/levels.ts";
@@ -8,20 +9,22 @@ import {
 	streamSegments,
 } from "../lib/segments.ts";
 import type { Application, Counted, OverviewData } from "../model.ts";
-import { ApplicationName } from "./ApplicationName.tsx";
-import { NodesCard, WorkloadsCard } from "./ClusterCards.tsx";
-import { EngineCard } from "./EngineCard.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
+import { Explained, type ExplainerSpec } from "./Explainer.tsx";
+import {
+	cardExplainers,
+	clusterExplainerOf,
+	engineExplainer,
+	eventsExplainerOf,
+	handlerExplainer,
+	queuesExplainerOf,
+} from "./explainers.tsx";
 import { Figure } from "./Figure.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
-import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
-import { describedClasses, Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
-import { partialStatus } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
-import { RateCard, type RateWords } from "./RateCard.tsx";
 import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
@@ -59,67 +62,74 @@ export function Totals({
 	application,
 	data,
 	links = {},
-	clusterId,
 	down = false,
 }: {
 	application: Application;
 	data: OverviewData;
 	links?: OverviewLinks;
-	clusterId?: string;
 	down?: boolean;
 }) {
+	const explainers = useExplainers(application);
+	const { events, queues, cluster } = data;
+
 	return (
 		<section
 			className="flex flex-wrap gap-5 [&>*]:min-w-0 [&>*]:flex-[1_1_260px]"
 			aria-label="Totals"
 		>
 			<Presence shape="fade">
-				{data.events && (
+				{events && (
 					<ErrorBoundary>
-						<Distrusted value={down}>
-							<Covered coverage={data.events.coverage ?? 1}>
-								<EventsTile
-									application={application}
-									data={data.events}
-									href={links.events}
-								/>
-							</Covered>
-						</Distrusted>
+						<Explaining
+							spec={() => ({
+								...explainers[eventsExplainerOf(events)],
+								label: "events tile",
+							})}
+						>
+							<Distrusted value={down}>
+								<Covered coverage={events.coverage ?? 1}>
+									<EventsTile data={events} href={links.events} />
+								</Covered>
+							</Distrusted>
+						</Explaining>
 					</ErrorBoundary>
 				)}
 			</Presence>
 			<Presence shape="fade">
-				{data.queues && (
+				{queues && (
 					<ErrorBoundary>
-						<Distrusted value={down}>
-							<Covered coverage={data.queues.coverage ?? 1}>
-								<QueuesTile
-									application={application}
-									data={data.queues}
-									href={links.queues}
-								/>
-							</Covered>
-						</Distrusted>
+						<Explaining
+							spec={() => ({
+								...explainers[queuesExplainerOf(queues)],
+								label: "queues tile",
+							})}
+						>
+							<Distrusted value={down}>
+								<Covered coverage={queues.coverage ?? 1}>
+									<QueuesTile data={queues} href={links.queues} />
+								</Covered>
+							</Distrusted>
+						</Explaining>
 					</ErrorBoundary>
 				)}
 			</Presence>
-			{data.cluster && (
+			{cluster && (
 				<ErrorBoundary>
-					<ClusterTile
-						application={application}
-						clusterId={clusterId}
-						data={data.cluster}
-						href={links.cluster}
-					/>
+					<Explaining
+						spec={() => ({
+							...explainers[clusterExplainerOf(cluster)],
+							label: "cluster tile",
+						})}
+					>
+						<ClusterTile data={cluster} href={links.cluster} />
+					</Explaining>
 				</ErrorBoundary>
 			)}
 			{data.engine && (
 				<ErrorBoundary>
-					<EngineTile
-						application={application}
-						data={data.engine}
-						href={links.engine}
-					/>
+					<Explaining spec={() => engineExplainer(application)}>
+						<EngineTile data={data.engine} href={links.engine} />
+					</Explaining>
 				</ErrorBoundary>
 			)}
 		</section>
@@ -137,43 +147,38 @@ export function Overview({
 	application,
 	data,
 	links = {},
-	clusterId,
 	down = false,
 }: {
 	application: Application;
 	data: OverviewData;
 	links?: OverviewLinks;
 
-	/** The ID of the cluster, which the card of the cluster tile gives. */
-	clusterId?: string;
-
 	/** True if no node of the cluster is reporting, so its numbers are not trusted. */
 	down?: boolean;
 }) {
+	const explainers = useExplainers(application);
+
 	return (
 		<div className="grid gap-8">
-			<Totals
-				application={application}
-				data={data}
-				links={links}
-				clusterId={clusterId}
-				down={down}
-			/>
+			<Totals application={application} data={data} links={links} down={down} />
 			<section
 				className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5"
 				aria-label="Handlers"
 			>
 				{data.handlers.map((handler) => (
 					<ErrorBoundary key={handler.key}>
-						<Distrusted value={down}>
-							<Covered coverage={handler.coverage ?? 1}>
-								<HandlerDigest
-									application={application}
-									handler={handler}
-									href={links.handler?.(handler.key)}
-								/>
-							</Covered>
-						</Distrusted>
+						<Explaining
+							spec={() => handlerExplainer(explainers, application, handler)}
+						>
+							<Distrusted value={down}>
+								<Covered coverage={handler.coverage ?? 1}>
+									<HandlerDigest
+										handler={handler}
+										href={links.handler?.(handler.key)}
+									/>
+								</Covered>
+							</Distrusted>
+						</Explaining>
 					</ErrorBoundary>
 				))}
 			</section>
@@ -181,25 +186,28 @@ export function Overview({
 	);
 }
 
-/** What the card of the rate of the events tile says. */
-export const eventRateWords: RateWords = {
-	kind: "Event rate",
-	description: "The rate at which the application is recording new events",
-};
+/**
+ * Explaining is a card with the "?" that opens its explainer, which `spec` gives.
+ * The explainer is worked out as the card is drawn, so that a card whose data
+ * can't be read fails inside its own error boundary, as the card itself would.
+ */
+function Explaining({
+	spec,
+	children,
+}: {
+	spec: () => ExplainerSpec;
+	children: ReactNode;
+}) {
+	return <Explained spec={spec()}>{children}</Explained>;
+}
 
 /**
- * eventsAbout returns what the card of the events tile says, which is what the
- * part of the page is about. It says nothing of what the part shows, because
- * that depends on what the nodes of the cluster can tell it, and each element of
- * it has a popover of its own.
+ * useExplainers returns the explainers of the cluster view's cards, for the given
+ * application, which their titles name. They are made again only when the
+ * application changes.
  */
-export function eventsAbout(application: Application) {
-	return (
-		<p>
-			This section shows information about the events and event streams in the{" "}
-			<ApplicationName application={application} />.
-		</p>
-	);
+function useExplainers(application: Application) {
+	return useMemo(() => cardExplainers(application), [application]);
 }
 
 /**
@@ -207,11 +215,9 @@ export function eventsAbout(application: Application) {
  * number of events if no node reports the rate.
  */
 export function EventsTile({
-	application,
 	data,
 	href,
 }: {
-	application: Application;
 	data: NonNullable<OverviewData["events"]>;
 	href: string | undefined;
 }) {
@@ -232,17 +238,7 @@ export function EventsTile({
 	// A rate is a whole number of events per minute, or per hour or per day if it
 	// is less than one per minute, and is lost, as the figure shows it, for a
 	// minute at most.
-	const { scaled, per, state } = useRate(rate?.perMinute);
-
-	// The number and its detail line both have the card of the rate.
-	const rateCard = (
-		<RateCard
-			subsystem="streams"
-			icon="event"
-			words={eventRateWords}
-			state={state}
-		/>
-	);
+	const { scaled, per } = useRate(rate?.perMinute);
 
 	// The tile shows what the nodes can tell it. Its headline is the events per
 	// minute, or, if no node supports that, how many events there are.
@@ -251,20 +247,12 @@ export function EventsTile({
 			subsystem="streams"
 			label="Events"
 			icon="event"
-			about={eventsAbout(application)}
-			aboutStatus={data.coverage === undefined ? undefined : partialStatus}
 			href={href}
 			value={
 				rate ? (
-					<Popover card content={rateCard}>
-						<span>
-							<Figure
-								number={scaled?.amount}
-								format={formatCompact}
-								unit={per}
-							/>
-						</span>
-					</Popover>
+					<span>
+						<Figure number={scaled?.amount} format={formatCompact} unit={per} />
+					</span>
 				) : (
 					<Ramped value={total} format={formatCompact} />
 				)
@@ -272,11 +260,9 @@ export function EventsTile({
 			detail={
 				rate ? (
 					<>
-						<Popover card content={rateCard}>
-							<span className={describedClasses}>
-								<Noun>{`events per ${per}`}</Noun>
-							</span>
-						</Popover>
+						<span>
+							<Noun>{`events per ${per}`}</Noun>
+						</span>
 						{streams && (
 							<>
 								{", "}
@@ -370,30 +356,15 @@ export const countedWords: Record<
 };
 
 /**
- * queuesAbout returns what the card of the queues tile says, which is what the
- * part of the page is about, as [eventsAbout] does.
- */
-export function queuesAbout(application: Application) {
-	return (
-		<p>
-			This section shows information about the messages and queues in the{" "}
-			<ApplicationName application={application} />.
-		</p>
-	);
-}
-
-/**
  * QueuesTile is the queues tile, whose headline is the messages that wait in the
  * queues, or the rate at which they get through the queues, if no node reports how
  * many wait, which is the messages that handlers have handled, or those that are
  * removed, or only some kinds of the first. See [countedWords].
  */
 export function QueuesTile({
-	application,
 	data,
 	href,
 }: {
-	application: Application;
 	data: NonNullable<OverviewData["queues"]>;
 	href: string | undefined;
 }) {
@@ -409,7 +380,7 @@ export function QueuesTile({
 
 	// The rate of removal is a whole number per minute, or per hour or per day if
 	// it is less than one per minute, as the rate of events is.
-	const { scaled, per, state } = useRate(throughput?.perMinute);
+	const { scaled, per } = useRate(throughput?.perMinute);
 
 	// What the rate counts, which is the messages that handlers have handled, or
 	// those that are removed from the queues, or only the commands, or only the
@@ -419,9 +390,6 @@ export function QueuesTile({
 	const wording = countedWords[counted];
 
 	// The number and its detail line both have the card of the rate.
-	const rateCard = (
-		<RateCard subsystem="queues" icon="message" words={wording} state={state} />
-	);
 
 	const rate = (
 		<Figure number={scaled?.amount} format={formatCompact} unit={per} />
@@ -432,22 +400,16 @@ export function QueuesTile({
 			subsystem="queues"
 			label="Queues"
 			icon="message"
-			about={queuesAbout(application)}
-			aboutStatus={data.coverage === undefined ? undefined : partialStatus}
 			href={href}
 			accent={failing > 0 ? "failing" : undefined}
 			value={
 				queues ? (
-					<Popover card content={<MessagesWaitingCard />}>
-						<span>
-							<Ramped value={healthy} format={formatCompact} />
-							<Failing count={data.failing} size="headline" />
-						</span>
-					</Popover>
+					<span>
+						<Ramped value={healthy} format={formatCompact} />
+						<Failing count={data.failing} size="headline" />
+					</span>
 				) : (
-					<Popover card content={rateCard}>
-						<span>{rate}</span>
-					</Popover>
+					<span>{rate}</span>
 				)
 			}
 			detail={
@@ -466,21 +428,17 @@ export function QueuesTile({
 						{throughput && (
 							<>
 								{", "}
-								<Popover card content={rateCard}>
-									<span className={describedClasses}>
-										{rate}
-										{shortPer[per]}
-									</span>
-								</Popover>
+								<span>
+									{rate}
+									{shortPer[per]}
+								</span>
 							</>
 						)}
 					</>
 				) : (
-					<Popover card content={rateCard}>
-						<span className={describedClasses}>
-							<Noun>{`${wording.counted} per ${per}`}</Noun>
-						</span>
-					</Popover>
+					<span>
+						<Noun>{`${wording.counted} per ${per}`}</Noun>
+					</span>
 				)
 			}
 			bar={
@@ -508,32 +466,15 @@ export function QueuesTile({
 }
 
 /**
- * clusterAbout returns what the card of the cluster tile says, which is what the
- * part of the page is about, as [eventsAbout] does.
- */
-export function clusterAbout(application: Application) {
-	return (
-		<p>
-			This section shows information about the nodes of the cluster that runs
-			the <ApplicationName application={application} />.
-		</p>
-	);
-}
-
-/**
  * ClusterTile is the cluster tile, whose headline is the number of nodes that are
  * live, with the workloads that they own, and a bar of how those are shared. If
  * no node says that it reports its workloads, the tile leaves them out, and has
  * no bar.
  */
 export function ClusterTile({
-	application,
-	clusterId,
 	data,
 	href,
 }: {
-	application: Application;
-	clusterId?: string;
 	data: NonNullable<OverviewData["cluster"]>;
 	href: string | undefined;
 }) {
@@ -553,55 +494,40 @@ export function ClusterTile({
 		level: levelOf(n, elapsed),
 	}));
 
-	// The number and its detail line both have the card of the nodes.
-	const nodesCard = <NodesCard live={data.nodes.length} />;
-
 	return (
 		<MetricTile
 			subsystem="cluster"
 			label="Cluster"
 			icon="cluster"
-			about={clusterAbout(application)}
-			id={
-				clusterId === undefined
-					? undefined
-					: { id: clusterId, what: "cluster ID" }
-			}
 			href={href}
 			accent={data.nodes.length === 0 ? "bad" : undefined}
 			value={
-				<Popover card content={nodesCard}>
-					<span>
-						{data.nodes.length === 0 ? (
-							<Alarm>
-								<Ramped value={0} format={String} />
-							</Alarm>
-						) : (
-							<Ramped value={data.nodes.length} format={String} />
-						)}
-					</span>
-				</Popover>
+				<span>
+					{data.nodes.length === 0 ? (
+						<Alarm>
+							<Ramped value={0} format={String} />
+						</Alarm>
+					) : (
+						<Ramped value={data.nodes.length} format={String} />
+					)}
+				</span>
 			}
 			detail={
 				<>
-					<Popover card content={nodesCard}>
-						<span className={describedClasses}>
-							<Noun>
-								{nounFor(data.nodes.length, "cluster node", "cluster nodes")}
-							</Noun>
-						</span>
-					</Popover>
+					<span>
+						<Noun>
+							{nounFor(data.nodes.length, "cluster node", "cluster nodes")}
+						</Noun>
+					</span>
 					{divided && (
 						<>
 							{", "}
-							<Popover card content={<WorkloadsCard whole={coverage === 1} />}>
-								<span className={describedClasses}>
-									<Covered coverage={coverage}>
-										<Figure number={workloads} format={String} />
-									</Covered>{" "}
-									{nounFor(workloads, "workload", "workloads")}
-								</span>
-							</Popover>
+							<span>
+								<Covered coverage={coverage}>
+									<Figure number={workloads} format={String} />
+								</Covered>{" "}
+								{nounFor(workloads, "workload", "workloads")}
+							</span>
 						</>
 					)}
 				</>
@@ -620,30 +546,15 @@ export function ClusterTile({
 }
 
 /**
- * engineAbout returns what the card of the engine tile says, which is what the
- * part of the page is about, as [clusterAbout] does.
- */
-export function engineAbout(application: Application) {
-	return (
-		<p>
-			This section shows information about the engine that runs the{" "}
-			<ApplicationName application={application} />.
-		</p>
-	);
-}
-
-/**
  * EngineTile is the tile of an engine that doesn't cluster, which always runs as a
  * single process, in place of the cluster tile. Its headline says whether the
  * process is online, which is whether it is reporting, and its chart is the process's heartbeat. It has no bar,
  * because there is nothing to share between processes.
  */
 export function EngineTile({
-	application,
 	data,
 	href,
 }: {
-	application: Application;
 	data: NonNullable<OverviewData["engine"]>;
 	href: string | undefined;
 }) {
@@ -662,21 +573,15 @@ export function EngineTile({
 					},
 				];
 
-	const card = <EngineCard online={node !== undefined} />;
-
 	return (
 		<MetricTile
 			subsystem="cluster"
 			label="Engine"
 			icon="engine"
-			about={engineAbout(application)}
-			id={node === undefined ? undefined : { id: node.id, what: "engine ID" }}
 			href={href}
 			accent={node === undefined ? "bad" : undefined}
 			value={
-				<Popover card content={card}>
-					<span>{node === undefined ? <Alarm>Offline</Alarm> : "Online"}</span>
-				</Popover>
+				<span>{node === undefined ? <Alarm>Offline</Alarm> : "Online"}</span>
 			}
 			detail={null}
 			chart={<HeartbeatChart sections={sections} />}

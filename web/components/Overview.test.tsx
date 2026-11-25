@@ -9,8 +9,8 @@ import {
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { application, overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
-import { stubBrowser, tipOf } from "../test-support.ts";
-import { engineAbout, Overview } from "./Overview.tsx";
+import { stubBrowser } from "../test-support.ts";
+import { Overview } from "./Overview.tsx";
 
 beforeEach(stubBrowser);
 
@@ -244,26 +244,6 @@ test("a rate that the Observatory has never had is a zero in dot-matrix type, th
 	).toBeDefined();
 });
 
-test("the number of events per minute and its detail line both have the card of the rate", async () => {
-	render(<Overview application={application} data={overview} />);
-
-	const events = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Events" });
-	const number = events.querySelector("span.text-4xl span") as Element;
-	const words = screen.getByText("events per minute");
-
-	for (const target of [number, words]) {
-		const tip = await tipOf(target);
-
-		expect(tip).toContain("Event rate");
-		expect(tip).toContain(
-			"The rate at which the application is recording new events, averaged over the last minute.",
-		);
-		expect(tip).not.toContain("347");
-	}
-});
-
 test("the events tile of an engine that appends every event to one stream doesn't count streams, and has no bar", () => {
 	const events = overview.events;
 	render(
@@ -304,7 +284,7 @@ test("the queues tile of an engine that keeps every message in one queue doesn't
 	expect(tile.querySelector("div.h-2")).toBeNull();
 });
 
-test("a tile that only some of the nodes report shows their numbers, blurred by how few they are, and the card of its icon says why", async () => {
+test("a tile that only some of the nodes report shows their numbers, blurred by how few they are", () => {
 	render(
 		<Overview
 			application={application}
@@ -326,32 +306,6 @@ test("a tile that only some of the nodes report shows their numbers, blurred by 
 	for (const n of blurred) {
 		expect(n.style.getPropertyValue("--distrust")).toBe("0.25");
 	}
-
-	const tip = await tipOf(tile.querySelector("svg")?.parentElement as Element);
-	expect(tip).toContain(
-		"Only some of the cluster's nodes report the metrics shown in this section",
-	);
-});
-
-test('the number of nodes and the words "cluster nodes" in its detail line have the card of the nodes, and the workloads have theirs', async () => {
-	render(<Overview application={application} data={overview} />);
-
-	const cluster = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Cluster" });
-	const number = cluster.querySelector("span.text-4xl span") as Element;
-
-	for (const target of [number, screen.getByText("cluster nodes")]) {
-		const tip = await tipOf(target);
-
-		expect(tip).toContain("Cluster nodes");
-		expect(tip).toContain("A node is one running process");
-		expect(tip).not.toContain("is offline");
-	}
-
-	const tip = await tipOf(screen.getByText("5 workloads"));
-	expect(tip).toContain("Workloads");
-	expect(tip).toContain("A workload is an ongoing task");
 });
 
 test("a cluster whose engine doesn't divide its work into workloads leaves them out", () => {
@@ -374,7 +328,7 @@ test("a cluster whose engine doesn't divide its work into workloads leaves them 
 	expect(cluster.querySelector(".h-2")).toBeNull();
 });
 
-test("an engine that doesn't cluster has an engine tile in place of the cluster tile, which says whether its process is online", async () => {
+test("an engine that doesn't cluster has an engine tile in place of the cluster tile, which says whether its process is online", () => {
 	render(
 		<Overview
 			application={application}
@@ -392,21 +346,12 @@ test("an engine that doesn't cluster has an engine tile in place of the cluster 
 	const engine = totals.getByRole("article", { name: "Engine" });
 	expect(engine.textContent).toBe("Online");
 
-	// An engine that doesn't cluster has no nodes, so the tile and its cards never
-	// name one.
+	// An engine that doesn't cluster has no nodes, so the tile never names one.
 	expect(engine.textContent).not.toMatch(/node|cluster/i);
-	const { container: about } = render(engineAbout(application));
-	expect(about.textContent).toContain("engine");
-	expect(about.textContent).not.toMatch(/node|cluster/i);
 	expect(engine.className).not.toContain("--color-bad");
-
-	const tip = await tipOf(within(engine).getByText("Online"));
-	expect(tip).toContain("The engine is online while it is sending a signal.");
-	expect(tip).not.toMatch(/node|cluster/i);
-	expect(tip).not.toContain("There is no signal from the engine,");
 });
 
-test("the engine tile of an engine whose process isn't live says that it is offline, in red", async () => {
+test("the engine tile of an engine whose process isn't live says that it is offline, in red", () => {
 	render(
 		<Overview
 			application={application}
@@ -420,43 +365,9 @@ test("the engine tile of an engine whose process isn't live says that it is offl
 	expect(engine.textContent).toBe("Offline");
 	expect(engine.className).toContain("--color-bad");
 	expect(within(engine).getByText("Offline").className).toContain("text-bad");
-
-	const tip = await tipOf(within(engine).getByText("Offline"));
-	expect(tip).toContain("There is no signal from the engine,");
-	expect(tip).not.toMatch(/node|cluster/i);
 });
 
-test("the card of the nodes of a cluster with none live says that there is no signal", async () => {
-	render(
-		<Overview
-			application={application}
-			data={{ ...overview, cluster: { nodes: [] } }}
-			down
-		/>,
-	);
-
-	const tip = await tipOf(screen.getByText("cluster nodes"));
-	expect(tip).toContain("There is no signal from any of the nodes,");
-});
-
-test("the icon of the events tile has a card that says what it is about, and not what it shows", async () => {
-	render(<Overview application={application} data={overview} />);
-
-	const events = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Events" });
-	const icon = events.querySelector("svg")?.parentElement as Element;
-
-	const tip = await tipOf(icon);
-
-	expect(tip).toContain("Events");
-	expect(tip).toContain(
-		"This section shows information about the events and event streams in the statements application.",
-	);
-	expect(tip).not.toContain("This bar shows");
-});
-
-test("a rate that is built from the messages that handlers handle says so, in its words and its card", async () => {
+test("a rate that is built from the messages that handlers handle says so", () => {
 	render(
 		<Overview
 			application={application}
@@ -475,27 +386,12 @@ test("a rate that is built from the messages that handlers handle says so, in it
 		screen.getByRole("region", { name: "Totals" }),
 	).getByRole("article", { name: "Queues" });
 	expect(queues.textContent).toContain("messages handled per minute");
-
-	const words = screen.getByText("messages handled per minute");
-	const tip = await tipOf(words);
-	expect(tip).toContain("Message handling rate");
-	expect(tip).toContain(
-		"It does not include messages that were removed from the queue without being handled.",
-	);
 });
 
-test("a rate of only the commands that handlers handle, or only their deadlines, says which, in its words and its card", async () => {
-	for (const [of, words, kind] of [
-		[
-			"commands handled",
-			"commands handled per minute",
-			"Command handling rate",
-		],
-		[
-			"deadlines handled",
-			"deadlines handled per minute",
-			"Deadline handling rate",
-		],
+test("a rate of only the commands that handlers handle, or only their deadlines, says which", () => {
+	for (const [of, words] of [
+		["commands handled", "commands handled per minute"],
+		["deadlines handled", "deadlines handled per minute"],
 	] as const) {
 		const { unmount } = render(
 			<Overview
@@ -511,85 +407,53 @@ test("a rate of only the commands that handlers handle, or only their deadlines,
 			/>,
 		);
 
-		const tip = await tipOf(screen.getByText(words));
-		expect(tip).toContain(kind);
-		expect(tip).toContain(
-			"messages that were removed from the queue without being handled.",
-		);
+		expect(screen.getByText(words)).toBeDefined();
 		unmount();
 	}
 });
 
-test("no popover of the events tile gives the exact number of events", () => {
+test("no icon or figure of a tile or a digest opens a popover, because each card has its explainer", async () => {
 	vi.useFakeTimers();
 	render(<Overview application={application} data={overview} />);
 
-	const events = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Events" });
-
-	const tips: (string | null | undefined)[] = [];
-	for (const element of events.querySelectorAll("span, svg")) {
-		fireEvent.pointerEnter(element);
-		act(() => {
-			vi.advanceTimersByTime(600);
-		});
-		tips.push(screen.queryByRole("tooltip")?.textContent);
-		fireEvent.pointerLeave(element);
-		act(() => {
-			vi.advanceTimersByTime(300);
-		});
+	for (const card of screen.getAllByRole("article")) {
+		for (const element of card.querySelectorAll("span, svg")) {
+			fireEvent.pointerEnter(element);
+			act(() => {
+				vi.advanceTimersByTime(600);
+			});
+			// The tooltips that stay are the whole of a handler's name that is cut
+			// short, and the flag of a handler that minimizes concurrency.
+			const tip = screen.queryByRole("tooltip")?.textContent;
+			if (tip !== undefined) {
+				expect(
+					overview.handlers.some((h) => h.name === tip) ||
+						tip.startsWith("Minimize concurrency"),
+				).toBe(true);
+			}
+			fireEvent.pointerLeave(element);
+			act(() => {
+				vi.advanceTimersByTime(300);
+			});
+		}
 	}
-
-	expect(tips.filter(Boolean).length).toBeGreaterThan(0);
-	expect(tips.filter((t) => /\d,\d{3}/.test(t ?? ""))).toEqual([]);
 	vi.useRealTimers();
 });
 
-test("the icon of the queues tile has a card that says what it is about, and the figure of removals has the card of the rate", async () => {
+test("every tile and digest has a button that explains it", () => {
 	render(<Overview application={application} data={overview} />);
 
-	const queues = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Queues" });
-	const icon = queues.querySelector("svg")?.parentElement as Element;
-
-	expect(await tipOf(icon)).toContain(
-		"This section shows information about the messages and queues in the statements application.",
-	);
-
-	const rate = [...queues.querySelectorAll("span")].find(
-		(e) => e.textContent === "442/min",
-	) as Element;
-	const tip = await tipOf(rate);
-	expect(tip).toContain("Message removal rate");
-	expect(tip).toContain(
-		"The rate at which commands and deadlines are being removed from the queues, averaged over the last minute.",
-	);
-	expect(tip).not.toContain("442");
-});
-
-test("the queues tile has no popover with the exact number of messages", () => {
-	vi.useFakeTimers();
-	render(<Overview application={application} data={overview} />);
-
-	const queues = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Queues" });
-
-	for (const element of queues.querySelectorAll("span")) {
-		fireEvent.pointerEnter(element);
-		act(() => {
-			vi.advanceTimersByTime(600);
-		});
-		const tip = screen.queryByRole("tooltip")?.textContent ?? "";
-		expect(tip).not.toMatch(/^\d[\d,]*$/);
-		fireEvent.pointerLeave(element);
-		act(() => {
-			vi.advanceTimersByTime(300);
-		});
+	for (const name of [
+		"Explain the events tile",
+		"Explain the queues tile",
+		"Explain the cluster tile",
+		"Explain the account aggregate digest",
+		"Explain the statement-schedule process digest",
+		"Explain the mailer integration digest",
+		"Explain the balances projection digest",
+	]) {
+		expect(screen.getByRole("button", { name })).toBeDefined();
 	}
-	vi.useRealTimers();
 });
 
 test("a rate of less than one event per minute is a whole number per hour", () => {
@@ -605,49 +469,6 @@ test("a rate of less than one event per minute is a whole number per hour", () =
 
 	expect(events.textContent).toBe(
 		"24events per hour, 1.2K events in 2 streams",
-	);
-});
-
-test("the icon of the cluster tile has a card that says which cluster it is, by its ID, and what it is about", async () => {
-	const id = "3f6c1a52-9d1b-4c52-8f0a-2a7d6b1e9c04";
-	render(
-		<Overview
-			application={{ ...application, site: "eu-west" }}
-			data={overview}
-			clusterId={id}
-		/>,
-	);
-
-	const cluster = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Cluster" });
-	const icon = cluster.querySelector("svg")?.parentElement as Element;
-
-	fireEvent.pointerEnter(icon);
-	const tip = (await screen.findByRole("group")).textContent;
-
-	expect(tip).not.toContain("across");
-	expect(tip).toContain(id.slice(0, 8));
-	expect(tip).toContain(
-		"This section shows information about the nodes of the cluster that runs the statements application at the eu-west site.",
-	);
-});
-
-test("the cards of the tiles name the site of the application, if it has one", async () => {
-	render(
-		<Overview
-			application={{ ...application, site: "eu-west" }}
-			data={overview}
-		/>,
-	);
-
-	const events = within(
-		screen.getByRole("region", { name: "Totals" }),
-	).getByRole("article", { name: "Events" });
-	const icon = events.querySelector("svg")?.parentElement as Element;
-
-	expect(await tipOf(icon)).toContain(
-		"in the statements application at the eu-west site.",
 	);
 });
 

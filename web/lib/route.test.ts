@@ -30,8 +30,6 @@ test.each([
 	["/-/fixture", { page: "fixture" }],
 	["/-/review", { page: "review" }],
 	["/-/review/x", { page: "not-found" }],
-	["/-/vitals", { page: "vitals" }],
-	["/-/vitals/x", { page: "not-found" }],
 	["/-/fixture/x", { page: "not-found" }],
 	["/-", { page: "not-found" }],
 	["/-/", { page: "not-found" }],

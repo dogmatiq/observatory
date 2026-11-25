@@ -4,10 +4,8 @@ import { useCurrent } from "../lib/distrust.tsx";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
 import { type Readout, ReadoutContext } from "../lib/readout.tsx";
-import { ExplainersBuilt, TileFlag } from "./explained.ts";
+import { TileFlag } from "./explained.ts";
 import { Icon, type IconName } from "./Icon.tsx";
-import { InfoCard } from "./InfoCard.tsx";
-import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
@@ -49,9 +47,6 @@ export function MetricTile({
 	subsystem,
 	label,
 	icon,
-	about,
-	aboutStatus,
-	id,
 	value,
 	detail,
 	bar,
@@ -64,25 +59,8 @@ export function MetricTile({
 	/** The name of what the tile shows. */
 	label: string;
 
+	/** The icon of what the tile shows, at its top right. */
 	icon: IconName;
-
-	/**
-	 * What the tile is about and what its parts show, as the paragraphs of a card
-	 * that is the icon's popover. Without it, the popover is the label.
-	 */
-	about?: ReactNode;
-
-	/**
-	 * The ID of what the tile is about, for the card of the icon to show at the
-	 * right of its kind, such as the ID of a cluster, which has no name.
-	 */
-	id?: { id: string; what: string };
-
-	/**
-	 * What the card of the icon says, as a status, about the section being
-	 * degraded, if it is.
-	 */
-	aboutStatus?: { icon: IconName; text: ReactNode };
 
 	/** The headline number. */
 	value: ReactNode;
@@ -127,7 +105,6 @@ export function MetricTile({
 	}
 	const shownReadout = readout ?? lastReadout.current;
 
-	const explainersBuilt = useContext(ExplainersBuilt);
 	const flag = useContext(TileFlag);
 
 	const content = (
@@ -157,35 +134,9 @@ export function MetricTile({
 						)}
 					</span>
 					{flag}
-					{explainersBuilt ? (
-						<span className="flex-none text-(--subsystem)">
-							<Icon name={icon} className="inline size-5 align-text-bottom" />
-						</span>
-					) : (
-						<Popover
-							card={about !== undefined}
-							interactive={id !== undefined}
-							content={
-								about === undefined ? (
-									label
-								) : (
-									<InfoCard
-										subsystem={subsystem}
-										icon={icon}
-										kind={label}
-										id={id}
-										status={aboutStatus}
-									>
-										{about}
-									</InfoCard>
-								)
-							}
-						>
-							<span className="flex-none text-(--subsystem) transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none">
-								<Icon name={icon} className="inline size-5 align-text-bottom" />
-							</span>
-						</Popover>
-					)}
+					<span className="flex-none text-(--subsystem)">
+						<Icon name={icon} className="inline size-5 align-text-bottom" />
+					</span>
 				</div>
 			</div>
 			<span className="relative z-10 mt-1 min-h-[calc(2*1.5em)] text-sm text-muted">

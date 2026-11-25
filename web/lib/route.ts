@@ -19,7 +19,6 @@ export type Route =
 	| { page: "moved"; to: string }
 	| { page: "fixture" }
 	| { page: "review" }
-	| { page: "vitals" }
 	| { page: "not-found" };
 
 /**
@@ -51,9 +50,7 @@ export const noSite = "00000000-0000-0000-0000-000000000000";
  * - `/-/fixture`, the cluster view with the numbers that the prototype's
  *   overview showed, which a person compares with the prototype;
  * - `/-/review`, the tiles that are under review, each whole and then part by
- *   part, in every state, which a person looks at when reviewing them;
- * - `/-/vitals`, the words of the popovers of the vital statistics of the tiles,
- *   in each combination, which a person reads in one go.
+ *   part, in every state, which a person looks at when reviewing them.
  */
 export function routeOf(path: string): Route {
 	let parts: string[];
@@ -147,10 +144,6 @@ function pageRouteOf(name: string | undefined): Route {
 
 	if (name === "review") {
 		return { page: "review" };
-	}
-
-	if (name === "vitals") {
-		return { page: "vitals" };
 	}
 
 	return { page: "not-found" };

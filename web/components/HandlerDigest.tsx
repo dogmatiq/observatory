@@ -1,12 +1,10 @@
-import { type ReactNode, useContext, useId } from "react";
+import { type ReactNode, useId } from "react";
 import { cn } from "../lib/cn.ts";
 import { Trusted, useCurrent } from "../lib/distrust.tsx";
 import { formatCompact, nounFor } from "../lib/format.ts";
 import { useRamped } from "../lib/ramped.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
-import type { Application, HandlerData, HandlerSummary } from "../model.ts";
-import { ExplainersBuilt } from "./explained.ts";
-import { HandlerKindCard } from "./HandlerKindCard.tsx";
+import type { HandlerData, HandlerSummary } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
 	accentClasses,
@@ -52,16 +50,13 @@ const chartedWords: Record<HandlerData["kind"], string> = {
  * is.
  */
 export function HandlerDigest({
-	application,
 	handler,
 	href,
 }: {
-	application: Application;
 	handler: HandlerData;
 	href?: string;
 }) {
 	const nameId = useId();
-	const explainersBuilt = useContext(ExplainersBuilt);
 	const { summary, history } = handler;
 	const failing = useCurrent(summary.failing) > 0;
 
@@ -120,43 +115,17 @@ export function HandlerDigest({
 						</span>
 					</span>
 				</span>
-				{explainersBuilt ? (
-					<span
-						className={cn(
-							"ml-auto flex-none self-start",
-							kindColors[handler.kind],
-						)}
-					>
-						<Icon
-							name={handler.kind}
-							className="inline size-5 align-text-bottom"
-						/>
-					</span>
-				) : (
-					<Popover
-						card
-						content={
-							<HandlerKindCard
-								application={application}
-								name={handler.name}
-								kind={handler.kind}
-								partial={handler.coverage !== undefined}
-							/>
-						}
-					>
-						<span
-							className={cn(
-								"ml-auto flex-none self-start transition-transform duration-150 ease-out hover:scale-115 motion-reduce:transition-none",
-								kindColors[handler.kind],
-							)}
-						>
-							<Icon
-								name={handler.kind}
-								className="inline size-5 align-text-bottom"
-							/>
-						</span>
-					</Popover>
-				)}
+				<span
+					className={cn(
+						"ml-auto flex-none self-start",
+						kindColors[handler.kind],
+					)}
+				>
+					<Icon
+						name={handler.kind}
+						className="inline size-5 align-text-bottom"
+					/>
+				</span>
 			</div>
 			<Summary handler={handler} summary={summary} />
 			<Presence shape="fade" className="absolute inset-x-0 bottom-0">
@@ -215,7 +184,6 @@ function Summary({
 				after: <Failing count={summary.failing} size="stat" />,
 				// A message kind on its own means the ones that are pending.
 				label: plural,
-				title: `${plural} pending`,
 				end: true,
 			});
 		}
@@ -229,7 +197,6 @@ function Summary({
 				icon: "event",
 				number: unhandledEvents,
 				label: "events",
-				title: "events pending",
 				end: true,
 			});
 		}
@@ -252,7 +219,6 @@ function Summary({
 					id: "active",
 					number: activeInstances.count,
 					label: "active",
-					title: activeInstances.title,
 				});
 			}
 
@@ -372,9 +338,6 @@ interface StatProps {
 
 	label: string;
 
-	/** Explains the number, as a popover. */
-	title?: string;
-
 	/**
 	 * True if the stat is aligned to the right of the digest, with its label under
 	 * it, which is how the numbers of messages are, so that the numbers of
@@ -393,44 +356,34 @@ const iconColors: Partial<Record<IconName, string>> = {
 	event: "text-streams",
 };
 
-function Stat({ icon, number, after, label, title, end }: StatProps) {
+function Stat({ icon, number, after, label, end }: StatProps) {
 	const current = useCurrent(number);
 	const shown = useRamped(current) ?? current;
 	const zero = shown === 0;
 
 	return (
-		<Popover content={title}>
-			<div
+		<div className={cn("flex flex-col", end && "items-end text-right")}>
+			<span
 				className={cn(
-					// A number with a popover has a chip behind it when it is pointed at,
-					// as a link in the title bar does. Its padding is taken back by a
-					// negative margin, so that the chip doesn't move the numbers.
-					"-mx-2 -my-1 flex flex-col rounded-control px-2 py-1 transition-colors duration-150 hover:bg-sunk motion-reduce:transition-none",
-					end && "items-end text-right",
+					"text-2xl leading-[1.2] tabular-nums transition-[color,font-weight] duration-500 motion-reduce:transition-none",
+					zero ? "font-medium text-faint" : "font-semibold",
 				)}
 			>
-				<span
-					className={cn(
-						"text-2xl leading-[1.2] tabular-nums transition-[color,font-weight] duration-500 motion-reduce:transition-none",
-						zero ? "font-medium text-faint" : "font-semibold",
-					)}
-				>
-					{icon && (
-						<Icon
-							name={icon}
-							className={cn(
-								"mr-1.5 inline size-[18px] align-[-1px] transition-opacity duration-500 motion-reduce:transition-none",
-								iconColors[icon],
-								zero && "opacity-60",
-							)}
-						/>
-					)}
-					<Trusted text={formatCompact(shown)} />
-					{after}
-				</span>
-				<span className="text-xs text-muted">{label}</span>
-			</div>
-		</Popover>
+				{icon && (
+					<Icon
+						name={icon}
+						className={cn(
+							"mr-1.5 inline size-[18px] align-[-1px] transition-opacity duration-500 motion-reduce:transition-none",
+							iconColors[icon],
+							zero && "opacity-60",
+						)}
+					/>
+				)}
+				<Trusted text={formatCompact(shown)} />
+				{after}
+			</span>
+			<span className="text-xs text-muted">{label}</span>
+		</div>
 	);
 }
 

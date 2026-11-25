@@ -7,7 +7,6 @@ import {
 	within,
 } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
-import { application } from "../fixtures/overview.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { tipOf } from "../test-support.ts";
 import { HandlerDigest } from "./HandlerDigest.tsx";
@@ -28,7 +27,6 @@ function digest(
 ) {
 	return render(
 		<HandlerDigest
-			application={application}
 			handler={{
 				key: "k",
 				name: "the-handler",
@@ -85,14 +83,13 @@ test("an aggregate with one instance says so in the singular", () => {
 	expect(stats(container)).toHaveProperty("instance", "1");
 });
 
-test("an aggregate shows its active instances only when it is given them", async () => {
+test("an aggregate shows its active instances only when it is given them", () => {
 	const { container } = digest("aggregate", {
 		instances: 5,
 		activeInstances: { count: 2, title: "Recently active" },
 	});
 
 	expect(stats(container)).toHaveProperty("active", "2");
-	expect(await tipOf(screen.getByText("active"))).toBe("Recently active");
 });
 
 test("a process shows the instances in progress, its events and its deadlines", () => {
@@ -111,17 +108,6 @@ test("a process shows the instances in progress, its events and its deadlines", 
 		events: "7",
 		deadlines: "1",
 	});
-});
-
-test("a message kind on its own is the ones that are pending, and its popover says so", async () => {
-	digest("process", {
-		schedulesDeadlines: true,
-		unhandledEvents: 1,
-		queuedMessages: 2,
-	});
-
-	expect(await tipOf(screen.getByText("events"))).toBe("events pending");
-	expect(await tipOf(screen.getByText("deadlines"))).toBe("deadlines pending");
 });
 
 test("a process that schedules no deadlines has no deadlines or bar", () => {
@@ -197,14 +183,14 @@ test("a number that falls to zero recedes once it has got there, and not while i
 		},
 	});
 	const { container, rerender } = render(
-		<HandlerDigest application={application} handler={handler(30)} />,
+		<HandlerDigest handler={handler(30)} />,
 	);
 	const faint = () => container.querySelector("span.text-faint");
 
 	// Nothing of the stats is faint but the other numbers that are zero.
 	expect(container.textContent).toContain("30");
 
-	rerender(<HandlerDigest application={application} handler={handler(0)} />);
+	rerender(<HandlerDigest handler={handler(0)} />);
 	act(() => {
 		vi.advanceTimersByTime(80);
 	});
@@ -253,7 +239,6 @@ test("a digest is not a link unless it is given one", () => {
 
 	render(
 		<HandlerDigest
-			application={application}
 			handler={{
 				key: "k",
 				name: "the-handler",
@@ -428,7 +413,6 @@ test("a chart has the color of the messages that it counts", () => {
 test("the punctuation of a handler's name is muted, and the words are not, and a tooltip has the whole name when it is cut short", async () => {
 	render(
 		<HandlerDigest
-			application={application}
 			handler={{
 				key: "k",
 				name: "statement-schedule.v2",
@@ -460,7 +444,6 @@ test("a handler's name that fits has no tooltip", () => {
 	try {
 		render(
 			<HandlerDigest
-				application={application}
 				handler={{
 					key: "k",
 					name: "statements",

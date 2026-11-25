@@ -16,7 +16,6 @@ export function ClusterPage({
 	notice,
 	data,
 	links,
-	clusterId,
 	down,
 }: {
 	application: Application;
@@ -25,7 +24,6 @@ export function ClusterPage({
 	notice?: string;
 	data: OverviewData;
 	links?: OverviewLinks;
-	clusterId?: string;
 
 	/** True if no node of the cluster is reporting, so its numbers are not trusted. */
 	down?: boolean;
@@ -42,7 +40,6 @@ export function ClusterPage({
 					application={application}
 					data={data}
 					links={links}
-					clusterId={clusterId}
 					down={down}
 				/>
 			</ErrorBoundary>

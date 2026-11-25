@@ -1,21 +1,12 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
-import type { SegmentAbout } from "../lib/segments.ts";
 import { SegmentCard } from "./SegmentCard.tsx";
 
 afterEach(cleanup);
 
 const id = "113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93";
 
-/** The paragraphs of a card, which are its words, as opposed to its figures. */
-function paragraphs(about: SegmentAbout): (string | null)[] {
-	const { container } = render(<SegmentCard about={about} />);
-	const words = [...container.querySelectorAll("p")].map((p) => p.textContent);
-	cleanup();
-	return words;
-}
-
-test("the card of an event stream says what it is, which one, how much of the bar it is, what the bar shows, and that an even spread is better", () => {
+test("the card of an event stream says what it is, which one, and how much of the bar it is", () => {
 	const { container } = render(
 		<SegmentCard
 			about={{
@@ -33,13 +24,9 @@ test("the card of an event stream says what it is, which one, how much of the ba
 	expect(text).toContain("113cbdc3");
 	expect(text).toContain("7.6K events");
 	expect(text).toContain("62%");
-	expect(text).toContain(
-		"This bar shows how the application's events are spread across its streams.",
-	);
-	expect(text).toContain("An even spread is better.");
 });
 
-test("the card of a queue says what the bar shows, and that an even spread is better", () => {
+test("the card of a queue says how much of the bar it is", () => {
 	const { container } = render(
 		<SegmentCard
 			about={{
@@ -55,46 +42,23 @@ test("the card of a queue says what the bar shows, and that an even spread is be
 
 	expect(text).toContain("12 messages");
 	expect(text).toContain("60%");
-	expect(text).toContain(
-		"This bar shows how the application's messages are spread across its queues.",
-	);
-	expect(text).toContain("An even spread is better");
 });
 
-test("a card's words have no figures in them, and are the same whatever its figures, but for the advice, which is only there when the bar can be spread unevenly", () => {
+test("a card has no paragraphs, because its card's explainer says what the bar shows", () => {
 	for (const thing of ["event-stream", "queue", "node"] as const) {
-		const spread = paragraphs({
-			thing,
-			id,
-			amount: 3,
-			share: 0.6,
-			total: { amount: 5, things: 3 },
-		});
-		expect(spread.join(" ")).not.toMatch(/\d/);
-
-		// The same words, with other figures.
-		expect(
-			paragraphs({
-				thing,
-				id,
-				amount: 0,
-				share: 0,
-				total: { amount: 7, things: 4 },
-			}),
-		).toEqual(spread);
-
-		// One thing, or one of what is spread, can't be spread unevenly, so there is
-		// no advice, which is the last paragraph of a card that has it, and the
-		// other words are the same. A node's card has no advice.
-		const unadvised = thing === "node" ? spread : spread.slice(0, -1);
-		for (const total of [
-			{ amount: 5, things: 1 },
-			{ amount: 1, things: 3 },
-		]) {
-			expect(paragraphs({ thing, id, amount: 1, share: 1, total })).toEqual(
-				unadvised,
-			);
-		}
+		const { container } = render(
+			<SegmentCard
+				about={{
+					thing,
+					id,
+					amount: 3,
+					share: 0.6,
+					total: { amount: 5, things: 3 },
+				}}
+			/>,
+		);
+		expect(container.querySelectorAll("p")).toHaveLength(0);
+		cleanup();
 	}
 });
 
@@ -129,7 +93,7 @@ test("a thing that has one is singular, and one that has none has no share", () 
 	expect(none.container.textContent).not.toContain("%");
 });
 
-test("the card of a node says what the bar shows, gives its share, and has no advice about the spread", () => {
+test("the card of a node gives its workloads and its share", () => {
 	const { container } = render(
 		<SegmentCard
 			about={{
@@ -146,13 +110,6 @@ test("the card of a node says what the bar shows, gives its share, and has no ad
 	expect(text).toContain("Node");
 	expect(text).toContain("3 workloads");
 	expect(text).toContain("60%");
-	expect(text).toContain(
-		"This bar shows how the cluster's workloads are spread across its nodes.",
-	);
-	expect(text).toContain(
-		"Workloads vary in size, so two nodes with the same number of workloads can have very different amounts of work to do.",
-	);
-	expect(text).not.toContain("even spread");
 });
 
 test("the card of a node that doesn't report its workloads, while others do, says so as a status", () => {

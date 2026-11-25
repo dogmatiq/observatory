@@ -1044,6 +1044,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
   what drills down (a segment's identity and amount), the statuses, as alert
   flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
+  Done: every vital card, handler digest and compact digest of the cluster view, the engine tile and the site view has
+  its "?" and explainer, which `web/components/explainers.tsx` gives, chosen by what the card shows; the icon and figure
+  hovercards, the icons' growth, the sunken ground of the figures, the segment cards' paragraphs and the review-only
+  switches are gone, with the cards that only those hovercards drew and the `/-/vitals` page of their words. The
+  statuses that those hovercards carried are kept as texts for the alert flags (FL), which come next; until then the
+  views don't say them. The cluster's or engine's ID, which only the cluster tile's icon hovercard gave, waits for the
+  title bar's trail (ID 2).
   The node hovercard's sentence "Workloads vary in size, so two nodes with the same number of workloads can have very
   different amounts of work to do." moves to the end of the cluster explainer's paragraph about workloads (approved);
   its words are under review (CL 6).
@@ -1124,7 +1131,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   engine's event stream model from the server for this, as the events card has it.
 - To build after the review of the explainers: the sunken ground that a figure or phrase gets while it is pointed at,
   which says that it has a hovercard, goes from each one whose explaining hovercard goes; and the tooltips that are left
-  on figures are reviewed, as some aren't wanted.
+  on figures are reviewed, as some aren't wanted. Done with the explainers: no figure opens anything now, so none has
+  the sunken ground; the tooltips left are a cut-short handler name and the minimize-concurrency flag.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked

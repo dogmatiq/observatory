@@ -5,7 +5,6 @@ import { LinksPage } from "./components/LinksPage.tsx";
 import { Message } from "./components/Message.tsx";
 import { Page } from "./components/Page.tsx";
 import { ReviewPage } from "./components/ReviewPage.tsx";
-import { VitalsPage } from "./components/VitalsPage.tsx";
 import { application, overview } from "./fixtures/overview.ts";
 import {
 	fetchClusters,
@@ -83,8 +82,6 @@ export function App({ path = window.location.pathname }: { path?: string }) {
 		case "review":
 			return <ReviewPage />;
 
-		case "vitals":
-			return <VitalsPage />;
 
 		case "not-found":
 			return (
@@ -540,7 +537,6 @@ function Cluster({ id }: { id: string }) {
 						application={watched.data.application}
 						data={watched.data.overview}
 						down={watched.data.down}
-						clusterId={id}
 						notice={watched.status === "stale" ? staleNotice : undefined}
 					/>
 				</LiveData>

@@ -1,9 +1,4 @@
-import {
-	type ComponentProps,
-	type CSSProperties,
-	type ReactNode,
-	useId,
-} from "react";
+import { type CSSProperties, useId, useMemo } from "react";
 import { cn } from "../lib/cn.ts";
 import { Covered, Distrusted } from "../lib/distrust.tsx";
 import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
@@ -13,14 +8,16 @@ import { applicationAtSitePath } from "../lib/route.ts";
 import { applicationSegments } from "../lib/segments.ts";
 import type { SiteApplication, SiteData } from "../model.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
+import { Explained } from "./Explainer.tsx";
+import {
+	cardExplainers,
+	compactExplainer,
+	siteExplainers,
+} from "./explainers.tsx";
 import { Figure } from "./Figure.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
 import { Icon } from "./Icon.tsx";
 import { InfoCard } from "./InfoCard.tsx";
-import {
-	MessagesWaitingCard,
-	SetApartExample,
-} from "./MessagesWaitingCard.tsx";
 import {
 	Alarm,
 	accentClasses,
@@ -32,11 +29,9 @@ import {
 	raisedClasses,
 } from "./MetricTile.tsx";
 import { NameLink } from "./NameLink.tsx";
-import { eventRateWords } from "./Overview.tsx";
-import { describedClasses, Popover } from "./Popover.tsx";
+import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
-import { RateCard, type RateWords } from "./RateCard.tsx";
 import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { StackedBar } from "./StackedBar.tsx";
@@ -81,7 +76,7 @@ export function SiteBreakdown({
 	return (
 		<section aria-label="Applications">
 			{breakdown === "compact-digests" ? (
-				<CompactDigests data={data} alert="icon" />
+				<CompactDigests data={data} alert="icon" explained />
 			) : (
 				<ApplicationSquares data={data} />
 			)}
@@ -97,6 +92,10 @@ export function SiteTotals({ data }: { data: SiteData }) {
 	// There is no signal from any of the applications, so the totals are what they were when
 	// a node last reported, and are not trusted.
 	const down = data.applications.every((a) => a.nodes === 0);
+	const explainers = useMemo(
+		() => siteExplainers(data.site?.name),
+		[data.site?.name],
+	);
 
 	return (
 		<section
@@ -106,85 +105,35 @@ export function SiteTotals({ data }: { data: SiteData }) {
 			<Presence shape="fade">
 				{data.events && (
 					<ErrorBoundary>
-						<Distrusted value={down}>
-							<Covered coverage={data.events.coverage ?? 1}>
-								<SiteEventsTile data={data} events={data.events} />
-							</Covered>
-						</Distrusted>
+						<Explained spec={explainers.events}>
+							<Distrusted value={down}>
+								<Covered coverage={data.events.coverage ?? 1}>
+									<SiteEventsTile data={data} events={data.events} />
+								</Covered>
+							</Distrusted>
+						</Explained>
 					</ErrorBoundary>
 				)}
 			</Presence>
 			<Presence shape="fade">
 				{data.queues && (
 					<ErrorBoundary>
-						<Distrusted value={down}>
-							<Covered coverage={data.queues.coverage ?? 1}>
-								<SiteQueuesTile data={data} queues={data.queues} />
-							</Covered>
-						</Distrusted>
+						<Explained spec={explainers.queues}>
+							<Distrusted value={down}>
+								<Covered coverage={data.queues.coverage ?? 1}>
+									<SiteQueuesTile data={data} queues={data.queues} />
+								</Covered>
+							</Distrusted>
+						</Explained>
 					</ErrorBoundary>
 				)}
 			</Presence>
 			<ErrorBoundary>
-				<ApplicationsTile data={data} />
+				<Explained spec={explainers.applications}>
+					<ApplicationsTile data={data} />
+				</Explained>
 			</ErrorBoundary>
 		</section>
-	);
-}
-
-/**
- * TheApplications names the applications that the site view is of, in a
- * sentence: "the applications at the **eu-west** site", or, for the
- * applications at no site, "the applications", because an operator who has no
- * sites never meets the word "site". The word "the" is its own.
- */
-function TheApplications({ site }: { site: SiteData["site"] }) {
-	return site === undefined ? (
-		<>the applications</>
-	) : (
-		<>
-			the applications at the{" "}
-			<span className="font-semibold text-fg">{site.name}</span> site
-		</>
-	);
-}
-
-/**
- * siteAbout returns what the card of each of the site view's tiles says, which
- * is what the part of the view is about, as the cluster view's do.
- */
-export const siteAbout = {
-	events: (site: SiteData["site"]) => (
-		<p>
-			This section shows information about the events and event streams{" "}
-			<AtTheSite site={site} />.
-		</p>
-	),
-	queues: (site: SiteData["site"]) => (
-		<p>
-			This section shows information about the messages and queues{" "}
-			<AtTheSite site={site} />.
-		</p>
-	),
-	applications: (site: SiteData["site"]) => (
-		<p>
-			This section shows information about <TheApplications site={site} />.
-		</p>
-	),
-};
-
-/**
- * AtTheSite says where the things in a sentence are: "at the **eu-west** site",
- * or, for the applications at no site, "of the applications", as
- * [TheApplications] does.
- */
-function AtTheSite({ site }: { site: SiteData["site"] }) {
-	return site === undefined ? (
-		<>of the applications</>
-	) : (
-		<>
-			at the <span className="font-semibold text-fg">{site.name}</span> site
-		</>
 	);
 }
 
@@ -198,19 +147,6 @@ export const sitePartialStatus = {
 	icon: "alert",
 	text: "Only some of the applications fully report the metrics shown in this section, so the numbers may appear lower than they really are.",
 } as const;
-
-/** What the card of the rate of the site's events tile says. */
-export const siteEventRateWords: RateWords = {
-	kind: "Event rate",
-	description: "The rate at which the applications are recording new events",
-};
-
-/** What the card of the rate of the site's queues tile says. */
-export const siteHandlingWords: RateWords = {
-	kind: "Message handling rate",
-	description:
-		"The rate at which the applications are handling commands and deadlines",
-};
 
 /**
  * SiteEventsTile is the site's events tile, whose headline is the events per
@@ -226,39 +162,23 @@ export function SiteEventsTile({
 	data: SiteData;
 	events: NonNullable<SiteData["events"]>;
 }) {
-	const { scaled, per, state } = useRate(events.rate.perMinute);
-	const rateCard = (
-		<RateCard
-			subsystem="streams"
-			icon="event"
-			words={siteEventRateWords}
-			state={state}
-		/>
-	);
+	const { scaled, per } = useRate(events.rate.perMinute);
 
 	return (
 		<MetricTile
 			subsystem="streams"
 			label="Events"
 			icon="event"
-			about={siteAbout.events(data.site)}
-			aboutStatus={
-				events.coverage === undefined ? undefined : sitePartialStatus
-			}
 			value={
-				<Popover card content={rateCard}>
-					<span>
-						<Figure number={scaled?.amount} format={formatCompact} unit={per} />
-					</span>
-				</Popover>
+				<span>
+					<Figure number={scaled?.amount} format={formatCompact} unit={per} />
+				</span>
 			}
 			detail={
 				<>
-					<Popover card content={rateCard}>
-						<span className={describedClasses}>
-							<Noun>{`events per ${per}`}</Noun>
-						</span>
-					</Popover>
+					<span>
+						<Noun>{`events per ${per}`}</Noun>
+					</span>
 					{events.streams !== undefined && (
 						<>
 							{", "}
@@ -313,35 +233,20 @@ export function SiteQueuesTile({
 	data: SiteData;
 	queues: NonNullable<SiteData["queues"]>;
 }) {
-	const { scaled, per, state } = useRate(queues.throughput?.perMinute);
+	const { scaled, per } = useRate(queues.throughput?.perMinute);
 	const healthy = Math.max(0, queues.messages - queues.failing);
-
-	const rateCard = (
-		<RateCard
-			subsystem="queues"
-			icon="message"
-			words={siteHandlingWords}
-			state={state}
-		/>
-	);
 
 	return (
 		<MetricTile
 			subsystem="queues"
 			label="Queues"
 			icon="message"
-			about={siteAbout.queues(data.site)}
-			aboutStatus={
-				queues.coverage === undefined ? undefined : sitePartialStatus
-			}
 			accent={queues.failing > 0 ? "failing" : undefined}
 			value={
-				<Popover card content={<MessagesWaitingCard />}>
-					<span>
-						<Ramped value={healthy} format={formatCompact} />
-						<Failing count={queues.failing} size="headline" />
-					</span>
-				</Popover>
+				<span>
+					<Ramped value={healthy} format={formatCompact} />
+					<Failing count={queues.failing} size="headline" />
+				</span>
 			}
 			detail={
 				<>
@@ -356,16 +261,14 @@ export function SiteQueuesTile({
 					{queues.throughput && (
 						<>
 							{", "}
-							<Popover card content={rateCard}>
-								<span className={describedClasses}>
-									<Figure
-										number={scaled?.amount}
-										format={formatCompact}
-										unit={per}
-									/>
-									{shortPer[per]}
-								</span>
-							</Popover>
+							<span>
+								<Figure
+									number={scaled?.amount}
+									format={formatCompact}
+									unit={per}
+								/>
+								{shortPer[per]}
+							</span>
 						</>
 					)}
 				</>
@@ -401,41 +304,6 @@ export function SiteQueuesTile({
 }
 
 /**
- * ApplicationsCard is the card of the headline of the applications tile, and of
- * the words of its detail line. It says what the number counts, and what it is
- * for an application to be sending a signal, for an engine that clusters and for
- * one that doesn't. If no applications are sending a signal, it says so, as a
- * status.
- */
-export function ApplicationsCard({ live }: { live: number }) {
-	return (
-		<InfoCard
-			subsystem="cluster"
-			icon="application"
-			kind="Applications"
-			status={
-				live === 0
-					? {
-							icon: "alert",
-							text: "There is no signal from any of the applications, so it's unknown whether any of them are working.",
-						}
-					: undefined
-			}
-		>
-			<p>
-				The number of applications that are sending a signal now. If there is no
-				signal from some applications, they are shown separately.
-			</p>
-			<SetApartExample
-				rest="sending a signal"
-				part="with no signal"
-				partInk="text-bad"
-			/>
-		</InfoCard>
-	);
-}
-
-/**
  * ApplicationsTile is the site's applications tile, whose headline is the number
  * of applications sending a signal, followed by the number with no signal, set
  * apart in red, such as "94 +2", as the queues tile sets apart its failing
@@ -460,41 +328,34 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 		level: levelOf(a, elapsed),
 	}));
 
-	const card = <ApplicationsCard live={live.length} />;
-
 	return (
 		<MetricTile
 			subsystem="cluster"
 			label="Applications"
 			icon="application"
-			about={siteAbout.applications(data.site)}
 			accent={out > 0 ? "bad" : undefined}
 			value={
-				<Popover card content={card}>
-					<span>
-						{live.length === 0 ? (
-							<Alarm>
-								<Ramped value={0} format={String} />
-							</Alarm>
-						) : (
-							<Ramped value={live.length} format={String} />
-						)}
-						{/* When there is no signal from any of the applications, there is
+				<span>
+					{live.length === 0 ? (
+						<Alarm>
+							<Ramped value={0} format={String} />
+						</Alarm>
+					) : (
+						<Ramped value={live.length} format={String} />
+					)}
+					{/* When there is no signal from any of the applications, there is
 						nothing to set them apart from, so the headline is the red zero
 						alone, as the cluster tile's is when there is no signal from any of
 						the nodes. */}
-						<NoSignal count={live.length === 0 ? 0 : out} />
-					</span>
-				</Popover>
+					<NoSignal count={live.length === 0 ? 0 : out} />
+				</span>
 			}
 			detail={
-				<Popover card content={card}>
-					<span className={describedClasses}>
-						<Noun>
-							{nounFor(data.applications.length, "application", "applications")}
-						</Noun>
-					</span>
-				</Popover>
+				<span>
+					<Noun>
+						{nounFor(data.applications.length, "application", "applications")}
+					</Noun>
+				</span>
 			}
 			chart={<HeartbeatChart sections={sections} />}
 		/>
@@ -517,18 +378,36 @@ export type DigestAlert = "icon" | { words: string };
 export function CompactDigests({
 	data,
 	alert,
+	explained = false,
 }: {
 	data: SiteData;
 
 	/** How a compact digest says that there is no signal from its application. */
 	alert: DigestAlert;
+
+	/**
+	 * True if each compact digest has the "?" that opens its explainer, as on the
+	 * site view, and not in the copy of a compact digest that an explainer draws.
+	 */
+	explained?: boolean;
 }) {
+	const explainers = useMemo(
+		() => (explained ? cardExplainers({ name: "", key: "" }) : undefined),
+		[explained],
+	);
+
 	return (
 		<ul className="grid grid-cols-[repeat(auto-fill,minmax(176px,1fr))] gap-3">
 			{data.applications.map((a) => (
 				<li key={a.application.key} className="min-w-0">
 					<ErrorBoundary>
-						<CompactDigest site={data.site} app={a} alert={alert} />
+						{explainers ? (
+							<Explained spec={compactExplainer(explainers, a, data.site)}>
+								<CompactDigest site={data.site} app={a} alert={alert} />
+							</Explained>
+						) : (
+							<CompactDigest site={data.site} app={a} alert={alert} />
+						)}
 					</ErrorBoundary>
 				</li>
 			))}
@@ -596,7 +475,7 @@ function CompactDigest({
 			</span>
 			<Distrusted value={out}>
 				<Covered coverage={app.coverage ?? 1}>
-					<ApplicationFigures app={app} explained />
+					<ApplicationFigures app={app} />
 				</Covered>
 			</Distrusted>
 		</article>
@@ -616,83 +495,50 @@ export const noSignalText =
  * application, each with the icon of what it counts, in the colors of its
  * subsystem, for whichever of them the application's engine supports.
  */
-function ApplicationFigures({
-	app,
-	explained,
-}: {
-	app: SiteApplication;
-
-	/**
-	 * True if each figure has the card that explains it, as its popover. A figure
-	 * inside a popover has none, because only one popover is open at a time.
-	 */
-	explained: boolean;
-}) {
-	const { state } = useRate(app.events?.perMinute);
-	const explain = (
-		card: ReactNode,
-		figure: ComponentProps<typeof Popover>["children"],
-	) =>
-		explained ? (
-			<Popover card content={card}>
-				{figure}
-			</Popover>
-		) : (
-			figure
-		);
-
+function ApplicationFigures({ app }: { app: SiteApplication }) {
 	return (
 		<span className="flex items-baseline gap-4 text-sm tabular-nums">
-			{app.events &&
-				explain(
-					<RateCard
-						subsystem="streams"
-						icon="event"
-						words={eventRateWords}
-						state={state}
-					/>,
-					<span
-						className={cn(
-							"inline-flex items-baseline gap-1",
-							subsystemColors.streams,
-						)}
-					>
-						<Icon
-							name="event"
-							className="size-3.5 self-center text-(--subsystem)"
+			{app.events && (
+				<span
+					className={cn(
+						"inline-flex items-baseline gap-1",
+						subsystemColors.streams,
+					)}
+				>
+					<Icon
+						name="event"
+						className="size-3.5 self-center text-(--subsystem)"
+					/>
+					<span>
+						<Figure
+							number={app.events.perMinute}
+							format={formatCompact}
+							unit="minute"
 						/>
-						<span>
-							<Figure
-								number={app.events.perMinute}
-								format={formatCompact}
-								unit="minute"
-							/>
-							<span className="text-muted">/min</span>
-						</span>
-					</span>,
-				)}
-			{app.queues &&
-				explain(
-					<MessagesWaitingCard />,
-					<span
-						className={cn(
-							"inline-flex items-baseline gap-1",
-							subsystemColors.queues,
-						)}
-					>
-						<Icon
-							name="message"
-							className="size-3.5 self-center text-(--subsystem)"
+						<span className="text-muted">/min</span>
+					</span>
+				</span>
+			)}
+			{app.queues && (
+				<span
+					className={cn(
+						"inline-flex items-baseline gap-1",
+						subsystemColors.queues,
+					)}
+				>
+					<Icon
+						name="message"
+						className="size-3.5 self-center text-(--subsystem)"
+					/>
+					<span>
+						<Figure
+							number={app.queues.messages - app.queues.failing}
+							format={formatCompact}
 						/>
-						<span>
-							<Figure
-								number={app.queues.messages - app.queues.failing}
-								format={formatCompact}
-							/>
-							<Failing count={app.queues.failing} size="stat" />
-						</span>
-					</span>,
-				)}
+						<Failing count={app.queues.failing} size="stat" />
+					</span>
+				</span>
+			)}
 		</span>
 	);
 }
@@ -783,7 +629,7 @@ export function ApplicationCard({ app }: { app: SiteApplication }) {
 		>
 			{!out && (
 				<Covered coverage={app.coverage ?? 1}>
-					<ApplicationFigures app={app} explained={false} />
+					<ApplicationFigures app={app} />
 				</Covered>
 			)}
 		</InfoCard>

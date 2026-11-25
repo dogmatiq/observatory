@@ -18,28 +18,6 @@ import { MoonHolder } from "./Sky.tsx";
  * opens it on a card. See the Explainers section of docs/ui-design.md.
  */
 
-/** Where a card's "?" is. */
-export type Placement = "icon" | "bottom-right" | "bottom-left";
-
-/**
- * How a card's "?" looks: in the muted color or the card's own, at the size of a
- * small icon or of the card's icon, and as an outline or a filled circle.
- */
-export interface Look {
-	ink: Ink;
-	size: "small" | "large";
-	inverse: boolean;
-}
-
-/** The color of a card's "?". */
-export type Ink = "muted" | "card" | "chart";
-
-export const inks: [Ink, string][] = [
-	["card", "In the card’s color"],
-	["chart", "In the color of the chart"],
-	["muted", "Muted"],
-];
-
 /**
  * chartInk returns the color of a card's chart: the color of its line, or of a
  * chart drawn on a canvas, or of the ground of the sky that is there in place of
@@ -64,68 +42,24 @@ function chartInk(card: Element): string | undefined {
 }
 
 /**
- * size returns the classes of the size of a card's "?" button and its glyph: as
- * large as the card's icon in the icon's place, and a step larger if it is to be
- * larger.
- */
-function size(placement: Placement, look: Look) {
-	const step = (placement === "icon" ? 1 : 0) + (look.size === "large" ? 1 : 0);
-	return [
-		{ button: "size-6", glyph: "size-4" },
-		{ button: "size-7", glyph: "size-5" },
-		{ button: "size-8", glyph: "size-6" },
-	][step] as { button: string; glyph: string };
-}
-
-/** How a card's "?" shows. */
-export type Showing = "always" | "quiet" | "faint" | "hover";
-
-/** The ways that the "?" can show on a desktop. */
-export const reveals: [Showing, string][] = [
-	["quiet", "Always, in the faint color, and darker on pointing"],
-	["faint", "Always, at 40%, and fully on pointing"],
-	["hover", "Only on pointing (now)"],
-];
-
-export const placements: [Placement, string][] = [
-	["icon", "In the icon's place, at the top right"],
-	["bottom-right", "At the bottom right"],
-	["bottom-left", "At the bottom left"],
-];
-
-/**
- * Explainable puts the button that opens a card's explainer in the place of the
- * card's icon, at its top right. The icon stays on show until the card is pointed
- * at or has the keyboard's focus, and then the button's "?" takes its place. A
- * compact digest has no icon, so its "?" appears where an icon would be. The
- * button lies over the card, and is not inside it, because a card may be a link.
+ * Explainable puts the button that opens a card's explainer at the card's bottom
+ * right, inside its rounded edge: a filled circle in the color of the card's
+ * chart, or of the ground of the sky that is there in its place, or in the accent
+ * color on a card with neither, with the "?" in the card's background color. It
+ * shows while the card is pointed at or has the keyboard's focus, and always on a
+ * screen that is touched, which can't point. The button lies over the card, and
+ * is not inside it, because a card may be a link.
  */
 export function Explainable({
 	label,
-	icon,
-	placement,
-	shown,
-	look,
+	className,
 	onExplain,
 	children,
 }: {
 	label: string;
 
-	/** Where the "?" is. */
-	placement: Placement;
-
-	/**
-	 * When the "?" shows: always; always, but in the faint color until the card
-	 * is pointed at; at 40% until then; or only while the card is pointed at or
-	 * has focus.
-	 */
-	shown: Showing;
-
-	/** How the "?" looks. */
-	look: Look;
-
-	/** A CSS selector for the card's icon, if it has one. */
-	icon?: string;
+	/** The classes of the box around the card, such as its width. */
+	className?: string;
 
 	/**
 	 * Called with where the card is, and whether its sky has the moon, which the
@@ -136,13 +70,8 @@ export function Explainable({
 }) {
 	const ref = useRef<HTMLDivElement>(null);
 	const [at, setAt] = useState<{ x: number; y: number }>();
-	// The card's own color, which is its icon's, and the color of its chart, or
-	// the accent for a card with neither, such as a compact digest.
-	const [cardInk, setCardInk] = useState("var(--color-accent)");
-	const [lineInk, setLineInk] = useState("var(--color-accent)");
+	const [ink, setInk] = useState("var(--color-accent)");
 
-	// The button is centred on the icon, or, with no icon, on the right of the
-	// card's first line, inside its padding.
 	useLayoutEffect(() => {
 		const el = ref.current;
 		if (!el) {
@@ -153,36 +82,14 @@ export function Explainable({
 				return;
 			}
 			const box = el.getBoundingClientRect();
-			const tinted = icon ? el.querySelector(icon) : null;
-			setCardInk(
-				tinted ? getComputedStyle(tinted).color : "var(--color-accent)",
-			);
-			setLineInk(chartInk(el) ?? "var(--color-accent)");
-			if (placement !== "icon") {
-				// In a bottom corner, inside the card's rounded edge.
-				setAt({
-					x: placement === "bottom-right" ? box.width - 18 : 18,
-					y: box.height - 18,
-				});
-				return;
-			}
-			const target = icon
-				? el.querySelector(icon)
-				: el.querySelector("span.truncate");
-			if (!target) {
-				return;
-			}
-			const r = target.getBoundingClientRect();
-			setAt({
-				x: icon ? r.left + r.width / 2 - box.left : box.width - 22,
-				y: r.top + r.height / 2 - box.top,
-			});
+			setInk(chartInk(el) ?? "var(--color-accent)");
+			setAt({ x: box.width - 18, y: box.height - 18 });
 		}
 		place();
 		const resized = new ResizeObserver(place);
 		resized.observe(el);
 		return () => resized.disconnect();
-	}, [icon, placement]);
+	}, []);
 
 	const explain = () => {
 		const rect = ref.current?.getBoundingClientRect();
@@ -192,56 +99,30 @@ export function Explainable({
 	};
 
 	return (
-		<div ref={ref} className="group relative w-fit">
+		<div ref={ref} className={cn("group relative", className ?? "w-fit")}>
 			{children}
 			{at && (
 				<button
 					type="button"
 					aria-label={`Explain the ${label}`}
-					className={cn(
-						"absolute z-20 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-panel transition-[opacity,color,transform] duration-150 group-focus-within:opacity-100 group-hover:opacity-100 hover:scale-110 motion-reduce:transition-none",
-						size(placement, look).button,
-						look.ink === "muted" &&
-							(shown === "quiet"
-								? "text-faint group-focus-within:text-muted group-hover:text-muted hover:text-fg"
-								: "text-muted hover:text-fg"),
-						shown === "always" || shown === "quiet"
-							? "opacity-100"
-							: shown === "faint"
-								? "opacity-40"
-								: "opacity-0",
-					)}
-					style={{
-						left: at.x,
-						top: at.y,
-						color:
-							look.ink === "card"
-								? cardInk
-								: look.ink === "chart"
-									? lineInk
-									: undefined,
-					}}
+					className="absolute z-20 flex size-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-panel opacity-0 transition-[opacity,transform] duration-150 group-focus-within:opacity-100 group-hover:opacity-100 hover:scale-110 pointer-coarse:opacity-100 motion-reduce:transition-none"
+					style={{ left: at.x, top: at.y, color: ink }}
 					onClick={explain}
 				>
 					<svg
 						aria-hidden="true"
 						viewBox="0 0 24 24"
-						className={size(placement, look).glyph}
+						className="size-5"
 						fill="none"
 						stroke="currentColor"
 						strokeWidth="2"
 						strokeLinecap="round"
 						strokeLinejoin="round"
 					>
-						{/* Lucide's circle-question-mark, or, inverse, its circle filled
-						and its mark in the card's ground. */}
-						<circle
-							cx="12"
-							cy="12"
-							r="10"
-							fill={look.inverse ? "currentColor" : "none"}
-						/>
-						<g stroke={look.inverse ? "var(--color-panel)" : "currentColor"}>
+						{/* Lucide's circle-question-mark, with its circle filled and its
+						mark in the card's ground. */}
+						<circle cx="12" cy="12" r="10" fill="currentColor" />
+						<g stroke="var(--color-panel)">
 							<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
 							<path d="M12 17h.01" />
 						</g>
@@ -379,9 +260,6 @@ export type Paragraph =
 
 export interface ExplainerSpec {
 	label: string;
-
-	/** A CSS selector for the card's icon, if it has one. */
-	icon?: string;
 
 	/** What the card is about, and where, above the card. */
 	title: ReactNode;
@@ -1755,23 +1633,26 @@ function Arrows({
 }
 
 /**
- * Explained is a card with the "?" that opens its explainer, as the views draw
- * it: at the card's bottom right, while the card is pointed at or has focus, as a
- * filled circle in the color of the card's chart.
+ * Explained is a card with the "?" that opens its explainer. The card is
+ * `children`, which fills its place, or, without it, the explainer's own copy of
+ * the card, at its width, as the review page shows it.
  */
-export function Explained({ spec }: { spec: ExplainerSpec }) {
+export function Explained({
+	spec,
+	children,
+}: {
+	spec: ExplainerSpec;
+	children?: ReactNode;
+}) {
 	const [open, setOpen] = useState<{ from: DOMRect; moon: boolean }>();
 	return (
 		<>
 			<Explainable
 				label={spec.label}
-				icon={spec.icon}
-				placement="bottom-right"
-				shown="hover"
-				look={{ ink: "chart", size: "large", inverse: true }}
+				className={children === undefined ? undefined : "grid min-w-0"}
 				onExplain={(from, moon) => setOpen({ from, moon })}
 			>
-				<div style={{ width: spec.width }}>{spec.card}</div>
+				{children ?? <div style={{ width: spec.width }}>{spec.card}</div>}
 			</Explainable>
 			{open && (
 				<Explainer
