@@ -680,7 +680,7 @@ export function ReviewPage() {
 					<Part
 						step={2}
 						title="Where the page is, in the title bar"
-						deciding="That the title bar says where the page is as a trail, which moves to a row under the title bar once the views have links: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
+						deciding="That the title bar says where the page is as a trail, which moves to a row under the title bar once the views have links: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable, and of the application's version and the name and version of the engine's software, which lists each version with how many nodes run it while they differ; and that no card's icon, on a vital card or a digest, opens a hovercard."
 						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
 						note="Every page has its own address, so each step of the trail is a page to go to, and the trail reads in the order of the address: the site, then the application, then the cluster. The application and the site have names, so the trail shows their names and no keys; the cluster has no name, so it shows its shortened ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the page has to leave room for them. An application has only the one view in v1, so the title bar has no links, and the trail is in it."
 					>
@@ -697,6 +697,14 @@ export function ReviewPage() {
 							wide
 						>
 							<TitleBar trail={<PageTrail steps={engineSteps} />} />
+						</State>
+						<State
+							label="Nodes that run different versions"
+							note="Part of the way through a deploy, some nodes run one version of the application or the engine and some another. The hovercard lists each version, with how many nodes run it. Point at the trail to see it."
+							recommendation="Approve. The reader sees that the versions differ, and by how much, without a status that guesses why."
+							wide
+						>
+							<TitleBar trail={<PageTrail steps={mixedSteps} />} />
 						</State>
 						<State
 							label="Once the views have links"
@@ -1347,6 +1355,21 @@ function TwoRows({
 /** The key of the site of the review page's examples. */
 const siteKey = "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43";
 
+/** A step of a page's trail, for ID 2. */
+interface TrailStep {
+	kind: string;
+	name?: string;
+	href: string;
+	id: { id: string; what: string };
+
+	/**
+	 * The versions of the step, if it has any: the application's version, or the
+	 * name and version of the engine's software. A version that some nodes give
+	 * and others don't says on how many nodes it runs.
+	 */
+	versions?: string[];
+}
+
 /**
  * PageTrail is where a page is, in the title bar, as LK's and ID's proposal: a
  * trail of steps, the site, the application and the cluster or the engine, each
@@ -1355,16 +1378,7 @@ const siteKey = "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43";
  * copied. It is a mockup for ID 2, and becomes part of the title bar if it is
  * accepted.
  */
-function PageTrail({
-	steps,
-}: {
-	steps: {
-		kind: string;
-		name?: string;
-		href: string;
-		id: { id: string; what: string };
-	}[];
-}) {
+function PageTrail({ steps }: { steps: TrailStep[] }) {
 	return (
 		<Popover
 			card
@@ -1389,6 +1403,11 @@ function PageTrail({
 									</span>
 								)}
 							</span>
+							{s.versions?.map((v) => (
+								<span key={v} className="text-xs text-fg-soft">
+									{v}
+								</span>
+							))}
 						</div>
 					))}
 				</div>
@@ -1499,7 +1518,7 @@ function Tip({ children }: { children: ReactNode }) {
 const atSite = { ...application, site: "eu-west" };
 
 /** The steps of the trail of a page about a cluster, for ID 2. */
-const clusterSteps = [
+const clusterSteps: TrailStep[] = [
 	{
 		kind: "Site",
 		name: "eu-west",
@@ -1511,21 +1530,40 @@ const clusterSteps = [
 		name: atSite.name,
 		href: "#",
 		id: { id: atSite.key, what: "application key" },
+		versions: ["version 2026.11.3"],
 	},
 	{
 		kind: "Cluster",
 		href: "#",
 		id: { id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58", what: "cluster ID" },
+		versions: ["runkit 0.3.1"],
 	},
 ];
 
 /** The steps of the trail of a page about an engine that doesn't cluster, for ID 2. */
-const engineSteps = [
+const engineSteps: TrailStep[] = [
 	...clusterSteps.slice(0, 2),
 	{
 		kind: "Engine",
 		href: "#",
 		id: { id: "2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24", what: "engine ID" },
+		versions: ["runkit 0.3.1"],
+	},
+];
+
+/**
+ * The steps of the trail of a page about a cluster whose nodes run different
+ * versions, part of the way through a deploy, for ID 2.
+ */
+const mixedSteps: TrailStep[] = [
+	clusterSteps[0] as TrailStep,
+	{
+		...(clusterSteps[1] as TrailStep),
+		versions: ["version 2026.11.3 on 2 nodes", "version 2026.11.4 on 1 node"],
+	},
+	{
+		...(clusterSteps[2] as TrailStep),
+		versions: ["runkit 0.3.1 on 2 nodes", "runkit 0.4.0 on 1 node"],
 	},
 ];
 

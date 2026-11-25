@@ -1078,10 +1078,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   and site, small and faint, after the word "cluster" or "engine", shortened and copyable, because it is the same for
   every part of the view. `/review` draws every card that way, as the views will be once they have explainers.
   Proposed since, on ID 2: the title bar says where the page is as a trail, the site, the application and the cluster or
-  the engine; once an application's views have links, the links take the title bar and the trail moves to a row under
-  it (decided); each a link to its own page, by name, or by its shortened ID for the cluster or engine; pointing at the
+  the engine, each a link to its own page, by name, or by its shortened ID for the cluster or engine; pointing at the
   trail shows a hovercard of every key and ID, each copyable, so that the keys have a place to be copied from without
-  showing beside a name. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
+  showing beside a name. Decided: once an application's views have links, the links take the title bar and
+  the trail moves to a row under it. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
   prototype's links fit a wide window only just. The trail's hovercard lays each step out as a card's heading: its
   name over its kind, with its key at the right of its kind, or its ID in its name's place if it has no name.
   Under review (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
@@ -1142,9 +1142,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   and for the figures that sit inside a line of prose. Come back to it with the site and universe views, which have the
   same figures in smaller places.
 - The versions that the prototype's footer showed. The engine API's preamble gives the name and version of the engine's
-  software and the version of the application, and nothing in the spec gives the version of Dogma. Whether the footer
-  shows the versions that the spec gives, and what it shows when the nodes of a cluster give different ones, is still
-  to decide.
+  software and the version of the application, and nothing in the spec gives the version of Dogma. Proposed on ID 2: the
+  trail's hovercard gives the application's version and the name and version of the engine's software, and, while the
+  nodes give different ones, lists each with how many nodes run it. The server sends only whether the nodes' versions
+  are the same, so it would send each version with its count of nodes.
 - The observation budget's actual limits. They are set before the prototype's queries are ported.
 - Where runkit keeps its counters of removed commands and deadlines: in memory on each node, which makes them
   node-scoped and restart from zero with the node, or in counter rows kept by triggers, which adds contention to the
