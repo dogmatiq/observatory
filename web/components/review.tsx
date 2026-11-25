@@ -28,7 +28,13 @@ export function Review({ children }: { children: ReactNode }) {
 
 	return (
 		<Accepted.Provider value={accepted}>
-			<Page>
+			<Page
+				aside={
+					accepted.loaded && (
+						<Progress {...progressOf(children, accepted.ids)} />
+					)
+				}
+			>
 				<div className="mb-8 flex items-center justify-between gap-4">
 					<p className="text-muted">
 						Each tile under review, whole and then part by part. Animations play
@@ -47,6 +53,77 @@ export function Review({ children }: { children: ReactNode }) {
 				</div>
 			</Page>
 		</Accepted.Provider>
+	);
+}
+
+/**
+ * progressOf returns how far the review of the given tiles has got: how many of
+ * their parts are settled, how many there are, and the ID of the part that is
+ * open for review, if one is.
+ */
+function progressOf(
+	children: ReactNode,
+	ids: ReadonlySet<string>,
+): { settled: number; total: number; open?: string } {
+	let settled = 0;
+	let total = 0;
+	let open: string | undefined;
+
+	for (const tile of Children.toArray(children)) {
+		if (!isValidElement<TileProps>(tile) || tile.type !== Tile) {
+			continue;
+		}
+		for (const part of Children.toArray(tile.props.children)) {
+			if (!isValidElement<PartProps>(part) || part.type !== Part) {
+				continue;
+			}
+			total++;
+			if (partSettled(tile.props.code, part.props, ids)) {
+				settled++;
+			} else if (open === undefined) {
+				open = `${tile.props.code} ${part.props.step ?? 0}`;
+			}
+		}
+	}
+
+	return { settled, total, open };
+}
+
+/**
+ * Progress is how far the review has got, in the title bar: the part that is
+ * open for review, and a bar of the parts that are settled out of all of them.
+ */
+function Progress({
+	settled,
+	total,
+	open,
+}: {
+	settled: number;
+	total: number;
+	open?: string;
+}) {
+	return (
+		<div className="flex items-center gap-2.5 text-xs whitespace-nowrap text-muted">
+			{open !== undefined && (
+				<span className="font-mono font-semibold text-fg-soft">{open}</span>
+			)}
+			<div
+				role="progressbar"
+				aria-label="Parts settled"
+				aria-valuemin={0}
+				aria-valuemax={total}
+				aria-valuenow={settled}
+				className="h-1.5 w-32 overflow-hidden rounded-full bg-sunk"
+			>
+				<div
+					className="h-full rounded-full bg-accent transition-[width] duration-500 motion-reduce:transition-none"
+					style={{ width: `${total === 0 ? 0 : (settled / total) * 100}%` }}
+				/>
+			</div>
+			<span className="tabular-nums">
+				{settled} of {total} parts
+			</span>
+		</div>
 	);
 }
 

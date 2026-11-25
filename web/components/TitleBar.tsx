@@ -40,6 +40,7 @@ export function TitleBar({
 	application,
 	identifier,
 	nav = [],
+	aside,
 }: {
 	/**
 	 * The application that the cluster runs, which is where the page is. A page
@@ -58,6 +59,9 @@ export function TitleBar({
 	 * The page's links, in groups. A line separates one group from the next.
 	 */
 	nav?: NavItem[][];
+
+	/** What the page shows at the right of the bar, before the color mode control. */
+	aside?: ReactNode;
 }) {
 	return (
 		<header className="sticky top-0 z-10 border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)] [backdrop-filter:saturate(1.4)_blur(10px)]">
@@ -107,6 +111,7 @@ export function TitleBar({
 					</nav>
 				)}
 				<div className="ml-auto flex items-center gap-2.5">
+					{aside}
 					<ThemeToggle />
 				</div>
 			</div>

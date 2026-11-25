@@ -17,18 +17,23 @@ export function Page({
 	nav,
 	versions,
 	notice,
+	aside,
 	children,
 }: {
 	application?: { name: string; key: string };
 	nav?: NavItem[][];
 	versions?: Version[];
 	notice?: string;
+
+	/** What the title bar shows at its right, before the color mode control. */
+	aside?: ReactNode;
+
 	children: ReactNode;
 }) {
 	return (
 		<>
 			<ErrorBoundary>
-				<TitleBar application={application} nav={nav} />
+				<TitleBar application={application} nav={nav} aside={aside} />
 			</ErrorBoundary>
 			<main className="mx-auto max-w-page px-6 pt-6 pb-12 max-narrow:px-4 max-narrow:pt-4 max-narrow:pb-10">
 				<h1 className="sr-only">Dogma Observatory</h1>
