@@ -25,6 +25,7 @@ import {
 	WorkloadsCard,
 } from "./ClusterCards.tsx";
 import { EngineCard, engineOutText } from "./EngineCard.tsx";
+import { Explained, type ExplainerSpec } from "./Explainer.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import {
 	HandlerKindCard,
@@ -45,7 +46,6 @@ import {
 	eventRateWords,
 	eventsAbout,
 	QueuesTile,
-	queuesAbout,
 	Totals,
 } from "./Overview.tsx";
 import { Popover } from "./Popover.tsx";
@@ -60,12 +60,12 @@ import {
 	CompactDigests,
 	ContactLostCard,
 	SiteBreakdown,
+	SiteEventsTile,
 	SiteOverview,
+	SiteQueuesTile,
 	SiteTotals,
-	siteAbout,
 	siteEventRateWords,
 	siteHandlingWords,
-	sitePartialStatus,
 } from "./SiteView.tsx";
 import { handlerSubsystem, kindColors } from "./subsystems.ts";
 
@@ -227,118 +227,49 @@ export function ReviewPage() {
 
 			<Tile
 				code="SW"
-				title="Site view: the icons' words"
-				note="What the hovercard of each tile's icon says."
+				title="Site view: the explainers"
+				note="The explainer of each of the site view's tiles, which takes the place of the hovercards that explained them, by the rules of the cluster view's explainers. Point at a tile and press its &quot;?&quot;. The compact digest's explainer is approved on the cluster view's review of explainers."
 			>
 				<Part
 					step={1}
-					title="The icons"
-					notDeciding={
-						"How the hovercards look, which is as on the cluster view; the hovercards of the headlines (SH); the words in a compact digest of the grid (SS); what a site is, which nothing on the view explains yet."
-					}
-					note="The hovercard of each tile's icon says what its section is about. Nothing on the view says what a site is yet. While only some of the applications' nodes report what the events or queues tile shows, its hovercard says why, as a status. It says nothing about versions, because the applications at a site run different engines and versions as a matter of course."
+					title="The events tile"
+					notDeciding="The words on the tile, which are SH 1; the alert flag of a status, which is FL; how an explainer looks and opens, which is settled."
+					note="It is the cluster view's events card for all the applications at the site together. Its bar is of the applications, and has no advice, because applications record events at whatever rate their work needs."
 				>
 					<State
-						label="The events tile, while only some nodes report it"
-						precedents={[
-							{
-								where: "On the cluster view, the events tile's icon",
-								status: "settled",
-								words: eventsAbout(atSite),
-							},
-							{
-								where: "Its status",
-								status: { underReview: "EV 1" },
-								words: <p>{partialStatus.text}</p>,
-							},
-						]}
-						recommendation="Approve, with this wording, which was proposed in review, with &quot;at the eu-west site&quot;, as the cluster view says where an application is. The tile counts the event streams of all the applications together in its detail line."
+						label="The events tile"
+						recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines."
+						wide
 					>
-						<Panel>
-							<InfoCard
-								subsystem="streams"
-								icon="event"
-								kind="Events"
-								status={sitePartialStatus}
-							>
-								{siteAbout.events(euWest)}
-							</InfoCard>
-						</Panel>
+						<Explained spec={siteEventsExplainer} />
 					</State>
+				</Part>
+				<Part
+					step={2}
+					title="The queues tile"
+					notDeciding="The words on the tile, which are SH 1; counting the messages that are due, which is in the plan, and whose words the explainer already has."
+					note="It is the cluster view's queues card for all the applications at the site together. Its bar is of the applications, and has no advice, for the same reason as the events tile's."
+				>
 					<State
-						label="The queues tile, while only some nodes report it"
-						precedents={[
-							{
-								where: "On the cluster view, the queues tile's icon",
-								status: "settled",
-								words: queuesAbout(atSite),
-							},
-							{
-								where: "Its status",
-								status: { underReview: "EV 1" },
-								words: <p>{partialStatus.text}</p>,
-							},
-						]}
-						recommendation="Approve, with this wording, in the same shape as the events tile's. The tile counts the queues of all the applications together in its detail line, which says roughly how widely the site's work can be spread."
+						label="The queues tile"
+						recommendation="Approve. It has the cluster view's annotations and paragraphs, said of the applications together, with no box."
+						wide
 					>
-						<Panel>
-							<InfoCard
-								subsystem="queues"
-								icon="message"
-								kind="Queues"
-								status={sitePartialStatus}
-							>
-								{siteAbout.queues(euWest)}
-							</InfoCard>
-						</Panel>
+						<Explained spec={siteQueuesExplainer} />
 					</State>
+				</Part>
+				<Part
+					step={3}
+					title="The applications tile"
+					notDeciding="The words on the tile, which are SH 1."
+					note="Its headline is the applications in contact, with those out of contact set apart in red, and its chart is the heartbeat chart, with a share for each application in contact."
+				>
 					<State
-						label="The applications tile"
-						precedents={[
-							{
-								where: "On the cluster view, the cluster tile's icon",
-								status: "settled",
-								words: clusterAbout(atSite),
-							},
-						]}
-						recommendation="Approve, with this wording."
+						label="The applications tile, while two applications are out of contact"
+						recommendation="Approve. It explains the heartbeat chart as the cluster view's explainer does, with an application's share in place of a node's."
+						wide
 					>
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="application"
-								kind="Applications"
-							>
-								{siteAbout.applications(euWest)}
-							</InfoCard>
-						</Panel>
-					</State>
-					<State
-						label="At no site"
-						note="The same hovercards, for the applications that run at no site. They say only &quot;the applications&quot;, so that an operator who has no sites never meets the word &quot;site&quot;."
-						recommendation="Approve, with this wording."
-					>
-						<div className="grid gap-3">
-							<Panel>
-								<InfoCard subsystem="streams" icon="event" kind="Events">
-									{siteAbout.events(undefined)}
-								</InfoCard>
-							</Panel>
-							<Panel>
-								<InfoCard subsystem="queues" icon="message" kind="Queues">
-									{siteAbout.queues(undefined)}
-								</InfoCard>
-							</Panel>
-							<Panel>
-								<InfoCard
-									subsystem="cluster"
-									icon="application"
-									kind="Applications"
-								>
-									{siteAbout.applications(undefined)}
-								</InfoCard>
-							</Panel>
-						</div>
+						<Explained spec={siteApplicationsExplainer} />
 					</State>
 				</Part>
 			</Tile>
@@ -2380,3 +2311,215 @@ function EventsIconCard({ status }: { status: string }) {
 		</InfoCard>
 	);
 }
+
+/**
+ * The site of the explainers of the site view's tiles: six applications in
+ * contact, two of which have failing messages.
+ */
+const explainedSite = siteOf(
+	siteApplications
+		.filter((a) => (a.queues?.failing ?? 0) > 0)
+		.slice(0, 2)
+		.concat(
+			siteApplications
+				.filter((a) => (a.queues?.failing ?? 0) === 0)
+				.slice(0, 4),
+		),
+	euWest,
+);
+
+/**
+ * The site of the applications tile's explainer, with two applications out of
+ * contact.
+ */
+const explainedOut = siteOf(
+	someOut.map((a, i, all) =>
+		// Most of the applications have just sent a heartbeat, which keeps their
+		// share of the chart full, and some haven't for a while, so that the
+		// chart dips here and there and is high at its right end, where its arrow
+		// ends.
+		[6, 21, 22, 47, 63].includes(i) && i < all.length - 10
+			? a
+			: { ...a, heartbeats: [1000] },
+	),
+	euWest,
+);
+
+/** The title of a site tile's explainer: what it is about, at the eu-west site. */
+function siteTitle(what: string) {
+	return (
+		<>
+			{what} at the <span className="font-semibold text-fg">eu-west</span> site
+		</>
+	);
+}
+
+const siteEventsExplainer: ExplainerSpec = {
+	label: "site's events tile",
+	icon: "svg.size-5",
+	title: siteTitle("The events and event streams of the applications"),
+	width: 360,
+	card: explainedSite.events && (
+		<SiteEventsTile data={explainedSite} events={explainedSite.events} />
+	),
+	notes: [
+		{
+			at: ".text-4xl",
+			text: "the rate of new events across the applications, averaged over the last minute",
+			side: "left",
+			atText: true,
+			with: [{ at: ":scope > article > span", atText: "events per minute" }],
+			approach: "top-left",
+			dy: -40,
+		},
+		{
+			at: ":scope > article > span",
+			text: "total number of events on the applications' event streams",
+			side: "top",
+			atText: `${formatCompact(explainedSite.events?.streams?.events ?? 0)} events`,
+		},
+		{
+			at: ":scope > article > span",
+			text: "the number of event streams the applications have",
+			side: "right",
+			atText: `${formatCompact(explainedSite.events?.streams?.count ?? 0)} streams`,
+			bow: "under",
+		},
+		{
+			at: "div.h-2",
+			text: "how the new events are spread across the applications",
+			side: "left",
+			dy: 6,
+		},
+		{
+			at: "svg.h-12",
+			text: "events recorded over the last minute",
+			side: "right",
+			into: "chart",
+		},
+		{ at: "[data-moon]", text: "the moon", side: "right" },
+	],
+	paragraphs: [
+		{
+			text: "Each event that an application records is written to an event stream. Streams store events in the order they are written, so they can be read in that order.",
+			when: { has: "stream" },
+		},
+	],
+	before: [
+		"Icon: This section shows information about the events and event streams of the applications at the eu-west site.",
+		`Headline: ${siteEventRateWords.description}, averaged over the last minute.`,
+	],
+};
+
+const siteQueuesExplainer: ExplainerSpec = {
+	label: "site's queues tile",
+	icon: "svg.size-5",
+	title: siteTitle("The messages and queues of the applications"),
+	width: 360,
+	card: explainedSite.queues && (
+		<SiteQueuesTile data={explainedSite} queues={explainedSite.queues} />
+	),
+	notes: [
+		{
+			at: ".text-4xl",
+			text: "the number of messages ready to be delivered now, across the applications",
+			side: "left",
+			atText: formatCompact(
+				(explainedSite.queues?.messages ?? 0) -
+					(explainedSite.queues?.failing ?? 0),
+			),
+			with: [
+				{ at: ":scope > article > span", atText: "messages" },
+				{ at: ".text-4xl .text-failing", atText: true, keepInk: true },
+			],
+			approach: "top-left",
+			dy: -40,
+		},
+		{
+			at: ".text-4xl .text-failing",
+			text: "the number of messages that are failing",
+			side: "top",
+			wordsLeft: true,
+			atText: true,
+			keepInk: true,
+		},
+		{
+			at: ":scope > article > span",
+			text: "the number of queues the applications have",
+			side: "top",
+			atText: `${formatCompact(explainedSite.queues?.queues ?? 0)} queues`,
+		},
+		{
+			at: ":scope > article > span",
+			text: "the rate of handled messages across the applications, averaged over the last minute",
+			side: "right",
+			atText: "/min",
+			dy: -4,
+		},
+		{
+			at: "div.h-2",
+			text: "how the ready messages are spread across the applications",
+			side: "left",
+			dy: 6,
+		},
+		{
+			at: "svg.h-12",
+			text: "messages handled over the last minute",
+			side: "right",
+			into: "chart",
+		},
+		{ at: "[data-moon]", text: "the moon", side: "right" },
+	],
+	paragraphs: [
+		"Commands and deadlines wait on queues until they are delivered. A command is ready to be delivered as soon as it is queued, and a deadline once its scheduled time arrives.",
+		"Fewer ready messages is better. If the number keeps rising, messages are becoming ready faster than they are being handled.",
+	],
+	before: [
+		"Icon: This section shows information about the messages and queues of the applications at the eu-west site.",
+		`Headline: ${messagesWaitingText}`,
+		`Rate: ${siteHandlingWords.description}, averaged over the last minute.`,
+	],
+};
+
+const siteApplicationsExplainer: ExplainerSpec = {
+	label: "site's applications tile",
+	icon: "svg.size-5",
+	title: siteTitle("The applications"),
+	width: 360,
+	card: <ApplicationsTile data={explainedOut} />,
+	notes: [
+		{
+			at: ".text-4xl",
+			text: "the number of applications in contact now",
+			side: "left",
+			atText: String(
+				explainedOut.applications.filter((a) => a.nodes > 0).length,
+			),
+			with: [
+				{ at: ":scope > article > span", atText: "applications" },
+				{ at: ".text-4xl .text-bad", atText: true, keepInk: true },
+			],
+			approach: "top-left",
+			dy: -40,
+		},
+		{
+			at: ".text-4xl .text-bad",
+			text: "the number of applications out of contact",
+			side: "top",
+			atText: true,
+			keepInk: true,
+		},
+		{
+			at: "canvas",
+			text: "how recently each application sent a heartbeat",
+			side: "right",
+			into: "chart",
+		},
+	],
+	paragraphs: [
+		"Each application's nodes send heartbeats to show that they are running. An application's section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
+	],
+	before: [
+		"Icon: This section shows information about the applications at the eu-west site.",
+	],
+};

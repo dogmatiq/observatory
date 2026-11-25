@@ -214,7 +214,7 @@ export const siteHandlingWords: RateWords = {
  * are, as the cluster view's does, and whose bar shows which
  * applications record the most.
  */
-function SiteEventsTile({
+export function SiteEventsTile({
 	data,
 	events,
 }: {
@@ -301,7 +301,7 @@ function SiteEventsTile({
  * gives the number of queues of all the applications together, and whose bar
  * shows which applications have the most waiting.
  */
-function SiteQueuesTile({
+export function SiteQueuesTile({
 	data,
 	queues,
 }: {

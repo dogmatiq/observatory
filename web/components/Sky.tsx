@@ -1,6 +1,8 @@
 import {
 	type CSSProperties,
+	createContext,
 	type ReactNode,
+	useContext,
 	useEffect,
 	useId,
 	useSyncExternalStore,
@@ -53,20 +55,34 @@ function createSkies() {
 
 const allSkies = { night: createSkies(), day: createSkies() };
 
+/** True inside a [MoonHolder]. */
+const HeldMoon = createContext(false);
+
+/**
+ * MoonHolder makes each sky inside it have the moon, already risen, as a copy of
+ * a card whose sky has the moon does, such as the copy that explains the card.
+ */
+export function MoonHolder({ children }: { children: ReactNode }) {
+	return <HeldMoon.Provider value={true}>{children}</HeldMoon.Provider>;
+}
+
 /**
  * useHoldsMoon returns whether this sky is the one that has been drawn longest,
- * of the skies of its kind on the page, which is the one that has the moon.
+ * of the skies of its kind on the page, which is the one that has the moon, or
+ * is inside a [MoonHolder].
  */
 function useHoldsMoon(kind: "night" | "day"): boolean {
 	const id = useId();
 	const store = allSkies[kind];
+	const held = useContext(HeldMoon);
 
 	useEffect(() => {
 		store.change((ids) => [...ids, id]);
 		return () => store.change((ids) => ids.filter((i) => i !== id));
 	}, [id, store]);
 
-	return useSyncExternalStore(store.subscribe, () => store.ids[0]) === id;
+	const first = useSyncExternalStore(store.subscribe, () => store.ids[0]);
+	return held || first === id;
 }
 
 /**
@@ -272,6 +288,8 @@ function Moon({
 }) {
 	const id = useId();
 	const colors = moonColors[tone];
+	// A copy of a card shows the moon where it already is, without rising.
+	const held = useContext(HeldMoon);
 
 	const phase = moonPhase(new Date());
 	const waxing = phase <= 0.5;
@@ -307,12 +325,13 @@ function Moon({
 				data-moon=""
 				aria-hidden="true"
 				className={cn(
-					"pointer-events-auto absolute top-[7px] right-[14%] size-[34px] overflow-visible transition-[filter] duration-300 ease-out motion-reduce:transition-none motion-safe:animate-[moonrise_30s_ease-out_both]",
+					"pointer-events-auto absolute top-[7px] right-[14%] size-[34px] overflow-visible transition-[filter] duration-300 ease-out motion-reduce:transition-none",
 					// The moon glows while it is pointed at: white in the night, and a warm
 					// light in the day, which a white glow would be lost in.
 					tone === "night"
 						? "hover:drop-shadow-[0_0_6px_rgb(255_255_255/0.75)]"
 						: "hover:drop-shadow-[0_0_6px_rgb(255_214_120/0.95)]",
+					!held && "motion-safe:animate-[moonrise_30s_ease-out_both]",
 				)}
 				viewBox="-15 -15 30 30"
 			>
