@@ -1095,6 +1095,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   the nodes that report run, in place of whether their versions are the same. The title bar's tooltip no longer gives
   the application's key. Deferred until the views have links: where the trail goes then; ID 2 tried the links in the
   title bar with the trail in a row under it, because in one row the prototype's links fit a wide window only just.
+  Decided since: on a screen that is touched, a tap on the trail opens its hovercard, whose names are the links, as an
+  exception to LK, so that the hovercard can be opened there; a long application name is not cut short in the title bar
+  at wide widths until the views have links, when the title bar's room is decided.
   Approved (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
   at the right of its top row, where a compact digest has its flag, and so clear of the chevron after a linked name.
   On a vital card, the readout of the chart, while the chart is pointed at, is to the left of the flag. Done: every
