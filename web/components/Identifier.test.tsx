@@ -20,19 +20,10 @@ afterEach(() => {
 	vi.unstubAllGlobals();
 });
 
-test("an identifier shows the first eight characters, in the color of the text", () => {
+test("an identifier shows the first eight characters", () => {
 	const { container } = render(<Identifier id={id} what="queue ID" />);
 
-	const code = container.querySelector("code");
-	expect(code?.textContent).toBe("8b0081fd");
-	expect(code?.className).toContain("text-fg");
-	expect(code?.className).not.toContain("text-muted");
-});
-
-test("the identifier of a thing that has a name is in the color of muted text", () => {
-	const { container } = render(<Identifier id={id} what="queue ID" named />);
-
-	expect(container.querySelector("code")?.className).toContain("text-muted");
+	expect(container.textContent).toBe("8b0081fd");
 });
 
 test("the button copies the whole ID, and says that it has", async () => {

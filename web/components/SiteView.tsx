@@ -12,7 +12,6 @@ import { useElapsed } from "../lib/live.tsx";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { applicationSegments } from "../lib/segments.ts";
 import type { SiteApplication, SiteData } from "../model.ts";
-import { DigestKey } from "./DigestKey.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Figure } from "./Figure.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
@@ -519,30 +518,18 @@ export type DigestAlert = "icon" | { words: string };
 export function CompactDigests({
 	data,
 	alert,
-	keepsKeyRoom = false,
 }: {
 	data: SiteData;
 
 	/** How a compact digest says that its application is out of contact. */
 	alert: DigestAlert;
-
-	/**
-	 * True to keep room for each key while it is not there, for /review to
-	 * compare with the digests that don't. Only /review sets it.
-	 */
-	keepsKeyRoom?: boolean;
 }) {
 	return (
 		<ul className="grid grid-cols-[repeat(auto-fill,minmax(176px,1fr))] gap-3">
 			{data.applications.map((a) => (
 				<li key={a.application.key} className="min-w-0">
 					<ErrorBoundary>
-						<CompactDigest
-							site={data.site}
-							app={a}
-							alert={alert}
-							keepsKeyRoom={keepsKeyRoom}
-						/>
+						<CompactDigest site={data.site} app={a} alert={alert} />
 					</ErrorBoundary>
 				</li>
 			))}
@@ -553,9 +540,7 @@ export function CompactDigests({
 /**
  * CompactDigest is the compact digest of one application in [CompactDigests]. Its
  * name is the link to its application view, and is the only part of it that is a
- * link. While it is pointed at, or anything in it has the keyboard's focus, the
- * application's identity key is at the right of its name, which gives up room for
- * it, as the digest is too narrow to keep room for it. An
+ * link. An
  * application that is out of contact has the red accent along its top, and says
  * so in red at the right of its name, as `alert` says. Its figures keep their places, as zeros that are not
  * available, which glitch when contact is lost, so that the blur alone says how
@@ -568,12 +553,10 @@ function CompactDigest({
 	site,
 	app,
 	alert,
-	keepsKeyRoom,
 }: {
 	site: SiteData["site"];
 	app: SiteApplication;
 	alert: DigestAlert;
-	keepsKeyRoom: boolean;
 }) {
 	const out = app.nodes === 0;
 	const failing = app.queues?.failing ?? 0;
@@ -598,24 +581,19 @@ function CompactDigest({
 				>
 					{app.application.name}
 				</NameLink>
-				<span className="ml-auto flex items-center gap-2">
-					<DigestKey
-						id={app.application.key}
-						what="application key"
-						keepsRoom={keepsKeyRoom}
-					/>
-					{out &&
-						(alert === "icon" ? (
-							<Popover card content={<ContactLostCard app={app} />}>
-								<span className="flex-none self-center text-bad">
-									<Icon name="alert" className="size-4" />
-									<span className="sr-only">Contact lost</span>
-								</span>
-							</Popover>
-						) : (
-							<span className="flex-none text-xs text-bad">{alert.words}</span>
-						))}
-				</span>
+				{out &&
+					(alert === "icon" ? (
+						<Popover content={contactLostText}>
+							<span className="ml-auto flex-none self-center text-bad">
+								<Icon name="alert" className="size-4" />
+								<span className="sr-only">Contact lost</span>
+							</span>
+						</Popover>
+					) : (
+						<span className="ml-auto flex-none text-xs text-bad">
+							{alert.words}
+						</span>
+					))}
 			</span>
 			<Distrusted value={out}>
 				<Covered coverage={app.coverage ?? 1}>
@@ -627,26 +605,9 @@ function CompactDigest({
 }
 
 /**
- * ContactLostCard is the card of the alert icon of a compact digest whose application is
- * out of contact. It names the application and says, as a status, what losing
- * contact means for the reader.
- */
-export function ContactLostCard({ app }: { app: SiteApplication }) {
-	return (
-		<InfoCard
-			subsystem="cluster"
-			icon="application"
-			kind="Application"
-			name={app.application.name}
-			id={{ id: app.application.key, what: "application key" }}
-			status={{ icon: "alert", text: contactLostText }}
-		/>
-	);
-}
-
-/**
- * contactLostText is the status of an application that is out of contact, in
- * the form of the engine card's status, with the application as its subject.
+ * contactLostText is the tooltip of the alert flag of a compact digest whose
+ * application is out of contact, in the form of the engine card's status, with
+ * the application as its subject.
  */
 export const contactLostText =
 	"The application is out of contact, so it's unknown whether it is working.";
@@ -812,7 +773,6 @@ export function ApplicationCard({ app }: { app: SiteApplication }) {
 			icon="application"
 			kind="Application"
 			name={app.application.name}
-			id={{ id: app.application.key, what: "application key" }}
 			status={
 				out
 					? {

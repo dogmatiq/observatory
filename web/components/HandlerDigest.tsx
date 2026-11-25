@@ -5,7 +5,6 @@ import { formatCompact, nounFor } from "../lib/format.ts";
 import { useRamped } from "../lib/ramped.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { Application, HandlerData, HandlerSummary } from "../model.ts";
-import { DigestKey } from "./DigestKey.tsx";
 import { HandlerKindCard } from "./HandlerKindCard.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
@@ -49,9 +48,7 @@ const chartedWords: Record<HandlerData["kind"], string> = {
  *
  * The digest is an article named by the handler's name. If it has an `href`, the
  * name is a link to the handler's page, and is the only part of the digest that
- * is. While the digest is pointed at, or anything in it has the keyboard's focus,
- * the handler's identity key is at the right of its kind; on a screen that is
- * touched, it is always there.
+ * is.
  */
 export function HandlerDigest({
 	application,
@@ -81,7 +78,7 @@ export function HandlerDigest({
 	const content = (
 		<>
 			<div className="flex min-w-0 items-center gap-3">
-				<span className="flex min-w-0 flex-1 flex-col">
+				<span className="flex min-w-0 flex-col">
 					<Tooltip text={handler.name}>
 						<span
 							id={nameId}
@@ -96,7 +93,7 @@ export function HandlerDigest({
 							)}
 						</span>
 					</Tooltip>
-					<span className="flex min-w-0 items-baseline justify-between gap-3 text-2xs font-medium tracking-[0.08em] text-muted uppercase">
+					<span className="flex min-w-0 items-center gap-3 text-2xs font-medium tracking-[0.08em] text-muted uppercase">
 						<span className="min-w-0 truncate">
 							{handler.disabled ? `${handler.kind}, disabled` : handler.kind}
 							{handler.minimizesConcurrency && (
@@ -110,11 +107,6 @@ export function HandlerDigest({
 								</Popover>
 							)}
 						</span>
-						<DigestKey
-							id={handler.key}
-							what={`${handler.kind} key`}
-							keepsRoom
-						/>
 					</span>
 				</span>
 				<Popover

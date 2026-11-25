@@ -30,10 +30,9 @@ export interface Scope {
  * a popover that says more about something on the page. From the top it has:
  *
  * - a header, with an icon in the color of a subsystem, then the name of the
- *   thing that the card is about, if it has one, with its kind under it, as a
- *   digest has its name over its kind; its ID or key at the right of the kind, if
- *   it has one; and its scope, if it has one, such as "within the Account
- *   application";
+ *   thing that the card is about, or, for a thing that has no name, its ID in the
+ *   place of a name, with its kind under it, as a digest has its name over its
+ *   kind; and its scope, if it has one, such as "within the Account application";
  * - a figure that is the card's main number, with a unit, and an aside at the
  *   right, such as a share, if the card has them;
  * - paragraphs that say what the figure is;
@@ -43,6 +42,17 @@ export interface Scope {
  *
  * The card sets its own width.
  */
+/**
+ * Identity is what an [InfoCard] shows in the place of the name of the thing that
+ * it is about, which leads the header, over its kind, in capitals as a digest
+ * shows a name: the thing's `name`, or, for a thing that has no name, its `id`,
+ * shortened and copyable, and `what` the ID is, such as "queue ID". A card that
+ * is about no one thing has neither, and its kind leads.
+ */
+type Identity =
+	| { name?: ReactNode; id?: undefined }
+	| { id: { id: string; what: string }; name?: undefined };
+
 export function InfoCard({
 	subsystem,
 	icon,
@@ -67,18 +77,6 @@ export function InfoCard({
 	/** Where the thing is, or what it is of, shown under its kind. */
 	scope?: Scope;
 
-	/**
-	 * The thing's name, which leads the header, over its kind, in capitals as a
-	 * digest shows it. A thing with no name has none, and its kind leads.
-	 */
-	name?: ReactNode;
-
-	/**
-	 * The thing's ID or key, shown at the right of its kind, and `what` it is,
-	 * such as "event stream ID" or "aggregate key".
-	 */
-	id?: { id: string; what: string };
-
 	figure?: {
 		value: ReactNode;
 		unit: string;
@@ -95,35 +93,38 @@ export function InfoCard({
 	 * is `busy` says that the figure is being worked out, and its icon turns.
 	 */
 	status?: { icon: IconName; text: ReactNode; busy?: boolean };
-}) {
+} & Identity) {
 	return (
 		<div className={cn("w-64", subsystemColors[subsystem])}>
 			<div
 				className={cn(
 					"flex gap-3 px-3.5 py-3",
-					name || scope ? "items-start" : "items-center",
+					name !== undefined || id !== undefined || scope
+						? "items-start"
+						: "items-center",
 				)}
 			>
 				<span
 					className={cn(
 						"flex-none",
 						iconColor ?? "text-(--subsystem)",
-						name || scope ? "mt-px" : "",
+						name !== undefined || id !== undefined || scope ? "mt-px" : "",
 					)}
 				>
 					<Icon name={icon} className="size-5" />
 				</span>
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
-					{name !== undefined && (
+					{(name !== undefined || id !== undefined) && (
 						<span className="truncate font-bold tracking-[0.04em] text-fg uppercase">
-							{name}
+							{id === undefined ? (
+								name
+							) : (
+								<Identifier id={id.id} what={id.what} />
+							)}
 						</span>
 					)}
-					<span className="flex items-baseline justify-between gap-3">
-						<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
-							{kind}
-						</span>
-						{id && <Identifier id={id.id} what={id.what} named />}
+					<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
+						{kind}
 					</span>
 					{scope && (
 						<span className="text-fg-soft">
@@ -141,7 +142,7 @@ export function InfoCard({
 						</span>
 					)}
 					{scope?.id !== undefined && (
-						<Identifier id={scope.id} what={`${scope.kind} ID`} named />
+						<Identifier id={scope.id} what={`${scope.kind} ID`} />
 					)}
 				</div>
 			</div>

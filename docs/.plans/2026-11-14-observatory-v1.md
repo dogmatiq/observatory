@@ -1044,21 +1044,17 @@ Tick each item when it is done, and write the pull request or commit that did it
   hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
   what drills down (a segment's identity and amount), the statuses, as alert
   flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
-  A digest shows the thing's identity key, shortened and copyable, while it is pointed at or anything in it has the
-  keyboard's focus, and always on a screen that is touched, so that no hovercard is needed to give it: at the right of
-  the kind on a handler digest, which keeps its room, and at the right of the name, before any alert flag, on a compact
-  digest, whose name gives up room for it, as keeping the room would cut most names short. Every hovercard that is about one
-  thing starts with the thing's name, in bold capitals, then its kind, as a digest does; its ID or identity key, if any,
-  is at the right of the kind, so an application's hovercard gives its key. A thing with no name, such as a stream,
-  starts with its kind, so that a shortened ID never leads. The copy button says what it copied, such as "Copied
-  application key", in a note above it that moves nothing. No card's icon opens a
+  Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
+  does. A thing with no name, such as a stream, a queue or a node, has its shortened ID in the place of the name, in the
+  same style, with a copy button that says what it copied, such as "Copied queue ID", in a note above it that moves
+  nothing. A thing that has a name shows no ID or key, on a hovercard or a digest, so only the bars' drill-down
+  hovercards and the title bar show IDs. An alert flag opens a tooltip of its status, not a hovercard. No card's icon opens a
   hovercard, so an icon no longer grows when it is pointed at. The cluster's ID, or the engine's for an engine that
   doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word "cluster"
   or "engine", shortened and copyable, because it is the same for every part of the view.
   Under review (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole
   doesn't react to the pointer; the name is underlined, with a chevron after it, while it is pointed at or has the
-  keyboard's focus. The digests are built that way, so that the review can try it. The test data's application keys
-  differ in their first eight characters, as real keys do.
+  keyboard's focus. The digests are built that way, so that the review can try it.
   `/review` no longer reviews the words of the hovercards that explain (it retired EV 1, CL 1–3, EN 1–2, WD, and SH 2's
   headline hovercards), and reviews the site view's explainers (SW) and the engine tile's (EN 4). Done: the segment hovercards' advice says
   "An even spread is better".

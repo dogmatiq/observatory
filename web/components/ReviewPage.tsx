@@ -37,7 +37,7 @@ import {
 	QueuesTile,
 	Totals,
 } from "./Overview.tsx";
-import { Popover } from "./Popover.tsx";
+import { Popover, panelClasses } from "./Popover.tsx";
 import { partialStatus } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
@@ -45,14 +45,13 @@ import { SegmentCard, things } from "./SegmentCard.tsx";
 import {
 	ApplicationsTile,
 	CompactDigests,
-	ContactLostCard,
+	contactLostText,
 	SiteBreakdown,
 	SiteEventsTile,
 	SiteOverview,
 	SiteQueuesTile,
 	SiteTotals,
 } from "./SiteView.tsx";
-import { handlerSubsystem, kindColors } from "./subsystems.ts";
 import { TitleBar } from "./TitleBar.tsx";
 
 /**
@@ -213,19 +212,19 @@ export function ReviewPage() {
 			<Tile
 				code="IC"
 				title="Which thing a hovercard is about"
-				note="A rule for every hovercard that stays once the explainers are built, on every view: where a hovercard says which thing it is about. It comes first, because the hovercards that stay follow it: those of the bars' segments, of the digests' names and of the alert flags."
+				note="A rule for every hovercard that stays once the explainers are built, on every view: where a hovercard says which thing it is about. It comes first, because the hovercards that stay follow it: those of the bars' segments."
 			>
 				<Part
 					step={1}
-					title="The thing's name, its kind and its ID"
-					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold capitals first, as a digest has it, then its kind; the thing's ID or identity key, shortened and copyable, at the right of its kind, with a copy button that says what it copied. A thing with no name starts with its kind."
-					notDeciding="The other words of each of these hovercards, which are decided with them: a segment's (SB, and the bars of EV, QU and CL) and an alert flag's (SH 2); how an ID is shortened and copied, which is settled."
-					note="Two kinds of hovercard stay once the explainers are built, each about one thing, and each opened by something that stands for that thing: a segment of a bar, which drills down to one stream, queue, node or application; and an alert flag, which says a status about one thing. The moon's hovercard follows the same rule. No icon opens a hovercard, a digest shows its own key (DI), and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
+					title="The thing's name, or its ID, over its kind"
+					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold capitals first, as a digest has it, then its kind. A thing with no name has its ID in the place of the name, in the same style, shortened, with a copy button that says what it copied. A thing that has a name shows no ID or key."
+					notDeciding="The other words of each segment's hovercard, which are decided with them (SB, and the bars of EV, QU and CL); how an ID is shortened, which is settled; the alert flags, which open a tooltip of their status (SH 2, FL)."
+					note="Once the explainers are built, the hovercards that stay are the drill-downs of a bar's segments, each about one stream, queue, node or application. The moon's hovercard follows the same rule. No icon opens a hovercard, an alert flag opens a tooltip of its status, a digest shows no key, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
 				>
 					<State
 						label="The hovercards that stay, by what opens them"
-						note="The segments' and the alert flag's hovercards are as they are today, with the name, kind and ID or key where this rule puts them."
-						recommendation="Approve the rule as these hovercards show it: the name first, in capitals, where the thing has one, then the kind, with the ID or key at its right; a cryptic ID never leads."
+						note="The segments' hovercards are as they are today, with the name or ID where this rule puts it."
+						recommendation="Approve the rule as these hovercards show it: the name, or for a thing with no name its ID, first, in bold capitals, then the kind; no key for a thing with a name."
 						wide
 					>
 						<div className="flex flex-wrap items-start gap-6">
@@ -242,9 +241,6 @@ export function ReviewPage() {
 										share: 0.1834,
 									}}
 								/>
-							</Captioned>
-							<Captioned caption="Opened by an alert flag, about a thing with a name: an application out of contact (SH 2)">
-								<ContactLostCard app={contactLostExample} />
 							</Captioned>
 							<Captioned caption="Opened by a segment, about a thing with only an ID: a stream on the events bar">
 								<SegmentCard
@@ -271,7 +267,7 @@ export function ReviewPage() {
 					step={1}
 					title="A card's name is its link"
 					deciding="That on a card that leads to another page, only the thing's name is a link, and the card as a whole doesn't react to the pointer; and that the name shows that it leads to another page while it is pointed at or has the keyboard's focus: it is underlined, and a chevron appears after it."
-					notDeciding="How a vital card links to its page, as it shows no name, and none links anywhere yet; the key that a digest shows while it is pointed at, which is DI."
+					notDeciding="How a vital card links to its page, as it shows no name, and none links anywhere yet."
 					note="A finger can tap a little past the name, so that a short name is still easy to tap. The handler digest here links nowhere, as no handler has a page yet."
 				>
 					<State
@@ -314,68 +310,6 @@ export function ReviewPage() {
 							label,
 							<PointedName key={label} look={look} />,
 						])}
-					/>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="DI"
-				title="A digest's key"
-				note="Every digest stands for something with its own page. Its identity key is on the digest itself, so that no hovercard is needed to give it."
-			>
-				<Part
-					step={1}
-					title="The key on a digest"
-					deciding="That a digest shows the thing's identity key, shortened and copyable, while it is pointed at or anything in it has the keyboard's focus, and always on a screen that is touched: at the right of the kind on a handler digest, and at the right of the name, before any alert flag, on a compact digest, which has no kind. On a handler digest its room is kept, so nothing moves when it appears; a compact digest is too narrow to keep room for it, so its name gives up room while the key is there. A digest's name opens no hovercard."
-					notDeciding="How a key is shortened and copied, which is settled; which part of a digest is a link, which is LK; the digest's explainer, which is approved."
-					note="A compact digest's kind is always an application, so it doesn't show one, and its key goes on its name's line. Keeping room for the key there would cut most names short, such as &quot;address-book&quot;, all the time."
-				>
-					<State
-						label="A handler digest"
-						recommendation="Approve. The key is where a hovercard puts an ID, without a hovercard to open. Point at the digest to see it."
-					>
-						<div className="w-80">
-							<HandlerDigest
-								application={application}
-								handler={
-									overview.handlers[0] as OverviewData["handlers"][number]
-								}
-							/>
-						</div>
-					</State>
-					<State
-						label="Compact digests, one out of contact"
-						recommendation="Approve, as for a handler digest."
-						wide
-					>
-						<div className="max-w-xl">
-							<CompactDigests
-								data={siteOf(
-									withContact(siteApplications.slice(0, 3), {
-										out: [siteApplications[1]?.application.name ?? ""],
-									}),
-									euWest,
-								)}
-								alert="icon"
-							/>
-						</div>
-					</State>
-					<Choices
-						of="B"
-						title="where a compact digest's key goes"
-						framed={false}
-						choices={[
-							[
-								"At the right of the name, with its room kept, so names are cut short all the time",
-								<div key="kept" className="max-w-xl">
-									<CompactDigests
-										data={siteOf(siteApplications.slice(0, 3), euWest)}
-										alert="icon"
-										keepsKeyRoom
-									/>
-								</div>,
-							],
-						]}
 					/>
 				</Part>
 			</Tile>
@@ -538,13 +472,13 @@ export function ReviewPage() {
 			<Tile
 				code="FL"
 				title="Statuses as alert flags"
-				note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose hovercard says the status."
+				note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose tooltip says the status."
 			>
 				<Part
 					step={1}
 					title="An alert flag while a status applies"
 					deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
-					notDeciding="The words of each status, which are settled; the kinds of hovercard, which follow; the compact digest's alert flag, which it already has and whose hovercard is SH 2."
+					notDeciding="The words of each status, which are settled; that a flag opens a tooltip of its status, which is IC; the compact digest's alert flag, which it already has and whose tooltip is SH 2."
 					note="On a vital card, which has no label that shows, the flag goes to the left of its icon. On a digest it goes after the name, as the compact digest's does. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
 				>
 					{flaggedCards.map((f) => (
@@ -595,16 +529,16 @@ export function ReviewPage() {
 
 				<Part
 					step={2}
-					title="The hovercard of a compact digest's alert flag"
-					deciding="The words of the hovercard of a compact digest's alert flag: the application's name, and the status that says what losing contact means."
+					title="The tooltip of a compact digest's alert flag"
+					deciding="That a compact digest's alert flag opens a tooltip, not a hovercard, as the application's name is beside it; and the words of the tooltip, which say what losing contact means."
 					notDeciding={
 						"The words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
 					}
-					note="The hovercard of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
+					note="The tooltip of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
 				>
 					<State
-						label="The hovercard of a compact digest's alert icon"
-						note="It names the application, and its status says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
+						label="The tooltip of a compact digest's alert icon"
+						note="It says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
 						recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
 						precedents={[
 							{
@@ -615,9 +549,9 @@ export function ReviewPage() {
 							},
 						]}
 					>
-						<Panel>
-							<ContactLostCard app={contactLostExample} />
-						</Panel>
+						<div className={cn(panelClasses, "w-max max-w-xs px-2.5 py-1.5")}>
+							{contactLostText}
+						</div>
 					</State>
 				</Part>
 			</Tile>
@@ -631,7 +565,7 @@ export function ReviewPage() {
 					step={2}
 					title="The ID in the title bar"
 					deciding="That the cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word &quot;cluster&quot; or &quot;engine&quot;, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
-					notDeciding="How an ID is shortened and copied, which is settled; a digest's key, which is on the digest (DI); the IDs of the things in a card, which are in their segments' hovercards."
+					notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards."
 					note="The title bar names the application and its site, so the ID sits beside them, after a short gap, where it reads as part of where the page is."
 				>
 					<State
@@ -647,7 +581,6 @@ export function ReviewPage() {
 									<Identifier
 										id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
 										what="cluster ID"
-										named
 									/>
 								</>
 							}
@@ -666,7 +599,6 @@ export function ReviewPage() {
 									<Identifier
 										id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
 										what="engine ID"
-										named
 									/>
 								</>
 							}
@@ -1120,6 +1052,8 @@ function Flagged({
 
 	/** "bad" for red, "qualifies" for the grey of a status that qualifies. */
 	tone: "bad" | "qualifies";
+
+	/** The words of the status, which the flag's tooltip says. */
 	status: ReactNode;
 }) {
 	const ref = useRef<HTMLDivElement>(null);
@@ -1142,7 +1076,7 @@ function Flagged({
 			{card}
 			{at && (
 				<span className="absolute z-20" style={{ left: at.x, top: at.y }}>
-					<Popover card content={status}>
+					<Popover content={status}>
 						<span
 							className={cn(
 								"flex size-4 cursor-help",
@@ -1176,14 +1110,7 @@ const flaggedCards = [
 				href={undefined}
 			/>
 		),
-		status: (
-			<InfoCard
-				subsystem="streams"
-				icon="event"
-				kind="Events"
-				status={partialStatus}
-			/>
-		),
+		status: partialStatus.text,
 	},
 	{
 		label: "The queues tile, while no new samples are arriving",
@@ -1199,17 +1126,7 @@ const flaggedCards = [
 				href={undefined}
 			/>
 		),
-		status: (
-			<InfoCard
-				subsystem="queues"
-				icon="message"
-				kind="Queues"
-				status={{
-					icon: "alert",
-					text: "No new samples are arriving, so this average is out of date.",
-				}}
-			/>
-		),
+		status: "No new samples are arriving, so this average is out of date.",
 	},
 	{
 		label: "The cluster tile, while every node is out of contact",
@@ -1226,14 +1143,7 @@ const flaggedCards = [
 				href={undefined}
 			/>
 		),
-		status: (
-			<InfoCard
-				subsystem="cluster"
-				icon="cluster"
-				kind="Cluster"
-				status={{ icon: "alert", text: noNodesText }}
-			/>
-		),
+		status: noNodesText,
 	},
 	{
 		label: "A handler digest, while only some nodes report it",
@@ -1252,22 +1162,9 @@ const flaggedCards = [
 				}}
 			/>
 		),
-		status: (
-			<InfoCard
-				subsystem={handlerSubsystem("aggregate")}
-				icon="aggregate"
-				iconColor={kindColors.aggregate}
-				kind="aggregate"
-				name="account"
-				status={partialStatus}
-			/>
-		),
+		status: partialStatus.text,
 	},
 ];
-
-const contactLostExample = withContact(siteApplications, { out: ["kyc"] }).find(
-	(a) => a.application.name === "kyc",
-) as SiteData["applications"][number];
 
 /**
  * PointedName is a compact digest's name as it looks while it is pointed at, in

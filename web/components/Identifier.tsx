@@ -12,26 +12,15 @@ const copiedTime = 1500;
 const gap = 6;
 
 /**
- * Identifier shows an ID or a key, which is a UUID, as its first eight characters
- * in monospace type, with a button that copies the whole UUID. `what` says what
- * it is, such as "cluster ID" or "application key", so that the button can say
- * what it copied: "Copied cluster ID".
- *
- * An ID is the identity of a thing that has no name, so it is in the color of
- * the text. If the thing has a name, which the page shows beside it, the name is
- * its identity, and the ID is in the color of muted text, `named`.
+ * Identifier shows the ID of a thing that has no name, which is a UUID, in the
+ * place of a name and in the style of the text around it, as its first eight
+ * characters, with a button that copies the whole ID. `what` says what it is,
+ * such as "queue ID", so that the button can say what it copied: "Copied queue
+ * ID".
  *
  * It is made to be inside a popover that can be pointed at.
  */
-export function Identifier({
-	id,
-	what,
-	named,
-}: {
-	id: string;
-	what: string;
-	named?: boolean;
-}) {
+export function Identifier({ id, what }: { id: string; what: string }) {
 	const [copied, setCopied] = useState<DOMRect>();
 	const button = useRef<HTMLButtonElement>(null);
 	const timer = useRef<number | undefined>(undefined);
@@ -54,14 +43,7 @@ export function Identifier({
 
 	return (
 		<span className="inline-flex items-center gap-1.5 align-baseline">
-			<code
-				className={cn(
-					"text-[0.625rem]/[1.5]",
-					named ? "text-muted" : "text-fg",
-				)}
-			>
-				{shortId(id)}
-			</code>
+			<span>{shortId(id)}</span>
 			<button
 				ref={button}
 				type="button"

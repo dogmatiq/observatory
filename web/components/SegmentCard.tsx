@@ -138,7 +138,6 @@ function ApplicationSegmentCard({ about }: { about: ApplicationAbout }) {
 			icon="application"
 			kind="Application"
 			name={about.application.name}
-			id={{ id: about.application.key, what: "application key" }}
 			figure={{
 				value: <Ramped value={about.amount} format={formatCompact} />,
 				unit: about.amount === 1 ? singular : plural,
