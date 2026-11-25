@@ -52,10 +52,20 @@ export const things = {
  * there only when the bar can be spread unevenly, which is when there is more than
  * one thing, and more than one of what is spread. A node has no advice, because
  * nothing is promised about how an even spread of workloads serves it.
+ *
+ * Without `paragraphs`, the card leaves out what it says about the bar and its
+ * advice, as every segment's card will once the explainers are in the views.
+ * Only /review leaves them out, until then.
  */
-export function SegmentCard({ about }: { about: SegmentAbout }) {
+export function SegmentCard({
+	about,
+	paragraphs = true,
+}: {
+	about: SegmentAbout;
+	paragraphs?: boolean;
+}) {
 	if (about.thing === "application") {
-		return <ApplicationSegmentCard about={about} />;
+		return <ApplicationSegmentCard about={about} paragraphs={paragraphs} />;
 	}
 
 	const of = things[about.thing];
@@ -95,12 +105,16 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 					),
 			}}
 		>
-			<p>{of.bar}</p>
-			{"reading" in of && <p>{of.reading}</p>}
-			{/* The advice is about how the bar is spread, so it is only there when
-			the bar can be spread unevenly. */}
-			{"advice" in of && total.things > 1 && total.amount > 1 && (
-				<p>{of.advice}</p>
+			{paragraphs && (
+				<>
+					<p>{of.bar}</p>
+					{"reading" in of && <p>{of.reading}</p>}
+					{/* The advice is about how the bar is spread, so it is only there
+					when the bar can be spread unevenly. */}
+					{"advice" in of && total.things > 1 && total.amount > 1 && (
+						<p>{of.advice}</p>
+					)}
+				</>
 			)}
 		</InfoCard>
 	);
@@ -128,7 +142,13 @@ const applicationBars = {
  * bar shows. It gives no advice, because nothing is promised about how the
  * applications at a site are best spread.
  */
-function ApplicationSegmentCard({ about }: { about: ApplicationAbout }) {
+function ApplicationSegmentCard({
+	about,
+	paragraphs,
+}: {
+	about: ApplicationAbout;
+	paragraphs: boolean;
+}) {
 	const { subsystem, bar } = applicationBars[about.of];
 	const [singular, plural] = applicationAmounts[about.of];
 
@@ -144,7 +164,7 @@ function ApplicationSegmentCard({ about }: { about: ApplicationAbout }) {
 				aside: <Ramped value={about.share} format={formatPercent} />,
 			}}
 		>
-			<p>{bar}</p>
+			{paragraphs && <p>{bar}</p>}
 		</InfoCard>
 	);
 }

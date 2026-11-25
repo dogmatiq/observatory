@@ -223,7 +223,7 @@ export function ReviewPage() {
 				>
 					<State
 						label="The hovercards of the cluster view's and the site view's bars"
-						note="Every hovercard of a segment about one thing, on the cluster view's and the site view's bars, as they are today, with the name or ID where this rule puts it."
+						note="Every hovercard of a segment about one thing, on the cluster view's and the site view's bars, as it will be once the explainers are in the views: without what it says about the bar or its advice, which the card's explainer says instead."
 						recommendation="Approve the rule as these hovercards show it: the name, or for a thing with no name its ID, first, in bold capitals, then the kind; no key for a thing with a name."
 						wide
 					>
@@ -231,6 +231,7 @@ export function ReviewPage() {
 							<Captioned2 title="The cluster view's bars">
 								<Captioned caption="A stream, on the events bar">
 									<SegmentCard
+										paragraphs={false}
 										about={{
 											thing: "event-stream",
 											id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
@@ -242,6 +243,7 @@ export function ReviewPage() {
 								</Captioned>
 								<Captioned caption="A queue, on the queues bar">
 									<SegmentCard
+										paragraphs={false}
 										about={{
 											thing: "queue",
 											id: "c42e7a19-5d0b-4f3a-8e61-7b2d9f0a3c85",
@@ -253,6 +255,7 @@ export function ReviewPage() {
 								</Captioned>
 								<Captioned caption="A node, on the cluster bar">
 									<SegmentCard
+										paragraphs={false}
 										about={{
 											thing: "node",
 											id: nodeId,
@@ -264,6 +267,7 @@ export function ReviewPage() {
 								</Captioned>
 								<Captioned caption="A node that doesn't report its workloads, on the cluster bar">
 									<SegmentCard
+										paragraphs={false}
 										about={{ thing: "node", id: nodeId, unreported: true }}
 									/>
 								</Captioned>
@@ -271,6 +275,7 @@ export function ReviewPage() {
 							<Captioned2 title="The site view's bars">
 								<Captioned caption="An application, on the events bar">
 									<SegmentCard
+										paragraphs={false}
 										about={{
 											thing: "application",
 											of: "events",
@@ -285,6 +290,7 @@ export function ReviewPage() {
 								</Captioned>
 								<Captioned caption="An application, on the queues bar">
 									<SegmentCard
+										paragraphs={false}
 										about={{
 											thing: "application",
 											of: "messages",
