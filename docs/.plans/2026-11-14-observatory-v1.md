@@ -1049,7 +1049,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   The explainers already describe the count of due messages, as long as the cards keep the word "messages": the
   waiting count's annotation is "the number of messages ready to be delivered now"; the queues card's and the compact
   digest's first paragraph is "Commands and deadlines wait on queues until they are delivered. A command is ready to
-  be delivered at once, and a deadline once its scheduled time arrives."; and their advice is "Fewer ready messages is
+  be delivered as soon as it is queued, and a deadline once its scheduled time arrives."; and their advice is "Fewer ready messages is
   better. If the number of ready messages keeps rising, messages are becoming ready faster than they are being
   handled."
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
