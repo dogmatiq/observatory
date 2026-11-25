@@ -25,7 +25,11 @@ import type {
 import { ApplicationName } from "./ApplicationName.tsx";
 import { noNodesText } from "./ClusterCards.tsx";
 import { engineOutText } from "./EngineCard.tsx";
-import { Explained, type ExplainerSpec } from "./Explainer.tsx";
+import {
+	type Equivalent,
+	Explained,
+	type ExplainerSpec,
+} from "./Explainer.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import {
 	HandlerKindCard,
@@ -35,7 +39,6 @@ import {
 import { Icon } from "./Icon.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
-import { messagesWaitingText } from "./MessagesWaitingCard.tsx";
 import {
 	ClusterTile,
 	clusterAbout,
@@ -60,8 +63,6 @@ import {
 	SiteOverview,
 	SiteQueuesTile,
 	SiteTotals,
-	siteEventRateWords,
-	siteHandlingWords,
 } from "./SiteView.tsx";
 import { handlerSubsystem, kindColors } from "./subsystems.ts";
 
@@ -1572,6 +1573,56 @@ function NodeCardWith({
 	);
 }
 
+/** What the cluster view's events card's explainer says, which is approved. */
+const clusterEventsWords: Equivalent = {
+	of: "the cluster view's events card",
+	notes: [
+		"the rate of new events, averaged over the last minute",
+		"total number of events on the application's event streams",
+		"the number of event streams the application has",
+		"how the events are spread across the streams",
+		"events recorded over the last minute",
+	],
+	paragraphs: [
+		"Each event that the application records is written to an event stream. Streams store events in the order they are written, so they can be read in that order.",
+		"In a box: The statements application's engine spreads events across several event streams. An even spread is better; a stream that holds more than its fair share limits parallel throughput. Each aggregate instance is bound to a single stream so that its events can be read in order.",
+	],
+};
+
+/** What the cluster view's queues card's explainer says, which is approved. */
+const clusterQueuesWords: Equivalent = {
+	of: "the cluster view's queues card",
+	notes: [
+		"the number of messages ready to be delivered now",
+		"the number of messages that are failing",
+		"the number of queues the application has",
+		"the rate of handled messages, averaged over the last minute",
+		"how the messages are spread across the queues",
+		"messages handled over the last minute",
+	],
+	paragraphs: [
+		"Commands and deadlines wait on queues until they are delivered. A command is ready to be delivered as soon as it is queued, and a deadline once its scheduled time arrives.",
+		"Fewer ready messages is better. If the number keeps rising, messages are becoming ready faster than they are being handled.",
+		"In a box: The statements application's engine spreads messages across several queues. An even spread is better; a queue that holds more than its fair share limits parallel throughput.",
+	],
+};
+
+/** What the cluster view's cluster card's explainer says, which is approved. */
+const clusterCardWords: Equivalent = {
+	of: "the cluster view's cluster card",
+	notes: [
+		"the number of nodes in contact now",
+		"the number of workloads in the cluster",
+		"how the workloads are spread across the nodes",
+		"how recently each node sent a heartbeat",
+	],
+	paragraphs: [
+		"Each node is a running process of the application's engine, and the nodes share the application's work.",
+		"The work is divided into ongoing tasks, such as delivering messages to a handler, which are called workloads. Each workload is given to one node at a time.",
+		"Each node sends heartbeats to show that it is running. Its section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
+	],
+};
+
 /**
  * The site of the explainers of the site view's tiles: six applications in
  * contact, two of which have failing messages.
@@ -1616,6 +1667,7 @@ function siteTitle(what: string) {
 
 const siteEventsExplainer: ExplainerSpec = {
 	label: "site's events tile",
+	equivalent: clusterEventsWords,
 	icon: "svg.size-5",
 	title: siteTitle("The events and event streams of the applications"),
 	width: 360,
@@ -1665,14 +1717,11 @@ const siteEventsExplainer: ExplainerSpec = {
 			when: { has: "stream" },
 		},
 	],
-	before: [
-		"Icon: This section shows information about the events and event streams of the applications at the eu-west site.",
-		`Headline: ${siteEventRateWords.description}, averaged over the last minute.`,
-	],
 };
 
 const siteQueuesExplainer: ExplainerSpec = {
 	label: "site's queues tile",
+	equivalent: clusterQueuesWords,
 	icon: "svg.size-5",
 	title: siteTitle("The messages and queues of the applications"),
 	width: 360,
@@ -1734,15 +1783,11 @@ const siteQueuesExplainer: ExplainerSpec = {
 		"Commands and deadlines wait on queues until they are delivered. A command is ready to be delivered as soon as it is queued, and a deadline once its scheduled time arrives.",
 		"Fewer ready messages is better. If the number keeps rising, messages are becoming ready faster than they are being handled.",
 	],
-	before: [
-		"Icon: This section shows information about the messages and queues of the applications at the eu-west site.",
-		`Headline: ${messagesWaitingText}`,
-		`Rate: ${siteHandlingWords.description}, averaged over the last minute.`,
-	],
 };
 
 const siteApplicationsExplainer: ExplainerSpec = {
 	label: "site's applications tile",
+	equivalent: clusterCardWords,
 	icon: "svg.size-5",
 	title: siteTitle("The applications"),
 	width: 360,
@@ -1779,13 +1824,11 @@ const siteApplicationsExplainer: ExplainerSpec = {
 	paragraphs: [
 		"Each application's nodes send heartbeats to show that they are running. An application's section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
 	],
-	before: [
-		"Icon: This section shows information about the applications at the eu-west site.",
-	],
 };
 
 const engineExplainer: ExplainerSpec = {
 	label: "engine tile",
+	equivalent: clusterCardWords,
 	icon: "svg.size-5",
 	title: (
 		<>
@@ -1824,9 +1867,5 @@ const engineExplainer: ExplainerSpec = {
 	],
 	paragraphs: [
 		"The engine sends heartbeats to show that it is running. The heartbeat chart rises with each heartbeat and falls until the next. If the heartbeats stop, the chart sinks to the bottom, and the card shows the engine as offline.",
-	],
-	before: [
-		"Icon: This section shows information about the engine that runs the statements application at the eu-west site.",
-		"Headline: The engine is online while it is in contact, so the figures shown are current.",
 	],
 };

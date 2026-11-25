@@ -380,8 +380,19 @@ export interface ExplainerSpec {
 	/** Definitions and advice that don't fit an annotation, under the card. */
 	paragraphs?: Paragraph[];
 
-	/** What the hovercards that explained the card said, for comparison. */
-	before: string[];
+	/**
+	 * What the explainer of the same kind of card on the cluster view says, for a
+	 * card of another view, so that a reviewer can compare them.
+	 */
+	equivalent?: Equivalent;
+}
+
+/** The words of an explainer, for comparing with another. */
+export interface Equivalent {
+	/** Which card's explainer it is, such as "the cluster view's events card". */
+	of: string;
+	notes: string[];
+	paragraphs: string[];
 }
 
 /** The most that the card is enlarged in the dialog, if the window has room. */
@@ -872,7 +883,7 @@ export function Explainer({
 				</svg>
 			</button>
 			<style>{`::highlight(${focusName}) { color: var(--color-fg); }`}</style>
-			<Before items={explainer.before} />
+			{explainer.equivalent && <Compared equivalent={explainer.equivalent} />}
 			{/* The stage is in the middle of the window, and the window scrolls when
 			the stage is taller than it. */}
 			<div className="pointer-events-none relative flex min-h-full items-center justify-center py-6">
@@ -1019,20 +1030,31 @@ export function Explainer({
 }
 
 /**
- * Before lists what the hovercards that explained a card said, so that a reviewer
- * can check that the explainer keeps it. It is only for the mockup.
+ * Compared lists what the explainer of the same kind of card on the cluster view
+ * says, so that a reviewer can compare the two. It is only for review.
  */
-function Before({ items }: { items: string[] }) {
+function Compared({ equivalent }: { equivalent: Equivalent }) {
 	return (
 		<details className="absolute bottom-4 left-4 z-10 max-w-md rounded-control border border-line bg-panel p-3 text-xs text-muted">
 			<summary className="cursor-pointer text-fg-soft">
-				What the hovercards said
+				What {equivalent.of}&rsquo;s explainer says
 			</summary>
-			<ul className="mt-2 flex list-disc flex-col gap-1.5 pl-4">
-				{items.map((item) => (
-					<li key={item}>{item}</li>
+			<p className="mt-2 font-semibold text-fg-soft">Annotations</p>
+			<ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+				{equivalent.notes.map((note) => (
+					<li key={note}>{note}</li>
 				))}
 			</ul>
+			{equivalent.paragraphs.length > 0 && (
+				<>
+					<p className="mt-2 font-semibold text-fg-soft">Under the card</p>
+					<ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+						{equivalent.paragraphs.map((paragraph) => (
+							<li key={paragraph}>{paragraph}</li>
+						))}
+					</ul>
+				</>
+			)}
 		</details>
 	);
 }
