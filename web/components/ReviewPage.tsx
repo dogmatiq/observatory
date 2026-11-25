@@ -90,6 +90,7 @@ export function ReviewPage() {
 				<Part
 					step={0}
 					title="Tiles above, applications below"
+					deciding="Where the view's parts go: the three tiles above, in a row, and the applications below them, in the order of their names."
 					notDeciding={
 						"What the tiles and the compact digests say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or contact is lost (SS); whether the grid is of compact digests or of squares (SL 1)."
 					}
@@ -104,9 +105,8 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The grid of applications"
-					notDeciding={
-						"What a compact digest's figures are, and what their hovercards say (SH); how a compact digest looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
-					}
+					deciding="Whether each application below the tiles is a compact digest, with its name and figures, or a square in a grid that names it only when pointed at."
+					notDeciding="What a compact digest's figures are, and its explainer, which is approved; the hovercard of its alert flag (SH 2); how a compact digest looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
 					note="Each application is a compact digest with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
 				>
 					<State
@@ -145,9 +145,8 @@ export function ReviewPage() {
 				<Part
 					step={0}
 					title="The view in each state"
-					notDeciding={
-						"The layout (SL); what the tiles and their hovercards say, including the hovercard that explains the applications tile's headline (SW and SH); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
-					}
+					deciding="How the whole view looks in each state: when messages fail, when only some nodes report, and when contact with one application, or with all of them, is lost."
+					notDeciding="The layout (SL); the words on the tiles (SH 1) and their explainers (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
 				>
 					<State
 						label="Three applications with failing messages"
@@ -229,6 +228,7 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The events tile"
+					deciding="The words of the events tile's explainer: its five annotations, its title, and the paragraph about event streams under the card."
 					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself, which are SH 1; the alert flag of a status, which is FL."
 					note="It is the cluster view's events card for all the applications at the site together. Its bar is of the applications, and has no advice, because applications record events at whatever rate their work needs."
 				>
@@ -243,7 +243,8 @@ export function ReviewPage() {
 				<Part
 					step={2}
 					title="The queues tile"
-					notDeciding="The words on the tile, which are SH 1; counting the messages that are due, which is in the plan, and whose words the explainer already has."
+					deciding="The words of the queues tile's explainer: its six annotations, its title, and the two paragraphs under the card."
+					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); counting the messages that are due, which is in the plan, and whose words the explainer already has."
 					note="It is the cluster view's queues card for all the applications at the site together. Its bar is of the applications, and has no advice, for the same reason as the events tile's."
 				>
 					<State
@@ -257,7 +258,8 @@ export function ReviewPage() {
 				<Part
 					step={3}
 					title="The applications tile"
-					notDeciding="The words on the tile, which are SH 1."
+					deciding="The words of the applications tile's explainer: its three annotations, its title, and the paragraph about the heartbeat chart under the card."
+					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); the chart itself (SC 1)."
 					note="Its headline is the applications in contact, with those out of contact set apart in red, and its chart is the heartbeat chart, with a share for each application in contact."
 				>
 					<State
@@ -278,6 +280,7 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="An alert flag while a status applies"
+					deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
 					notDeciding="The words of each status, which are settled; the kinds of hovercard, which follow; the compact digest's alert flag, which it already has and whose hovercard is SH 2."
 					note="On a vital card, which has no label that shows, the flag goes to the left of its icon. On a digest it goes after the name, as the compact digest's does. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
 				>
@@ -302,6 +305,7 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="A hovercard on the icon with only the ID"
+					deciding="That the cluster's and the engine's icons keep a hovercard with only the kind and the ID, which can be copied, and lose the paragraph that the explainer's title replaces."
 					notDeciding="How an ID is shortened and copied, which is settled; IDs elsewhere, such as a stream's on its bar."
 					note="The hovercard of the icon keeps the kind and the shortened ID, which can be copied, and loses its paragraph. The other way is to show the ID in the view itself, such as beside the application's name in the title bar, which this review doesn't draw."
 				>
@@ -366,9 +370,8 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The thing's name or ID, under its kind"
-					notDeciding={
-						"The other words of any hovercard, which keep their own reviews; the hovercard of a compact digest's alert icon, which is SH 2 and follows this rule either way; how an ID is shortened and copied, which is settled."
-					}
+					deciding="Where every hovercard says which thing it is about: the thing's name in bold, or its ID if it has only an ID, under its kind."
+					notDeciding="The other words of any hovercard, which keep their own reviews; how an ID is shortened and copied, which is settled. The handler's hovercard shown here goes when the explainers are built, so this part is reworked before it is decided."
 					note="Today a hovercard says which thing it is about in one of three ways: an ID under its kind, copyable, on the hovercards of a cluster, an engine, a stream, a queue and a node; a name under its kind, in bold, on the site view's application hovercards; or the name inside a sentence, on a handler's hovercard. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;. The rule makes that concrete: a hovercard about one thing shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. Sentences may still say where the thing is, such as which application it is in, because that is not its identity."
 				>
 					<State
@@ -482,9 +485,8 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The headlines and detail lines"
-					notDeciding={
-						"The hovercards that open when the headlines and detail lines are pointed at (SH 2); the hovercards of the icons (SW); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
-					}
+					deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
+					notDeciding="The tiles' explainers (SW); the hovercard of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
 					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
 				>
 					<State
@@ -511,6 +513,7 @@ export function ReviewPage() {
 				<Part
 					step={2}
 					title="The hovercard of a compact digest's alert flag"
+					deciding="The words of the hovercard of a compact digest's alert flag: the application's name, and the status that says what losing contact means."
 					notDeciding={
 						"The words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
 					}
@@ -544,9 +547,8 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The bars"
-					notDeciding={
-						"How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' other hovercards (SW and SH)."
-					}
+					deciding="What the bars of the events and queues tiles show, a segment for each of the busiest applications and one for the rest, and what a segment's hovercard says when it is pointed at."
+					notDeciding="How a bar is drawn and shaded, which is as on the cluster view; that the applications tile has no bar (SL); the tiles' explainers (SW) and the alert flag's hovercard (SH 2)."
 					note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's hovercard drills down: the application's name, its amount and its share. It gives no advice, because nothing is promised about how the applications at a site are best spread. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
 				>
 					<State
@@ -618,9 +620,8 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The applications tile's chart"
-					notDeciding={
-						"How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's headline and words (SW and SH)."
-					}
+					deciding="How the applications tile's heartbeat chart gives each application in contact a share, and what happens to an application's share when contact is lost."
+					notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's words (SH 1) and its explainer (SW 3)."
 					recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
 					note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
 				>
@@ -643,9 +644,8 @@ export function ReviewPage() {
 				<Part
 					step={0}
 					title="The tile"
-					notDeciding={
-						"What the hovercards say: the status on the icon's hovercard (EV 1) and the hovercard of a segment of the bar (EV 4), though they open when pointed at here."
-					}
+					deciding="How the events tile looks in each of its states."
+					notDeciding="What the hovercards say: the status, which becomes an alert flag (FL), and the hovercard of a segment of the bar (EV 4)."
 				>
 					<State label="Several streams" decided>
 						<EventsTile
@@ -681,9 +681,8 @@ export function ReviewPage() {
 				<Part
 					step={4}
 					title="The bar"
-					notDeciding={
-						"Which streams the bar shows, and how it is drawn, which are settled; the status on the icon's hovercard (EV 1)."
-					}
+					deciding="What a segment of the events tile's bar shows when it is pointed at: its stream, its events and its share of them."
+					notDeciding="Which streams the bar shows, and how it is drawn, which are settled; the advice about the spread, which moves to the explainer."
 					decided={false}
 					recommendation="Approve. The sentence about the bar is the same each time and has no figures in it, which are the stream's events and share."
 					note="Each segment is an event stream, and has the hovercard of that stream: its events and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that appends every event to one stream has no bar, so the hovercard is only ever of one of several streams."
@@ -749,9 +748,8 @@ export function ReviewPage() {
 				<Part
 					step={4}
 					title="The bar"
-					notDeciding={
-						"Which queues the bar shows, and how it is drawn, which are settled; the hovercard of a segment of the events tile's bar (EV 4)."
-					}
+					deciding="What a segment of the queues tile's bar shows when it is pointed at: its queue, its messages and its share of them."
+					notDeciding="Which queues the bar shows, and how it is drawn, which are settled; the advice about the spread, which moves to the explainer."
 					decided={false}
 					recommendation="Approve, as the events tile's bar."
 					note="Each segment is a queue, and has the hovercard of that queue: its messages and its share of them, then what the bar shows, and the advice about how it is best spread. An engine that keeps every message in one queue has no bar, so the hovercard is only ever of one of several queues."
@@ -786,9 +784,8 @@ export function ReviewPage() {
 				<Part
 					step={0}
 					title="The tile"
-					notDeciding={
-						"What any hovercard says (CL 2 to CL 4, and WD); the chart, which is settled (CL 5). Only the state of a node that doesn't report its workloads is open here."
-					}
+					deciding="How the cluster tile looks while a node doesn't report its workloads."
+					notDeciding="The statuses, which become alert flags (FL); the explainer, which is approved; the chart, which is settled (CL 5)."
 				>
 					{(
 						[
@@ -846,9 +843,8 @@ export function ReviewPage() {
 				<Part
 					step={4}
 					title="The bar"
-					notDeciding={
-						"How the bar is drawn, which is settled; the hovercard of the workloads in the detail line (CL 3)."
-					}
+					deciding="What a segment of the cluster tile's bar shows when it is pointed at: its node, its workloads and its share of them."
+					notDeciding="How the bar is drawn, which is settled; the explainer, which is approved."
 					decided={false}
 					recommendation="Approve. A node's hovercard drills down: its workloads and its share are its figures, a node that owns none has no share, and a node that doesn't report its workloads, while others do, shows only its ID, with a status. The words about the bar never change."
 					note="Each segment is a node, and has the hovercard of that node. The hovercard drills down: its figures are the node's workloads and its share of them, and its words, about the bar, never change. A node that owns none has no share."
@@ -1042,6 +1038,7 @@ export function ReviewPage() {
 				<Part
 					step={4}
 					title="The explainer"
+					deciding="The words of the engine tile's explainer: its two annotations, its title, and the paragraph about heartbeats under the card."
 					notDeciding="The alert flag of the engine while it is out of contact, which is FL; how an explainer looks and opens, which is settled."
 					note="It takes the place of the hovercards of the icon and the headline, by the rules of the cluster view's explainers. What &quot;online&quot; means, which the headline's hovercard said, is in its text."
 				>

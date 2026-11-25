@@ -45,6 +45,7 @@ function Page() {
 					step={0}
 					title="The whole"
 					recommendation="Approve the whole."
+					deciding="The whole."
 					notDeciding="The words."
 				>
 					<State label="As it is">whole</State>
@@ -52,7 +53,12 @@ function Page() {
 				<Part step={1} title="Settled" decided>
 					<State label="As it is">settled</State>
 				</Part>
-				<Part step={2} title="The words" notDeciding="The whole.">
+				<Part
+					step={2}
+					title="The words"
+					deciding="The words."
+					notDeciding="The whole."
+				>
 					<State label="One wording" recommendation="Approve.">
 						one
 					</State>
@@ -71,6 +77,7 @@ function Page() {
 					step={0}
 					title="Only part"
 					recommendation="Approve."
+					deciding="The only part."
 					notDeciding="Nothing else."
 				>
 					<State label="As it is">second</State>
@@ -107,10 +114,13 @@ test("a tile's next part is shown once the one before it is decided, and the nex
 	expect(screen.queryByText(/^Still to come/)).toBeNull();
 });
 
-test("an open part says what it isn't deciding", () => {
+test("an open part says what it is deciding, and what it isn't", () => {
 	stubDecisions();
 	render(<Page />);
 
+	expect(screen.getByText("Decided here:").parentElement?.textContent).toBe(
+		"Decided here: The whole.",
+	);
 	expect(screen.getByText("Not decided here:").parentElement?.textContent).toBe(
 		"Not decided here: The words.",
 	);

@@ -307,10 +307,14 @@ type PartProps = {
 	| {
 			/** True if the whole part is settled, so it has nothing open to explain. */
 			decided: true;
+			deciding?: never;
 			notDeciding?: never;
 	  }
 	| {
 			decided?: false;
+
+			/** What the reviewer is deciding here, said as plainly as possible. */
+			deciding: string;
 
 			/**
 			 * What the part shows, or what is near it, that the reviewer is not
@@ -322,8 +326,16 @@ type PartProps = {
 );
 
 export function Part(props: PartProps) {
-	const { step, title, note, decided, notDeciding, recommendation, children } =
-		props;
+	const {
+		step,
+		title,
+		note,
+		decided,
+		deciding,
+		notDeciding,
+		recommendation,
+		children,
+	} = props;
 	const tile = useContext(TileCode);
 	const { ids } = useContext(Accepted);
 	const settled = partSettled(tile, props, ids);
@@ -343,6 +355,12 @@ export function Part(props: PartProps) {
 						)}
 					</h3>
 					{note && <p className="text-sm text-muted">{note}</p>}
+					{deciding && (
+						<p className="mt-1 text-sm text-muted">
+							<span className="font-semibold text-fg-soft">Decided here:</span>{" "}
+							{deciding}
+						</p>
+					)}
 					{notDeciding && (
 						<p className="mt-1 text-sm text-muted">
 							<span className="font-semibold text-fg-soft">
