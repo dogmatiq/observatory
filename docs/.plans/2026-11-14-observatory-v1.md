@@ -1150,7 +1150,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   trail's hovercard gives the application's version and the name and version of the engine's software. While the
   nodes give different versions, the engine's tag is the range from the lowest to the highest, by semantic versioning,
   and the application's says "multiple versions", because its versions can be in any form; while the nodes give
-  different engines, the cluster has no name and its tag says "multiple engines" (decided). The server sends
+  different engines, the cluster has no name and the hovercard gives no engine or version for it (decided). The server sends
   only whether the nodes' versions are the same, so it would send the engine's lowest and highest versions.
 - The observation budget's actual limits. They are set before the prototype's queries are ported.
 - Where runkit keeps its counters of removed commands and deadlines: in memory on each node, which makes them
