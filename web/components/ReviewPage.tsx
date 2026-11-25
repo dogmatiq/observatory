@@ -1,4 +1,10 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { application, overview } from "../fixtures/overview.ts";
 import {
 	euWest,
@@ -6,6 +12,7 @@ import {
 	siteOf,
 	withContact,
 } from "../fixtures/site.ts";
+import { cn } from "../lib/cn.ts";
 import { Covered } from "../lib/distrust.tsx";
 import { formatCompact, formatPercent } from "../lib/format.ts";
 import { LiveData } from "../lib/live.tsx";
@@ -18,11 +25,13 @@ import {
 	WorkloadsCard,
 } from "./ClusterCards.tsx";
 import { EngineCard, engineOutText } from "./EngineCard.tsx";
+import { HandlerDigest } from "./HandlerDigest.tsx";
 import {
 	HandlerKindCard,
 	handlerKindAbout,
 	handlerKindReminders,
 } from "./HandlerKindCard.tsx";
+import { Icon } from "./Icon.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { messagesWaitingText } from "./MessagesWaitingCard.tsx";
@@ -39,6 +48,7 @@ import {
 	queuesAbout,
 	Totals,
 } from "./Overview.tsx";
+import { Popover } from "./Popover.tsx";
 import { partialStatus } from "./partial.ts";
 import { Ramped } from "./Ramped.tsx";
 import { RateCard } from "./RateCard.tsx";
@@ -329,6 +339,94 @@ export function ReviewPage() {
 								</InfoCard>
 							</Panel>
 						</div>
+					</State>
+				</Part>
+			</Tile>
+
+			<Tile
+				code="FL"
+				title="Statuses as alert flags"
+				note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose hovercard says the status."
+			>
+				<Part
+					step={1}
+					title="An alert flag while a status applies"
+					notDeciding="The words of each status, which are settled; the kinds of hovercard, which follow; the compact digest's alert flag, which it already has and whose hovercard is SH 2."
+					note="On a vital card, which has no label that shows, the flag goes to the left of its icon. On a digest it goes after the name, as the compact digest's does. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
+				>
+					{flaggedCards.map((f) => (
+						<State
+							key={f.label}
+							label={f.label}
+							note={f.note}
+							recommendation={f.recommendation}
+						>
+							<Flagged {...f} />
+						</State>
+					))}
+				</Part>
+			</Tile>
+
+			<Tile
+				code="ID"
+				title="The cluster's and the engine's IDs"
+				note="The ID of the cluster, and of the engine that doesn't cluster, is in the hovercard of the vital card's icon today, under the words that the explainer's title replaces. The explainer shows made-up figures, so it can't show a real ID."
+			>
+				<Part
+					step={1}
+					title="A hovercard on the icon with only the ID"
+					notDeciding="How an ID is shortened and copied, which is settled; IDs elsewhere, such as a stream's on its bar."
+					note="The hovercard of the icon keeps the kind and the shortened ID, which can be copied, and loses its paragraph. The other way is to show the ID in the view itself, such as beside the application's name in the title bar, which this review doesn't draw."
+				>
+					<State
+						label="The cluster card's icon"
+						recommendation="Approve. An ID is for drilling down, which is what hovercards are for now, and the explainer's &quot;?&quot; at the bottom right leaves the icon free."
+						precedents={[
+							{
+								where: "On the cluster view, the cluster tile's icon",
+								status: "settled",
+								words: clusterAbout(atSite),
+							},
+						]}
+					>
+						<Panel>
+							<InfoCard
+								subsystem="cluster"
+								icon="cluster"
+								kind="Cluster"
+								identifier={
+									<Identifier
+										id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
+										of="cluster"
+									/>
+								}
+							/>
+						</Panel>
+					</State>
+					<State
+						label="The engine card's icon"
+						recommendation="Approve, as for the cluster."
+						precedents={[
+							{
+								where: "On the cluster view, the engine tile's icon",
+								status: "settled",
+								words: engineAbout(atSite),
+							},
+						]}
+					>
+						<Panel>
+							<InfoCard
+								subsystem="cluster"
+								icon="engine"
+								kind="Engine"
+								identifier={
+									<Identifier
+										id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
+										of="engine"
+									/>
+								}
+							/>
+						</Panel>
 					</State>
 				</Part>
 			</Tile>
@@ -1688,6 +1786,176 @@ export function ReviewPage() {
 }
 
 /** An application of the site view's fixture, out of contact. */
+/**
+ * Flagged draws a card with an alert flag beside its anchor: to the left of a
+ * vital card's icon, or after a digest's name. Pointing at the flag shows the
+ * status in a hovercard. It shows how a status would look once the hovercards
+ * that explain stop carrying statuses.
+ */
+function Flagged({
+	card,
+	width,
+	anchor,
+	after,
+	tone,
+	status,
+}: {
+	card: ReactNode;
+	width: number;
+
+	/** A CSS selector for what the flag goes beside. */
+	anchor: string;
+
+	/** True to put the flag after the anchor, as after a digest's name. */
+	after?: true;
+
+	/** "bad" for red, "qualifies" for the grey of a status that qualifies. */
+	tone: "bad" | "qualifies";
+	status: ReactNode;
+}) {
+	const ref = useRef<HTMLDivElement>(null);
+	const [at, setAt] = useState<{ x: number; y: number }>();
+	useLayoutEffect(() => {
+		const el = ref.current;
+		const target = el?.querySelector(anchor);
+		if (!el || !target) {
+			return;
+		}
+		const box = el.getBoundingClientRect();
+		const r = target.getBoundingClientRect();
+		setAt({
+			x: after ? r.right - box.left + 6 : r.left - box.left - 22,
+			y: r.top + r.height / 2 - box.top - 8,
+		});
+	}, [anchor, after]);
+	return (
+		<div ref={ref} className="relative" style={{ width }}>
+			{card}
+			{at && (
+				<span className="absolute z-20" style={{ left: at.x, top: at.y }}>
+					<Popover card content={status}>
+						<span
+							className={cn(
+								"flex size-4 cursor-help",
+								tone === "bad" ? "text-bad" : "text-fg-soft",
+							)}
+						>
+							<Icon name="alert" className="size-4" />
+							<span className="sr-only">Status</span>
+						</span>
+					</Popover>
+				</span>
+			)}
+		</div>
+	);
+}
+
+/** The cards of FL 1, each with the status that it would flag. */
+const flaggedCards = [
+	{
+		label: "The events tile, while only some nodes report it",
+		note: "Today the status is in the hovercard of the tile's icon.",
+		recommendation:
+			"Approve. The status shows only while it applies, in grey, because the figures are still worth reading.",
+		width: 360,
+		anchor: "svg.size-5",
+		tone: "qualifies" as const,
+		card: (
+			<EventsTile
+				application={application}
+				data={{ ...overview.events, coverage: 0.67 }}
+				href={undefined}
+			/>
+		),
+		status: (
+			<InfoCard
+				subsystem="streams"
+				icon="event"
+				kind="Events"
+				status={partialStatus}
+			/>
+		),
+	},
+	{
+		label: "The queues tile, while no new samples are arriving",
+		note: "Today the status is in the hovercard of the rate.",
+		recommendation: "Approve, as for the events tile.",
+		width: 360,
+		anchor: "svg.size-5",
+		tone: "qualifies" as const,
+		card: (
+			<QueuesTile
+				application={application}
+				data={overview.queues}
+				href={undefined}
+			/>
+		),
+		status: (
+			<InfoCard
+				subsystem="queues"
+				icon="message"
+				kind="Queues"
+				status={{
+					icon: "alert",
+					text: "No new samples are arriving, so this average is out of date.",
+				}}
+			/>
+		),
+	},
+	{
+		label: "The cluster tile, while every node is out of contact",
+		note: "Today the status is in the hovercard of the nodes.",
+		recommendation:
+			"Approve, in red, because something is wrong, as the tile's red 0 and accent already say.",
+		width: 360,
+		anchor: "svg.size-5",
+		tone: "bad" as const,
+		card: (
+			<ClusterTile
+				application={application}
+				data={{ ...overview.cluster, nodes: [] }}
+				href={undefined}
+			/>
+		),
+		status: (
+			<InfoCard
+				subsystem="cluster"
+				icon="cluster"
+				kind="Cluster"
+				status={{ icon: "alert", text: noNodesText }}
+			/>
+		),
+	},
+	{
+		label: "A handler digest, while only some nodes report it",
+		note: "Today the status is in the hovercard of the kind icon. The flag goes after the name, as on a compact digest.",
+		recommendation: "Approve, as for the events tile.",
+		width: 360,
+		anchor: "span[id]",
+		after: true as const,
+		tone: "qualifies" as const,
+		card: (
+			<HandlerDigest
+				application={application}
+				handler={{
+					...(overview.handlers[0] as OverviewData["handlers"][number]),
+					coverage: 0.5,
+				}}
+			/>
+		),
+		status: (
+			<InfoCard
+				subsystem={handlerSubsystem("aggregate")}
+				icon="aggregate"
+				iconColor={kindColors.aggregate}
+				kind="aggregate"
+				identifier={<span className="font-semibold text-fg">account</span>}
+				status={partialStatus}
+			/>
+		),
+	},
+];
+
 const contactLostExample = withContact(siteApplications, { out: ["kyc"] }).find(
 	(a) => a.application.name === "kyc",
 ) as SiteData["applications"][number];
