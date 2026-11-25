@@ -321,6 +321,13 @@ export interface Note {
 	 * area under the chart's line, near its right end, and never on the line.
 	 */
 	into?: "chart";
+
+	/**
+	 * What the explainer of the same kind of card on the cluster view says here,
+	 * for a card of another view, which a reviewer compares it with. It is shown
+	 * under the annotation's words, in plain type.
+	 */
+	compare?: string;
 }
 
 /**
@@ -354,7 +361,13 @@ function shows(card: Element, when: Shown | undefined): boolean {
  */
 export type Paragraph =
 	| string
-	| { text: string; when: Shown }
+	| {
+			text: string;
+			when?: Shown;
+
+			/** What the cluster view's explainer says in its place, for review. */
+			compare?: string;
+	  }
 	| {
 			when?: Shown;
 			key: string;
@@ -379,20 +392,6 @@ export interface ExplainerSpec {
 
 	/** Definitions and advice that don't fit an annotation, under the card. */
 	paragraphs?: Paragraph[];
-
-	/**
-	 * What the explainer of the same kind of card on the cluster view says, for a
-	 * card of another view, so that a reviewer can compare them.
-	 */
-	equivalent?: Equivalent;
-}
-
-/** The words of an explainer, for comparing with another. */
-export interface Equivalent {
-	/** Which card's explainer it is, such as "the cluster view's events card". */
-	of: string;
-	notes: string[];
-	paragraphs: string[];
 }
 
 /** The most that the card is enlarged in the dialog, if the window has room. */
@@ -883,7 +882,6 @@ export function Explainer({
 				</svg>
 			</button>
 			<style>{`::highlight(${focusName}) { color: var(--color-fg); }`}</style>
-			{explainer.equivalent && <Compared equivalent={explainer.equivalent} />}
 			{/* The stage is in the middle of the window, and the window scrolls when
 			the stage is taller than it. */}
 			<div className="pointer-events-none relative flex min-h-full items-center justify-center py-6">
@@ -1007,7 +1005,12 @@ export function Explainer({
 							shown[i] === false ? null : typeof paragraph === "string" ? (
 								<p key={paragraph}>{paragraph}</p>
 							) : !("key" in paragraph) ? (
-								<p key={paragraph.text}>{paragraph.text}</p>
+								<p key={paragraph.text}>
+									{paragraph.text}
+									{paragraph.compare && (
+										<Comparison words={paragraph.compare} />
+									)}
+								</p>
 							) : (
 								<p
 									key={paragraph.key}
@@ -1030,32 +1033,15 @@ export function Explainer({
 }
 
 /**
- * Compared lists what the explainer of the same kind of card on the cluster view
- * says, so that a reviewer can compare the two. It is only for review.
+ * Comparison is what the cluster view's explainer says in the place of an
+ * annotation or a paragraph, in plain type under it, so that a reviewer can
+ * compare the two. It is only for review.
  */
-function Compared({ equivalent }: { equivalent: Equivalent }) {
+function Comparison({ words }: { words: string }) {
 	return (
-		<details className="absolute bottom-4 left-4 z-10 max-w-md rounded-control border border-line bg-panel p-3 text-xs text-muted">
-			<summary className="cursor-pointer text-fg-soft">
-				What {equivalent.of}&rsquo;s explainer says
-			</summary>
-			<p className="mt-2 font-semibold text-fg-soft">Annotations</p>
-			<ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
-				{equivalent.notes.map((note) => (
-					<li key={note}>{note}</li>
-				))}
-			</ul>
-			{equivalent.paragraphs.length > 0 && (
-				<>
-					<p className="mt-2 font-semibold text-fg-soft">Under the card</p>
-					<ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
-						{equivalent.paragraphs.map((paragraph) => (
-							<li key={paragraph}>{paragraph}</li>
-						))}
-					</ul>
-				</>
-			)}
-		</details>
+		<span className="mt-1 block font-sans text-[11px] leading-[14px] tracking-normal text-faint">
+			Cluster view: {words}
+		</span>
 	);
 }
 
@@ -1441,6 +1427,7 @@ function Legend({
 						<Badge n={n} active={active === i} />
 						<span className="pt-px">
 							<Highlighted on={active === i}>{d.note.text}</Highlighted>
+							{d.note.compare && <Comparison words={d.note.compare} />}
 						</span>
 					</button>
 				</li>
@@ -1760,6 +1747,7 @@ function Arrows({
 					onPointerLeave={() => onActive(undefined)}
 				>
 					<Highlighted on={active === i}>{note.text}</Highlighted>
+					{note.compare && <Comparison words={note.compare} />}
 				</span>
 			))}
 		</>
