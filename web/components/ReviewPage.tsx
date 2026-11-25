@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { application, overview } from "../fixtures/overview.ts";
 import {
 	euWest,
@@ -8,9 +8,13 @@ import {
 } from "../fixtures/site.ts";
 import { cn } from "../lib/cn.ts";
 import { Covered } from "../lib/distrust.tsx";
-import { shortId } from "../lib/format.ts";
 import { LiveData } from "../lib/live.tsx";
-import type { OverviewData, SiteApplication, SiteData } from "../model.ts";
+import type {
+	OverviewData,
+	SiteApplication,
+	SiteData,
+	Software,
+} from "../model.ts";
 import { Explained } from "./Explainer.tsx";
 import {
 	cardExplainers,
@@ -18,10 +22,9 @@ import {
 	siteExplainers,
 } from "./explainers.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
-import { Icon, type IconName } from "./Icon.tsx";
+import { Icon } from "./Icon.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
-import { NameLink } from "./NameLink.tsx";
 import {
 	ClusterTile,
 	EngineTile,
@@ -29,7 +32,8 @@ import {
 	QueuesTile,
 	Totals,
 } from "./Overview.tsx";
-import { Popover, panelClasses } from "./Popover.tsx";
+import { PageTrail } from "./PageTrail.tsx";
+import { panelClasses } from "./Popover.tsx";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
 import { SegmentCard } from "./SegmentCard.tsx";
 import {
@@ -794,21 +798,21 @@ export function ReviewPage() {
 					title="Where the page is, in the title bar"
 					deciding="That the title bar says where the page is as a trail: the page's address, the site and the application, and, on a cluster's own page, the cluster, or the engine for an engine that doesn't cluster, each a link to its own page, by its name, the cluster's or engine's being the name of the engine's software while its nodes agree on it, and otherwise its shortened ID; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable, and of the versions of the application and the engine's software, which, while the nodes give different versions, are the range of the engine's versions and &quot;multiple versions&quot; for the application's; and that no card's icon, on a vital card or a digest, opens a hovercard."
 					notDeciding="Where the trail goes once the views have links, which waits until they do; how an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
-					note="Every page has its own address, so each step of the trail is a page to go to, and the trail is the page's address: on an application's page, the site and then the application, which is what a reader asks to see; on a cluster's own page, the cluster after them. The cluster that runs the application, which a deploy can replace, is in the hovercard on an application's page. The application and the site have names, so the trail shows their names and no keys. The cluster, or the engine that doesn't cluster, is named by the name of the engine's software, which its nodes give in their preambles, such as runkit, and the trail shows its shortened ID after it; if its nodes give different names, it has no name, and the trail shows the word cluster or engine before its shortened ID. In the hovercard, each step has the icon of its kind, as a card's heading has, a globe for the site, and each version is a tag at the right of the name, above the key or ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. An application has only the one view in v1, so the title bar has no links, and the trail is in it. Where the trail goes once the views have links is left until they do."
+					note="Every page has its own address, so each step of the trail is a page to go to, and the trail is the page's address: on an application's page, the site and then the application, which is what a reader asks to see; on a cluster's own page, the cluster after them. The cluster that runs the application, which a deploy can replace, is in the hovercard on an application's page. The application and the site have names, so the trail shows their names and no keys. The cluster, or the engine that doesn't cluster, is named by the name of the engine's software, which its nodes give in their preambles, such as runkit, and the trail shows its shortened ID after it; if its nodes give different names, it has no name, and the trail shows the word cluster or engine before its shortened ID. In the hovercard, each step has the icon of its kind, as a card's heading has a pin for the site, and each version is a tag at the right of the name, above the key or ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has no site step: its trail starts with the application, and its hovercard has no site. Point at the trail to see its hovercard. An application has only the one view in v1, so the title bar has no links, and the trail is in it. Where the trail goes once the views have links is left until they do."
 				>
 					<State
 						label="An application's page, whose engine clusters"
 						recommendation="Approve. The trail says what the reader asked to see, the application at its site; every step of it is a link, and every key and ID, and the cluster that runs the application, are in its hovercard, without a key beside a name."
 						wide
 					>
-						<TitleBar trail={<PageTrail steps={clusterSteps} />} />
+						<TitleBar trail={<Trail software={sameSoftware} />} />
 					</State>
 					<State
 						label="An application's page, whose engine doesn't cluster"
 						recommendation="Approve, as for a cluster."
 						wide
 					>
-						<TitleBar trail={<PageTrail steps={engineSteps} />} />
+						<TitleBar trail={<Trail software={sameSoftware} engine />} />
 					</State>
 					<State
 						label="A cluster's own page"
@@ -816,9 +820,7 @@ export function ReviewPage() {
 						recommendation="Approve. The trail is the page's address, so it names the cluster only on the cluster's own page."
 						wide
 					>
-						<TitleBar
-							trail={<PageTrail steps={clusterSteps} onClusterPage />}
-						/>
+						<TitleBar trail={<Trail software={sameSoftware} onClusterPage />} />
 					</State>
 					<State
 						label="Nodes that give different engines"
@@ -826,7 +828,9 @@ export function ReviewPage() {
 						recommendation="Approve. A name that the nodes disagree on isn't the cluster's name, so the cluster is shown as a thing with no name."
 						wide
 					>
-						<TitleBar trail={<PageTrail steps={mixedEngineSteps} />} />
+						<TitleBar
+							trail={<Trail software={{ applicationVersion: "2026.11.3" }} />}
+						/>
 					</State>
 					<State
 						label="Nodes that run different versions"
@@ -834,7 +838,17 @@ export function ReviewPage() {
 						recommendation="Approve. The reader sees that the versions differ, and for the engine by how much, without a status that guesses why."
 						wide
 					>
-						<TitleBar trail={<PageTrail steps={mixedSteps} />} />
+						<TitleBar
+							trail={
+								<Trail
+									software={{
+										engineName: "runkit",
+										engineVersions: { lowest: "0.3.1", highest: "0.4.0" },
+										applicationVersionsDiffer: true,
+									}}
+								/>
+							}
+						/>
 					</State>
 					<Choices
 						of="A"
@@ -845,29 +859,27 @@ export function ReviewPage() {
 								"A pin for the site, in the hovercard",
 								<TitleBar
 									key="pin"
-									trail={
-										<PageTrail
-											steps={[
-												{ ...(clusterSteps[0] as TrailStep), icon: "pin" },
-												...clusterSteps.slice(1),
-											]}
-										/>
-									}
+									trail={<Trail software={sameSoftware} />}
 								/>,
 							],
 							[
 								"As before: the name, the site and the ID",
 								<TitleBar
 									key="before"
-									application={atSite}
-									identifier={
-										<>
-											cluster{" "}
-											<Identifier
-												id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
-												what="cluster ID"
-											/>
-										</>
+									trail={
+										<span className="flex items-center gap-3 whitespace-nowrap">
+											<span className="font-medium text-muted">
+												{atSite.name}
+												<span className="font-normal"> at {atSite.site}</span>
+											</span>
+											<span className="text-xs text-faint">
+												cluster{" "}
+												<Identifier
+													id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
+													what="cluster ID"
+												/>
+											</span>
+										</span>
 									}
 								/>,
 							],
@@ -1287,32 +1299,6 @@ const silentSite = siteOf(
 /** The key of the site of the review page's examples. */
 const siteKey = "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43";
 
-/** A step of a page's trail, for ID 2. */
-interface TrailStep {
-	kind: string;
-
-	/** The icon of the step's kind, as a card's heading has. */
-	icon: IconName;
-
-	name?: string;
-	href: string;
-	id: { id: string; what: string };
-
-	/** True if the trail shows the step's shortened ID after its name, as a cluster's or an engine's. */
-	idInTrail?: boolean;
-
-	/**
-	 * The versions of the step, if it has any, as tags after its name: the
-	 * application's version, or "multiple versions" while the nodes give
-	 * different ones; or the version of the engine's software, as the range from
-	 * the lowest to the highest by semantic versioning while the nodes give
-	 * different ones. A step with no name, because its nodes give different
-	 * engines, has none. A version that some nodes give
-	 * and others don't says on how many nodes it runs.
-	 */
-	versions?: string[];
-}
-
 /**
  * FlagComingAndGoing is an events tile with a button that makes only some of its
  * nodes report it, and then all of them again, so that its flag comes and goes.
@@ -1346,126 +1332,40 @@ function FlagComingAndGoing() {
 }
 
 /**
- * PageTrail is where a page is, in the title bar, as LK's and ID's proposal: a
- * trail of steps, the site, the application and the cluster or the engine, each
- * a link to its own page, by its name. The cluster, or the engine that doesn't
- * cluster, is named by the name of the engine's software, which its nodes give.
- * Pointing at the trail shows a hovercard of each step's key or ID, which can be
- * copied. It is a mockup for ID 2, and becomes part of the title bar if it is
- * accepted.
+ * Trail is the trail of the review page's examples, for ID 2: the statements
+ * application at the eu-west site, run by a cluster, or by an engine that
+ * doesn't cluster, whose nodes give the given software.
  */
-function PageTrail({
-	steps,
+function Trail({
+	software,
+	engine = false,
 	onClusterPage = false,
 }: {
-	/** The steps, the last of which is the cluster or the engine. */
-	steps: TrailStep[];
-
-	/**
-	 * True on a cluster's own page, whose trail ends with the cluster. On an
-	 * application's page, the trail ends with the application, and the cluster
-	 * that runs it is only in the hovercard.
-	 */
+	software: Software;
+	engine?: boolean;
 	onClusterPage?: boolean;
 }) {
-	const shown = onClusterPage ? steps : steps.slice(0, -1);
-
 	return (
-		<Popover
-			card
-			interactive
-			content={
-				// Each step is drawn as a card's heading is: its name, or its ID if it
-				// has no name, over its kind; a step with a name has its key at the
-				// right of its kind.
-				<div className="flex min-w-64 flex-col divide-y divide-line">
-					{steps.map((s) => (
-						<div key={s.kind} className="flex gap-3 px-3.5 py-3">
-							<Icon
-								name={s.icon}
-								className="mt-px size-5 flex-none text-cluster"
-							/>
-							<div className="flex min-w-0 flex-1 flex-col gap-1">
-								{/* The name and the kind are on the left, and the version and
-								the key or ID on the right, so that each lines up with the one
-								of the other steps. A long name is cut short before its
-								version. The row is positioned, so that on a screen that is
-								touched the name's link covers the row and no more. */}
-								<span className="relative flex items-center justify-between gap-6">
-									{s.name === undefined ? (
-										<span className="min-w-0 truncate font-bold tracking-[0.04em] text-fg uppercase">
-											<Identifier id={s.id.id} what={s.id.what} />
-										</span>
-									) : (
-										// The name is the link to the step's own page, as a card's name is.
-										<NameLink
-											href={s.href}
-											className="font-bold tracking-[0.04em] text-fg uppercase"
-										>
-											<span className="min-w-0 truncate">{s.name}</span>
-										</NameLink>
-									)}
-									{s.versions?.map((v) => (
-										<span
-											key={v}
-											className="flex-none rounded-full bg-sunk px-2 py-0.5 text-2xs font-medium text-fg-soft tabular-nums"
-										>
-											{v}
-										</span>
-									))}
-								</span>
-								<span className="flex items-center justify-between gap-6">
-									<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
-										{s.kind}
-									</span>
-									{s.name !== undefined && (
-										<span className="text-xs text-fg-soft tabular-nums">
-											<Identifier id={s.id.id} what={s.id.what} />
-										</span>
-									)}
-								</span>
-							</div>
-						</div>
-					))}
-				</div>
+		<PageTrail
+			site={{ name: "eu-west", key: siteKey }}
+			application={application}
+			runner={
+				engine
+					? { kind: "engine", id: "2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24" }
+					: { kind: "cluster", id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58" }
 			}
-		>
-			<nav
-				aria-label="Where this page is"
-				className="flex items-center gap-1.5 text-sm whitespace-nowrap text-muted"
-			>
-				{shown.map((s, i) => (
-					<Fragment key={s.kind}>
-						{i > 0 && (
-							<Icon name="chevron" className="size-3 flex-none text-faint" />
-						)}
-						<a
-							href={s.href}
-							className={cn(
-								"no-underline decoration-from-font underline-offset-2 hover:underline",
-								i === shown.length - 1
-									? "font-medium text-fg-soft"
-									: "text-muted",
-							)}
-						>
-							{s.name === undefined ? (
-								<>
-									{s.kind.toLowerCase()} {shortId(s.id.id)}
-								</>
-							) : s.idInTrail ? (
-								<>
-									{s.name} {shortId(s.id.id)}
-								</>
-							) : (
-								s.name
-							)}
-						</a>
-					</Fragment>
-				))}
-			</nav>
-		</Popover>
+			software={software}
+			onClusterPage={onClusterPage}
+		/>
 	);
 }
+
+/** The software of the review page's examples, which every node agrees on. */
+const sameSoftware: Software = {
+	engineName: "runkit",
+	engineVersions: { lowest: "0.3.1", highest: "0.3.1" },
+	applicationVersion: "2026.11.3",
+};
 
 /**
  * PointedName is a compact digest's name as it looks while it is pointed at, in
@@ -1539,86 +1439,6 @@ function Tip({ children }: { children: ReactNode }) {
 
 /** The application of the cluster view's fixture, at a site. */
 const atSite = { ...application, site: "eu-west" };
-
-/**
- * The name of the engine's software in the review page's examples, which a node
- * gives in its preamble. It names the cluster, or the engine that doesn't
- * cluster, in the trail.
- */
-const engineName = "runkit";
-
-/** The steps of the trail of a page about a cluster, for ID 2. */
-const clusterSteps: TrailStep[] = [
-	{
-		kind: "Site",
-		icon: "globe",
-		name: "eu-west",
-		href: "#",
-		id: { id: siteKey, what: "site key" },
-	},
-	{
-		kind: "Application",
-		icon: "application",
-		name: atSite.name,
-		href: "#",
-		id: { id: atSite.key, what: "application key" },
-		versions: ["2026.11.3"],
-	},
-	{
-		kind: "Cluster",
-		icon: "cluster",
-		name: engineName,
-		idInTrail: true,
-		href: "#",
-		id: { id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58", what: "cluster ID" },
-		versions: ["0.3.1"],
-	},
-];
-
-/** The steps of the trail of a page about an engine that doesn't cluster, for ID 2. */
-const engineSteps: TrailStep[] = [
-	...clusterSteps.slice(0, 2),
-	{
-		kind: "Engine",
-		icon: "engine",
-		name: engineName,
-		idInTrail: true,
-		href: "#",
-		id: { id: "2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24", what: "engine ID" },
-		versions: ["0.3.1"],
-	},
-];
-
-/**
- * The steps of the trail of a page about a cluster whose nodes give different
- * names of the engine's software, so that the cluster has no name, for ID 2.
- */
-const mixedEngineSteps: TrailStep[] = [
-	clusterSteps[0] as TrailStep,
-	clusterSteps[1] as TrailStep,
-	{
-		kind: "Cluster",
-		icon: "cluster",
-		href: "#",
-		id: { id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58", what: "cluster ID" },
-	},
-];
-
-/**
- * The steps of the trail of a page about a cluster whose nodes run different
- * versions, part of the way through a deploy, for ID 2.
- */
-const mixedSteps: TrailStep[] = [
-	clusterSteps[0] as TrailStep,
-	{
-		...(clusterSteps[1] as TrailStep),
-		versions: ["multiple versions"],
-	},
-	{
-		...(clusterSteps[2] as TrailStep),
-		versions: ["0.3.1–0.4.0"],
-	},
-];
 
 /**
  * The applications of the site view, all sending a signal, with no failing messages,

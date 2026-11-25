@@ -5,7 +5,13 @@ import { LinksPage } from "./components/LinksPage.tsx";
 import { Message } from "./components/Message.tsx";
 import { Page } from "./components/Page.tsx";
 import { ReviewPage } from "./components/ReviewPage.tsx";
-import { application, overview } from "./fixtures/overview.ts";
+import {
+	application,
+	clusterId as fixtureClusterId,
+	site as fixtureSite,
+	software as fixtureSoftware,
+	overview,
+} from "./fixtures/overview.ts";
 import {
 	fetchClusters,
 	fetchClustersOf,
@@ -57,7 +63,7 @@ export function App({ path = window.location.pathname }: { path?: string }) {
 			return <ApplicationByKey applicationKey={route.applicationKey} />;
 
 		case "cluster":
-			return <Cluster id={route.id} />;
+			return <Cluster id={route.id} onClusterPage />;
 
 		case "named":
 			return <Named name={route.name} />;
@@ -76,7 +82,15 @@ export function App({ path = window.location.pathname }: { path?: string }) {
 		case "fixture":
 			// What the prototype's overview showed. It is static, and it is how the
 			// cluster view is compared with the prototype.
-			return <ClusterPage application={application} data={overview} />;
+			return (
+				<ClusterPage
+					application={application}
+					site={fixtureSite}
+					software={fixtureSoftware}
+					runner={{ kind: "cluster", id: fixtureClusterId }}
+					data={overview}
+				/>
+			);
 
 
 		case "review":
@@ -506,7 +520,18 @@ function NamedApplicationAtSite({
 	);
 }
 
-function Cluster({ id }: { id: string }) {
+/**
+ * Cluster is the cluster view of the cluster with the given ID: on the cluster's
+ * own page, if `onClusterPage`, and otherwise on the page of the application
+ * that it runs, which shows its one cluster.
+ */
+function Cluster({
+	id,
+	onClusterPage,
+}: {
+	id: string;
+	onClusterPage?: boolean;
+}) {
 	const watched = useWatched(id);
 
 	switch (watched.status) {
@@ -535,6 +560,13 @@ function Cluster({ id }: { id: string }) {
 				<LiveData receivedAt={watched.at}>
 					<ClusterPage
 						application={watched.data.application}
+						site={watched.data.site}
+						software={watched.data.software}
+						runner={{
+							kind: watched.data.overview.engine ? "engine" : "cluster",
+							id,
+						}}
+						onClusterPage={onClusterPage}
 						data={watched.data.overview}
 						down={watched.data.down}
 						notice={watched.status === "stale" ? staleNotice : undefined}

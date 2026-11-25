@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { cn } from "../lib/cn.ts";
-import type { Application } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import { Logo } from "./Logo.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
@@ -36,26 +35,14 @@ export interface NavItem {
  * with the left edge of the page and the controls with its right edge.
  */
 export function TitleBar({
-	application,
-	identifier,
 	trail,
 	nav = [],
 	aside,
 }: {
 	/**
-	 * The application that the cluster runs, which is where the page is. A page
-	 * that is not about one cluster has none.
+	 * Where the page is, as a trail of links, such as the site and the
+	 * application. A page that is not about one cluster has none.
 	 */
-	application?: Application;
-
-	/**
-	 * The ID of what runs the application, after where the page is: the cluster's,
-	 * or the engine's if it doesn't cluster. It is the same for every part of the
-	 * page, so it is shown here rather than on any one card.
-	 */
-	identifier?: ReactNode;
-
-	/** Where the page is, as a trail of links, in place of the application and the ID. */
 	trail?: ReactNode;
 
 	/**
@@ -84,19 +71,6 @@ export function TitleBar({
 					</span>
 				</a>
 				{trail}
-				{application && (
-					<span className="font-medium whitespace-nowrap text-muted">
-						{application.name}
-						{application.site !== undefined && (
-							<span className="font-normal"> at {application.site}</span>
-						)}
-					</span>
-				)}
-				{identifier && (
-					<span className="-ml-3 text-xs whitespace-nowrap text-faint">
-						{identifier}
-					</span>
-				)}
 				{nav.length > 0 && (
 					<nav className="flex gap-0.5 overflow-x-auto [scrollbar-width:none] max-narrow:order-3 max-narrow:w-full max-narrow:flex-wrap">
 						{nav.map((group, g) => (

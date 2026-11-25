@@ -37,6 +37,22 @@ export const application = {
 	key: "d0137119-2660-4bc2-ab4c-bc156e08521c",
 };
 
+/** The site that the cluster is deployed to. */
+export const site = {
+	name: "eu-west",
+	key: "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43",
+};
+
+/** The ID of the cluster. */
+export const clusterId = "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58";
+
+/** The software that the cluster's nodes run. */
+export const software = {
+	engineName: "runkit",
+	engineVersions: { lowest: "0.3.1", highest: "0.3.1" },
+	applicationVersion: "2026.11.3",
+};
+
 /**
  * The overview of a cluster whose nodes support everything, so that every part
  * of its tiles is there.

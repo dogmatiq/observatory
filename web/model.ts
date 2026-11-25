@@ -189,6 +189,13 @@ export interface ClusterSummary {
  */
 export interface ClusterData {
 	application: Application;
+
+	/** The site that the cluster is deployed to, if it has one. */
+	site?: Site;
+
+	/** The software that the cluster's nodes run, if the document says. */
+	software?: Software;
+
 	overview: OverviewData;
 
 	/**
@@ -384,26 +391,36 @@ export interface OverviewData {
 	};
 
 	handlers: HandlerData[];
-
-	/**
-	 * Whether the nodes that report run the same versions of the engine and of
-	 * the application. Absent if the document doesn't say.
-	 */
-	versions?: Versions;
 }
 
 /**
- * Whether the nodes of a cluster that report run the same version of the engine,
- * and of the application: "same" if every node gives the same version,
- * "different" if two give different ones, and "unknown" if none differ but a node
- * doesn't give its version.
+ * Software is the software that the nodes of a cluster that report run, as
+ * their preambles give it.
  */
-export interface Versions {
-	engine: VersionsState;
-	application: VersionsState;
-}
+export interface Software {
+	/**
+	 * The name of the engine's software, if every node that reports gives the
+	 * same one. Absent if two give different names.
+	 */
+	engineName?: string;
 
-export type VersionsState = "same" | "different" | "unknown";
+	/**
+	 * The lowest and the highest of the versions of the engine's software that
+	 * the nodes give, by the precedence of Semantic Versioning, which are the same
+	 * if every node gives the same one. Absent if no node gives one, or if the
+	 * nodes give different engine names.
+	 */
+	engineVersions?: { lowest: string; highest: string };
+
+	/**
+	 * The version of the application, if every node that gives one gives the
+	 * same. Absent if no node gives one, or if two give different ones.
+	 */
+	applicationVersion?: string;
+
+	/** True if two nodes give different versions of the application. */
+	applicationVersionsDiffer?: boolean;
+}
 
 export type HandlerKind =
 	| "aggregate"

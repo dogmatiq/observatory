@@ -337,20 +337,41 @@ test("a tile or a card that only some of the nodes report has their coverage", (
 	expect(selectCluster(s, 0)?.overview.events?.coverage).toBe(0.5);
 });
 
-test("the overview says whether the nodes run the same versions", () => {
+test("the cluster's site and the software that its nodes run are read from the document", () => {
 	const s = applied([
 		changed({
-			application: { name: "a", key: "k" },
-			versions: { engine: "different", application: "same" },
+			application: { name: "a", key: "k", site: "eu-west" },
+			site: { name: "eu-west", key: "s" },
+			software: {
+				engineName: "runkit",
+				engineVersions: { lowest: "0.3.1", highest: "0.4.0" },
+				applicationVersionsDiffer: true,
+			},
 			handlers: {},
 		}),
 		0,
 	]);
 
-	expect(selectCluster(s, 0)?.overview.versions).toEqual({
-		engine: "different",
-		application: "same",
+	const data = selectCluster(s, 0);
+	expect(data?.site).toEqual({ name: "eu-west", key: "s" });
+	expect(data?.software).toEqual({
+		engineName: "runkit",
+		engineVersions: { lowest: "0.3.1", highest: "0.4.0" },
+		applicationVersionsDiffer: true,
 	});
+});
+
+test("a part of the software that isn't well formed is left out", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			software: { engineName: 3, engineVersions: { lowest: "1.0.0" } },
+			handlers: {},
+		}),
+		0,
+	]);
+
+	expect(selectCluster(s, 0)?.software).toEqual({});
 });
 
 test("apply doesn't change the snapshot that it is given", () => {

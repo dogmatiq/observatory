@@ -1079,23 +1079,22 @@ Tick each item when it is done, and write the pull request or commit that did it
   have the ID inside a sentence, become drill-down cards that follow the same rule, with the ID, the kind and the
   figure, and no paragraphs. A segment that is about no one thing, such as the merged last segment, keeps a tooltip of
   one line.
-  Under review (ID 2): no card's icon opens a hovercard, so an icon no longer grows when it is pointed at. The
-  cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name
-  and site, small and faint, after the word "cluster" or "engine", shortened and copyable, because it is the same for
-  every part of the view. `/review` draws every card that way, as the views will be once they have explainers.
-  Proposed since, on ID 2: the title bar says where the page is as a trail, which is the page's address: the site and the
-  application, and, on a cluster's own page, the cluster or the engine, each a link to its own page, by name; on an
-  application's page, the cluster that runs it is only in the trail's hovercard, because a reader asks to see the
-  application; the cluster or engine is named by the name of the engine's software
-  that its nodes give, with its shortened ID after the name in the trail, and has no name, so shows the word cluster or
-  engine and its shortened ID, while its nodes give different ones (decided); in the hovercard, each version is a tag
-  at the right of the name, above the key or ID (decided), and each step has the icon of its kind, as a card's heading has (decided), with a globe or a pin for
-  the site, which ID 2 shows; pointing at the
-  trail shows a hovercard of every key and ID, each copyable, so that the keys have a place to be copied from without
-  showing beside a name. Deferred until the views have links: where the trail goes then. ID 2 tried the
-  links in the title bar with the trail in a row under it; it isn't decided. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
-  prototype's links fit a wide window only just. The trail's hovercard lays each step out as a card's heading: its
-  name over its kind, with its key at the right of its kind, or its ID in its name's place if it has no name.
+  Done with the explainers: no card's icon opens a hovercard, so an icon no longer grows when it is pointed at.
+  Approved and done (ID 2): the title bar says where the page is as a trail, which is the page's address: the site
+  and the application, and, on a cluster's own page, the cluster or the engine, each a link to its own page. An
+  application at no site has no site step: its trail starts with the application, and its hovercard has no site. On
+  an application's page, the cluster that runs it is only in the trail's hovercard, because a reader asks to see the
+  application. The cluster or engine is named by the name of the engine's software that its nodes give, with its
+  shortened ID after the name in the trail; while its nodes give different names, it has no name, and the trail shows
+  the word cluster or engine and its shortened ID. Pointing at the trail shows a hovercard of every step, drawn as a
+  card's heading: the icon of its kind, a pin for the site, its name over its kind, its key or ID, copyable, at the
+  right of its kind, or its ID in its name's place if it has no name, and its version as a tag at the right of its
+  name. The application's version is "multiple versions" while the nodes give different ones, because its form is
+  the application's own; the engine's is the range from the lowest to the highest by semantic versioning, which the
+  spec promises for it; a cluster with no name has no version. The server sends the site's key, and the software that
+  the nodes that report run, in place of whether their versions are the same. The title bar's tooltip no longer gives
+  the application's key. Deferred until the views have links: where the trail goes then; ID 2 tried the links in the
+  title bar with the trail in a row under it, because in one row the prototype's links fit a wide window only just.
   Approved (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
   at the right of its top row, where a compact digest has its flag, and so clear of the chevron after a linked name.
   On a vital card, the readout of the chart, while the chart is pointed at, is to the left of the flag. Done: every

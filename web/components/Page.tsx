@@ -8,19 +8,20 @@ import { type NavItem, TitleBar } from "./TitleBar.tsx";
  * the footer along the bottom, and the main part of the page between them. Each
  * of them fails on its own.
  *
- * A page that says where it is gives the `application` that its cluster runs.
+ * A page about one cluster gives the `trail` that says where it is.
  * `notice` is a short line of text above the main part, for something that a
  * person should know, such as that the page is no longer being updated.
  */
 export function Page({
-	application,
+	trail,
 	nav,
 	versions,
 	notice,
 	aside,
 	children,
 }: {
-	application?: { name: string; key: string };
+	/** Where the page is, as a trail of links, for the title bar. */
+	trail?: ReactNode;
 	nav?: NavItem[][];
 	versions?: Version[];
 	notice?: string;
@@ -33,7 +34,7 @@ export function Page({
 	return (
 		<>
 			<ErrorBoundary>
-				<TitleBar application={application} nav={nav} aside={aside} />
+				<TitleBar trail={trail} nav={nav} aside={aside} />
 			</ErrorBoundary>
 			<main className="mx-auto max-w-page px-6 pt-6 pb-12 max-narrow:px-4 max-narrow:pt-4 max-narrow:pb-10">
 				<h1 className="sr-only">Dogma Observatory</h1>

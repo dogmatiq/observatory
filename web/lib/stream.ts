@@ -9,8 +9,8 @@ import type {
 	HandlerNode,
 	LiveNode,
 	OverviewData,
+	Software,
 	SpreadPart,
-	VersionsState,
 } from "../model.ts";
 
 /**
@@ -582,17 +582,6 @@ export function selectCluster(
 
 	const overview: OverviewData = { handlers: [] };
 
-	// Whether the nodes run the same versions, which the statuses of a section
-	// that only some nodes report say.
-	if (isObject(doc.versions)) {
-		const state = (v: unknown): VersionsState =>
-			v === "same" || v === "different" ? v : "unknown";
-		overview.versions = {
-			engine: state(doc.versions.engine),
-			application: state(doc.versions.application),
-		};
-	}
-
 	// A part of a tile that the document doesn't have is one that no node
 	// supports, and the tile leaves it out. A rate that the document has, and that
 	// has no number, is one that the nodes support and that isn't known yet.
@@ -727,7 +716,49 @@ export function selectCluster(
 			a.key.localeCompare(b.key),
 	);
 
-	return doc.down === true
-		? { application, overview, down: true }
-		: { application, overview };
+	const data: ClusterData = { application, overview };
+	if (doc.down === true) {
+		data.down = true;
+	}
+
+	// The site's key, and the software that the nodes run, which the title bar's
+	// trail gives. A part that isn't well formed is left out.
+	if (
+		isObject(doc.site) &&
+		typeof doc.site.name === "string" &&
+		typeof doc.site.key === "string"
+	) {
+		data.site = { name: doc.site.name, key: doc.site.key };
+	}
+	if (isObject(doc.software)) {
+		data.software = softwareOf(doc.software);
+	}
+
+	return data;
+}
+
+/**
+ * softwareOf returns the software that the nodes run, from its part of the
+ * state document, leaving out what isn't well formed.
+ */
+function softwareOf(doc: Record<string, unknown>): Software {
+	const software: Software = {};
+	if (typeof doc.engineName === "string") {
+		software.engineName = doc.engineName;
+	}
+	const range = doc.engineVersions;
+	if (
+		isObject(range) &&
+		typeof range.lowest === "string" &&
+		typeof range.highest === "string"
+	) {
+		software.engineVersions = { lowest: range.lowest, highest: range.highest };
+	}
+	if (typeof doc.applicationVersion === "string") {
+		software.applicationVersion = doc.applicationVersion;
+	}
+	if (doc.applicationVersionsDiffer === true) {
+		software.applicationVersionsDiffer = true;
+	}
+	return software;
 }
