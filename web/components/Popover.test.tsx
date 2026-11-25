@@ -117,11 +117,38 @@ test("a popover appears when its element has the keyboard's focus, and goes when
 	expect(screen.queryByRole("tooltip")).toBeNull();
 });
 
-test("a finger doesn't show a popover", () => {
+test("a finger shows a popover by a tap, and not by resting on its element", () => {
 	const button = target();
 
 	fireEvent.pointerEnter(button, { pointerType: "touch" });
 	wait(1000);
+	expect(screen.queryByRole("tooltip")).toBeNull();
+
+	fireEvent.pointerDown(button, { pointerType: "touch" });
+	expect(screen.getByRole("tooltip").textContent).toBe("the words");
+
+	// The finger leaves the element as it lifts.
+	fireEvent.pointerLeave(button, { pointerType: "touch" });
+	wait(1000);
+	expect(screen.getByRole("tooltip")).toBeDefined();
+});
+
+test("a tap on the element again hides a popover that a tap showed", () => {
+	const button = target();
+
+	fireEvent.pointerDown(button, { pointerType: "touch" });
+	fireEvent.pointerDown(button, { pointerType: "touch" });
+	expect(screen.queryByRole("tooltip")).toBeNull();
+});
+
+test("a tap anywhere but the popover hides a popover that a tap showed", () => {
+	const button = target();
+
+	fireEvent.pointerDown(button, { pointerType: "touch" });
+	fireEvent.pointerDown(screen.getByRole("tooltip"), { pointerType: "touch" });
+	expect(screen.getByRole("tooltip")).toBeDefined();
+
+	fireEvent.pointerDown(document.body, { pointerType: "touch" });
 	expect(screen.queryByRole("tooltip")).toBeNull();
 });
 

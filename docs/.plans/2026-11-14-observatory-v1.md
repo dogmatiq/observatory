@@ -1049,6 +1049,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   same style, with a copy button that says what it copied, such as "Copied queue ID", in a note above it that moves
   nothing. A thing that has a name shows no ID or key, on a hovercard or a digest, so only the bars' drill-down
   hovercards and the title bar show IDs (approved, IC 1A). An alert flag opens a tooltip of its status, not a hovercard.
+  On a screen that is touched, a tap on an element opens its hovercard or tooltip, such as a bar's segment's or an
+  alert flag's, and a tap on it again, or anywhere but the panel, closes it; a segment is a finger's height to tap.
+  Done.
   Under review (IC 1B):
   the segments of a handler digest's bars, whose tooltips today have the ID inside a sentence, become drill-down cards
   that follow the same rule, with the ID, the kind and the figure, and no paragraphs. A segment that is about no one
@@ -1085,6 +1088,9 @@ Tick each item when it is done, and write the pull request or commit that did it
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
   engine's event stream model from the server for this, as the events card has it.
+- To build after the review of the explainers: the sunken ground that a figure or phrase gets while it is pointed at,
+  which says that it has a hovercard, goes from each one whose explaining hovercard goes; and the tooltips that are left
+  on figures are reviewed, as some aren't wanted.
 - Later: the lens of the cluster tile with no live node needs a popover, as the moon has, and something playful in the
   same spirit as the moon's card and its quotes. A theme of the search for extraterrestrial intelligence, or of Carl
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked

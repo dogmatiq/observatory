@@ -89,8 +89,11 @@ interface Anchor {
  *
  * The panel is for what explains the element or says more than the element does.
  * It goes when the pointer leaves the element, when the element is pressed, when
- * the page scrolls and when Escape is pressed. A pointer that is a finger doesn't
- * show it.
+ * the page scrolls and when Escape is pressed.
+ *
+ * A finger can't point, so on a screen that is touched a tap on the element shows
+ * the panel at once, and a tap on the element again, or anywhere but the panel,
+ * hides it.
  *
  * The pointer can cross to the panel, which stays open while the pointer is on
  * it, and goes a moment after the pointer leaves the element or the panel. A
@@ -127,6 +130,9 @@ export function Popover({
 	const timer = useRef<number | undefined>(undefined);
 	const shown = anchor !== undefined && content !== undefined;
 
+	// The element that a tap showed the panel for, if a tap showed it.
+	const tapped = useRef<Element | undefined>(undefined);
+
 	// What closes this popover. It is the same function for as long as the popover
 	// lives, so that it can be told from the one of another popover.
 	const closer = useRef<() => void>(undefined);
@@ -154,15 +160,31 @@ export function Popover({
 			}
 		};
 
+		// A tap anywhere but the element and the panel hides a panel that a tap
+		// showed. The element's own handler sees a tap on the element.
+		const onPointerDown = (event: globalThis.PointerEvent) => {
+			const target = event.target as Node;
+			if (
+				event.pointerType !== "touch" ||
+				tapped.current?.contains(target) ||
+				document.getElementById(id)?.contains(target)
+			) {
+				return;
+			}
+			dismiss();
+		};
+
 		document.addEventListener("keydown", onKeyDown);
+		document.addEventListener("pointerdown", onPointerDown);
 		// A scroll in any element, which doesn't bubble, so it is caught on the way
 		// down.
 		window.addEventListener("scroll", dismiss, true);
 		return () => {
 			document.removeEventListener("keydown", onKeyDown);
+			document.removeEventListener("pointerdown", onPointerDown);
 			window.removeEventListener("scroll", dismiss, true);
 		};
-	}, [shown, dismiss]);
+	}, [shown, dismiss, id]);
 
 	if (content === undefined) {
 		return children;
@@ -236,11 +258,25 @@ export function Popover({
 		},
 		onPointerLeave: (event: PointerEvent<Element>) => {
 			props.onPointerLeave?.(event);
-			leave(false);
+			// A finger leaves the element as it lifts, which doesn't hide a panel
+			// that a tap showed.
+			if (event.pointerType !== "touch") {
+				leave(false);
+			}
 		},
 		onPointerDown: (event: PointerEvent<Element>) => {
 			props.onPointerDown?.(event);
-			leave(true);
+			if (event.pointerType !== "touch") {
+				leave(true);
+				return;
+			}
+			if (shown) {
+				tapped.current = undefined;
+				leave(true);
+				return;
+			}
+			tapped.current = event.currentTarget;
+			show(event.currentTarget, event.clientX, false);
 		},
 		onFocus: (event: FocusEvent<Element>) => {
 			props.onFocus?.(event);
@@ -266,7 +302,11 @@ export function Popover({
 						interactive={interactive}
 						card={card}
 						onPointerEnter={() => window.clearTimeout(timer.current)}
-						onPointerLeave={() => leave(false)}
+						onPointerLeave={(event) => {
+							if (event.pointerType !== "touch") {
+								leave(false);
+							}
+						}}
 					>
 						{content}
 					</Panel>,
@@ -331,7 +371,7 @@ function Panel({
 	interactive: boolean;
 	card: boolean;
 	onPointerEnter: () => void;
-	onPointerLeave: () => void;
+	onPointerLeave: (event: PointerEvent<Element>) => void;
 	children: ReactNode;
 }) {
 	const ref = useRef<HTMLDivElement>(null);

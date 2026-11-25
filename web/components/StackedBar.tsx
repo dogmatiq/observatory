@@ -97,6 +97,14 @@ function describe(s: {
 }
 
 /**
+ * tapTarget makes a segment, which is only as tall as the bar, a finger's height
+ * to tap on a screen that is touched, by an area that reaches above and below it.
+ * The segment must be positioned.
+ */
+const tapTarget =
+	"pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-2 pointer-coarse:after:content-['']";
+
+/**
  * useHovered returns the position of the segment that the pointer is on, if any,
  * and the handlers to give the element of each segment.
  */
@@ -179,6 +187,7 @@ export function StackedBar({
 						<div
 							className={cn(
 								"absolute transition-[left,width,top,bottom,opacity] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out] motion-reduce:transition-none",
+								tapTarget,
 								look?.isOther ? "bg-faint" : "bg-(--subsystem)",
 								// The segments at the two ends of the bar have its rounded
 								// ends, which stay as round as the segment is high when it
@@ -235,7 +244,8 @@ export function NodeBar({ segments }: { segments: NodeSegment[] }) {
 					>
 						<div
 							className={cn(
-								"min-w-0",
+								"relative min-w-0",
+								tapTarget,
 								s?.faint ? "bg-faint" : "bg-cluster",
 								s === undefined || s.percent !== undefined
 									? "flex-initial"
