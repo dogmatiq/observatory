@@ -301,10 +301,33 @@ func documentOf(view observe.ClusterView) map[string]any {
 	if view.Down {
 		doc["down"] = true
 	}
-	doc["versions"] = map[string]any{
-		"engine":      o.Versions.Engine,
-		"application": o.Versions.Application,
+	if view.Site != nil {
+		doc["site"] = map[string]any{
+			"name": view.Site.Name,
+			"key":  view.Site.Key,
+		}
 	}
+
+	// The software that the nodes run, which the title bar's trail gives. A part
+	// that the nodes don't give, or that they don't agree on, is left out.
+	sw := o.Software
+	software := map[string]any{}
+	if sw.EngineName != "" {
+		software["engineName"] = sw.EngineName
+	}
+	if r := sw.EngineVersions; r != nil {
+		software["engineVersions"] = map[string]any{
+			"lowest":  r.Lowest,
+			"highest": r.Highest,
+		}
+	}
+	if sw.ApplicationVersion != "" {
+		software["applicationVersion"] = sw.ApplicationVersion
+	}
+	if sw.ApplicationVersionsDiffer {
+		software["applicationVersionsDiffer"] = true
+	}
+	doc["software"] = software
 
 	if c := o.Cluster; c != nil {
 		cluster := map[string]any{}

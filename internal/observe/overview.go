@@ -288,71 +288,101 @@ type Overview struct {
 	// then processes, integrations and projections, each by name.
 	Handlers []HandlerCard `json:"handlers"`
 
-	// Versions says whether the nodes that report run the same versions of the
-	// engine and of the application.
-	Versions Versions `json:"versions"`
+	// Software is the software that the nodes that report run: the engine's and
+	// the application's, as their preambles give it.
+	Software Software `json:"software"`
 }
 
-// Versions says whether the nodes of a cluster that report run the same version
-// of something, each as [VersionsSame], [VersionsDifferent] or [VersionsUnknown].
-type Versions struct {
-	// Engine is about the version of the engine software, as each node's
-	// preamble gives it.
-	Engine string `json:"engine"`
+// Software is the software that the nodes of a cluster that report run, as
+// their preambles give it.
+type Software struct {
+	// EngineName is the name of the engine's software, if every node that
+	// reports gives the same name. It is empty if two give different names.
+	EngineName string `json:"engineName,omitempty"`
 
-	// Application is about the version of the application, as each node's
-	// preamble gives it.
-	Application string `json:"application"`
+	// EngineVersions is the range of the versions of the engine's software that
+	// the nodes give, by the precedence of Semantic Versioning, which the spec
+	// promises for them. It is nil if no node gives a version, or if the nodes
+	// give different engine names, whose versions aren't comparable.
+	EngineVersions *VersionRange `json:"engineVersions,omitempty"`
+
+	// ApplicationVersion is the version of the application, if every node that
+	// gives one gives the same. It is empty if no node gives one, or if two give
+	// different ones, which ApplicationVersionsDiffer says.
+	ApplicationVersion string `json:"applicationVersion,omitempty"`
+
+	// ApplicationVersionsDiffer is true if two nodes give different versions of
+	// the application. The spec leaves their format to the application, so they
+	// can be told apart but not put in order.
+	ApplicationVersionsDiffer bool `json:"applicationVersionsDiffer,omitempty"`
 }
 
-const (
-	// VersionsSame means that every node gives the same version.
-	VersionsSame = "same"
+// VersionRange is the lowest and the highest of some semantic versions. They are
+// the same if there is only one.
+type VersionRange struct {
+	Lowest  string `json:"lowest"`
+	Highest string `json:"highest"`
+}
 
-	// VersionsDifferent means that two nodes give different versions.
-	VersionsDifferent = "different"
+// softwareOf returns the software that the nodes that report at the time now
+// run. A node that doesn't give a version is left out of the versions, and so is
+// an engine version that isn't a semantic version, which the spec doesn't allow.
+func softwareOf(now time.Time, nodes []Node) Software {
+	var sw Software
 
-	// VersionsUnknown means that no two nodes give different versions, but a
-	// node doesn't give its version, so it isn't known whether they are the same.
-	VersionsUnknown = "unknown"
-)
+	names := map[string]bool{}
+	var engines []semver
+	apps := map[string]bool{}
 
-// versionsOf returns whether the nodes that report at the time now run the same
-// versions of the engine and the application. Versions are compared only for
-// equality: the spec promises an order only for the engine's version, and
-// nothing here needs one.
-func versionsOf(now time.Time, nodes []Node) Versions {
-	compare := func(version func(Node) string) string {
-		seen := map[string]bool{}
-		unknown := false
-		for _, n := range nodes {
-			if !n.Reporting(now) {
-				continue
-			}
-			if v := version(n); v == "" {
-				unknown = true
-			} else {
-				seen[v] = true
-			}
+	for _, n := range nodes {
+		if !n.Reporting(now) {
+			continue
 		}
-		switch {
-		case len(seen) > 1:
-			return VersionsDifferent
-		case unknown:
-			return VersionsUnknown
-		default:
-			return VersionsSame
+
+		impl := n.Preamble.GetImplementation()
+		names[impl.GetName()] = true
+		if v, ok := parseSemver(impl.GetVersion()); ok {
+			engines = append(engines, v)
+		}
+
+		if v := n.Preamble.GetApplication().GetVersion(); v != "" {
+			apps[v] = true
 		}
 	}
 
-	return Versions{
-		Engine: compare(func(n Node) string {
-			return n.Preamble.GetImplementation().GetVersion()
-		}),
-		Application: compare(func(n Node) string {
-			return n.Preamble.GetApplication().GetVersion()
-		}),
+	if len(names) == 1 {
+		for name := range names {
+			sw.EngineName = name
+		}
+
+		if len(engines) > 0 {
+			lowest, highest := engines[0], engines[0]
+			for _, v := range engines[1:] {
+				if v.less(lowest) {
+					lowest = v
+				}
+				if highest.less(v) {
+					highest = v
+				}
+			}
+			sw.EngineVersions = &VersionRange{
+				Lowest:  lowest.text,
+				Highest: highest.text,
+			}
+		}
 	}
+
+	switch len(apps) {
+	case 0:
+	case 1:
+		for v := range apps {
+			sw.ApplicationVersion = v
+		}
+	default:
+		sw.ApplicationVersionsDiffer = true
+	}
+
+	return sw
 }
 
 // A part of a tile that no node of the cluster supports the metrics for is
@@ -881,7 +911,7 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		o.Handlers[i].Coverage = handlers
 	}
 
-	o.Versions = versionsOf(now, nodes)
+	o.Software = softwareOf(now, nodes)
 
 	return app, o, r
 }
