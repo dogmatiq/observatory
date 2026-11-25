@@ -1086,8 +1086,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   at the right of the name, above the key or ID (decided), and each step has the icon of its kind, as a card's heading has (decided), with a globe or a pin for
   the site, which ID 2 shows; pointing at the
   trail shows a hovercard of every key and ID, each copyable, so that the keys have a place to be copied from without
-  showing beside a name. Decided: once an application's views have links, the links take the title bar and
-  the trail moves to a row under it. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
+  showing beside a name. Deferred until the views have links: where the trail goes then. ID 2 tried the
+  links in the title bar with the trail in a row under it; it isn't decided. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
   prototype's links fit a wide window only just. The trail's hovercard lays each step out as a card's heading: its
   name over its kind, with its key at the right of its kind, or its ID in its name's place if it has no name.
   Under review (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,

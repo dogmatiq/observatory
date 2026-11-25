@@ -55,7 +55,7 @@ import {
 	SiteQueuesTile,
 	SiteTotals,
 } from "./SiteView.tsx";
-import { NavGroup, type NavItem, TitleBar } from "./TitleBar.tsx";
+import { TitleBar } from "./TitleBar.tsx";
 
 /**
  * ReviewPage shows every state of the tiles that are being worked on, or that
@@ -681,9 +681,9 @@ export function ReviewPage() {
 					<Part
 						step={2}
 						title="Where the page is, in the title bar"
-						deciding="That the title bar says where the page is as a trail, which moves to a row under the title bar once the views have links: the page's address, the site and the application, and, on a cluster's own page, the cluster, or the engine for an engine that doesn't cluster, each a link to its own page, by its name, the cluster's or engine's being the name of the engine's software while its nodes agree on it, and otherwise its shortened ID; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable, and of the versions of the application and the engine's software, which, while the nodes give different versions, are the range of the engine's versions and &quot;multiple versions&quot; for the application's; and that no card's icon, on a vital card or a digest, opens a hovercard."
-						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
-						note="Every page has its own address, so each step of the trail is a page to go to, and the trail is the page's address: on an application's page, the site and then the application, which is what a reader asks to see; on a cluster's own page, the cluster after them. The cluster that runs the application, which a deploy can replace, is in the hovercard on an application's page. The application and the site have names, so the trail shows their names and no keys. The cluster, or the engine that doesn't cluster, is named by the name of the engine's software, which its nodes give in their preambles, such as runkit, and the trail shows its shortened ID after it; if its nodes give different names, it has no name, and the trail shows the word cluster or engine before its shortened ID. In the hovercard, each step has the icon of its kind, as a card's heading has, a globe for the site, and each version is a tag at the right of the name, above the key or ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the page has to leave room for them. An application has only the one view in v1, so the title bar has no links, and the trail is in it."
+						deciding="That the title bar says where the page is as a trail: the page's address, the site and the application, and, on a cluster's own page, the cluster, or the engine for an engine that doesn't cluster, each a link to its own page, by its name, the cluster's or engine's being the name of the engine's software while its nodes agree on it, and otherwise its shortened ID; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable, and of the versions of the application and the engine's software, which, while the nodes give different versions, are the range of the engine's versions and &quot;multiple versions&quot; for the application's; and that no card's icon, on a vital card or a digest, opens a hovercard."
+						notDeciding="Where the trail goes once the views have links, which waits until they do; how an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
+						note="Every page has its own address, so each step of the trail is a page to go to, and the trail is the page's address: on an application's page, the site and then the application, which is what a reader asks to see; on a cluster's own page, the cluster after them. The cluster that runs the application, which a deploy can replace, is in the hovercard on an application's page. The application and the site have names, so the trail shows their names and no keys. The cluster, or the engine that doesn't cluster, is named by the name of the engine's software, which its nodes give in their preambles, such as runkit, and the trail shows its shortened ID after it; if its nodes give different names, it has no name, and the trail shows the word cluster or engine before its shortened ID. In the hovercard, each step has the icon of its kind, as a card's heading has, a globe for the site, and each version is a tag at the right of the name, above the key or ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. An application has only the one view in v1, so the title bar has no links, and the trail is in it. Where the trail goes once the views have links is left until they do."
 					>
 						<State
 							label="An application's page, whose engine clusters"
@@ -725,14 +725,6 @@ export function ReviewPage() {
 						>
 							<TitleBar trail={<PageTrail steps={mixedSteps} />} />
 						</State>
-						<State
-							label="Once the views have links"
-							wide
-							note="The links, here the prototype's as an example, take the title bar, and the trail moves to a row of its own under it, because in one row with the trail they fit a wide window only just. The trail keeps its place on the left, and nothing else moves."
-							recommendation="Approve. The links have the room that they need, and the trail stays where it was."
-						>
-							<TwoRows trail={<PageTrail steps={clusterSteps} />} />
-						</State>
 						<Choices
 							of="A"
 							title="where the page is"
@@ -753,26 +745,9 @@ export function ReviewPage() {
 									/>,
 								],
 								[
-									"The trail in the title bar, and the links under it",
-									<TwoRows
-										key="trail-first"
-										trailFirst
-										trail={<PageTrail steps={clusterSteps} />}
-									/>,
-								],
-								[
-									"One row: the trail and the links",
-									<TitleBar
-										key="one-row"
-										nav={exampleNav}
-										trail={<PageTrail steps={clusterSteps} />}
-									/>,
-								],
-								[
 									"As before: the name, the site and the ID",
 									<TitleBar
 										key="before"
-										nav={exampleNav}
 										application={atSite}
 										identifier={
 											<>
@@ -1321,69 +1296,6 @@ const flaggedCards = [
 		status: partialStatus.text,
 	},
 ];
-
-/**
- * An example of the navigation of an application's views, from the prototype's,
- * to show how much room the title bar leaves for it. None of these pages is in
- * v1.
- */
-const exampleNav: NavItem[][] = [
-	[{ label: "Overview", icon: "cluster", href: "#", current: true }],
-	[
-		{ label: "Event streams", icon: "event-stream", href: "#" },
-		{ label: "Queues", icon: "queue", href: "#" },
-		{ label: "Nodes", icon: "node", href: "#" },
-		{ label: "Handlers", icon: "aggregate", href: "#" },
-	],
-];
-
-/**
- * TwoRows is the title bar with the view's links, and a row under it that says
- * where the page is, as ID 2 proposes, or, with `trailFirst`, the other way
- * around. It is a mockup, and becomes part of the page if it is accepted.
- */
-function TwoRows({
-	trail,
-	trailFirst = false,
-	links = exampleNav,
-}: {
-	trail: ReactNode;
-	trailFirst?: boolean;
-
-	/** The view's links, which are none in v1. */
-	links?: NavItem[][];
-}) {
-	const row = (content: ReactNode, label: string) => (
-		<div className="border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)]">
-			<nav
-				aria-label={label}
-				className="mx-auto flex h-11 max-w-page items-center gap-0.5 overflow-x-auto px-6 [scrollbar-width:none] max-narrow:px-4"
-			>
-				{content}
-			</nav>
-		</div>
-	);
-	const groups = links.map((group, g) => (
-		// biome-ignore lint/suspicious/noArrayIndexKey: a group has no identity but its position
-		<NavGroup key={g} items={group} divided={g > 0} />
-	));
-
-	return trailFirst ? (
-		<div>
-			<TitleBar trail={trail} />
-			{row(groups, "Views")}
-		</div>
-	) : (
-		<div>
-			<TitleBar nav={links} />
-			<div className="border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)]">
-				<div className="mx-auto flex h-10 max-w-page items-center px-6 max-narrow:px-4">
-					{trail}
-				</div>
-			</div>
-		</div>
-	);
-}
 
 /** The key of the site of the review page's examples. */
 const siteKey = "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43";
