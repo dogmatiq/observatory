@@ -1077,8 +1077,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name
   and site, small and faint, after the word "cluster" or "engine", shortened and copyable, because it is the same for
   every part of the view. `/review` draws every card that way, as the views will be once they have explainers.
-  Proposed since, on ID 2: the title bar says where the page is as a trail, the site, the application and the cluster or
-  the engine, each a link to its own page, by name; the cluster or engine is named by the name of the engine's software
+  Proposed since, on ID 2: the title bar says where the page is as a trail, which is the page's address: the site and the
+  application, and, on a cluster's own page, the cluster or the engine, each a link to its own page, by name; on an
+  application's page, the cluster that runs it is only in the trail's hovercard, because a reader asks to see the
+  application; the cluster or engine is named by the name of the engine's software
   that its nodes give, with its shortened ID after the name in the trail, and has no name, so shows the word cluster or
   engine and its shortened ID, while its nodes give different ones (decided); in the hovercard, each version is a tag
   at the right of the name, above the key or ID (decided), and each step has the icon of its kind, as a card's heading has (decided), with a globe or a pin for
