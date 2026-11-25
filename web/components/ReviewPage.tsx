@@ -954,7 +954,7 @@ export function ReviewPage() {
 						</State>
 						<State
 							label="A node that doesn't report its workloads"
-							note="Other nodes report their workloads and this one doesn't, so this one is supported and not working, and its hovercard says only that its workloads are unknown: its share isn't known, and its segment is a faint square. The number of workloads counts only the nodes that report them, blurred by how few they are."
+							note="Other nodes report their workloads and this one doesn't, so this one is supported and not working: its share isn't known, so its segment is a faint square, and the number of workloads counts only the nodes that report them, blurred by how few they are. What its segment's hovercard says is CL 4C."
 							decided={false}
 							recommendation="Approve. The cluster supports what any of its nodes supports, and a node that doesn't is supported and not working, which it stops being when every node supports the same things."
 						>
@@ -1023,7 +1023,7 @@ export function ReviewPage() {
 							</Panel>
 						</State>
 						<Choices
-							of="B"
+							of="C"
 							title="the status"
 							choices={[
 								[
