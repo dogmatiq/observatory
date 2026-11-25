@@ -192,7 +192,7 @@ export function Explainable({
 	};
 
 	return (
-		<div ref={ref} className="group relative">
+		<div ref={ref} className="group relative w-fit">
 			{children}
 			{at && (
 				<button
