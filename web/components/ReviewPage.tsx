@@ -213,23 +213,23 @@ export function ReviewPage() {
 			<Tile
 				code="IC"
 				title="Which thing a hovercard is about"
-				note="A rule for every hovercard that stays once the explainers are built, on every view: where a hovercard says which thing it is about. It comes first, because the hovercards of the bars' segments, of the alert flags and of the IDs follow it."
+				note="A rule for every hovercard that stays once the explainers are built, on every view: where a hovercard says which thing it is about. It comes first, because the hovercards that stay follow it: those of the bars' segments, of the digests' names and of the alert flags."
 			>
 				<Part
 					step={1}
 					title="The thing's name or ID, under its kind"
-					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold, or its ID if it has only an ID, under its kind."
-					notDeciding="The other words of each of these hovercards, which are decided with their cards (SB, SH 2, ID and the bars of EV, QU and CL); how an ID is shortened and copied, which is settled."
-					note="The hovercards that stay are those of a bar's segments, which drill down to one stream, queue, node or application; those of the alert flags, which say a status about one thing; and those of the cluster's and the engine's IDs. Each is about one thing, and shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
+					deciding="Where every hovercard that stays says which thing it is about: under its kind, the thing's name in bold, or, if it has no name, its ID, shortened and copyable."
+					notDeciding="The other words of each of these hovercards, which are decided with them: a segment's (SB, and the bars of EV, QU and CL), a digest's name's (DI), which also gives the thing's key, and an alert flag's (SH 2); how an ID is shortened and copied, which is settled."
+					note="Three kinds of hovercard stay once the explainers are built, each about one thing, and each opened by something that stands for that thing: a segment of a bar, which drills down to one stream, queue, node or application; a digest's name, which previews the thing that the digest leads to; and an alert flag, which says a status about one thing. No icon opens a hovercard, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
 				>
 					<State
-						label="The hovercards that stay, which already follow the rule"
-						note="None of them changes."
+						label="The hovercards that stay, by what opens them"
+						note="The segments' and the alert flag's hovercards are as they are today; the digest's name's is new, and is reviewed at DI."
 						recommendation="Approve the rule as these hovercards show it: a name in bold where the thing has one, and an ID where it has only an ID."
 						wide
 					>
 						<div className="flex flex-wrap items-start gap-6">
-							<Captioned caption="Has a name: an application on a bar">
+							<Captioned caption="Opened by a segment, about a thing with a name: an application on the site's events bar">
 								<SegmentCard
 									about={{
 										thing: "application",
@@ -240,23 +240,36 @@ export function ReviewPage() {
 									}}
 								/>
 							</Captioned>
-							<Captioned caption="Has a name: a compact digest's alert flag">
+							<Captioned caption="Opened by a digest's name, about a thing with a name: a handler (DI)">
+								<InfoCard
+									subsystem={handlerSubsystem("aggregate")}
+									icon="aggregate"
+									iconColor={kindColors.aggregate}
+									kind="aggregate"
+									identifier={
+										<>
+											<span className="font-semibold text-fg">account</span>
+											<Identifier
+												id={
+													(
+														overview
+															.handlers[0] as OverviewData["handlers"][number]
+													).key
+												}
+												of="aggregate"
+											/>
+										</>
+									}
+								>
+									<p>
+										In the <ApplicationName application={atSite} />.
+									</p>
+								</InfoCard>
+							</Captioned>
+							<Captioned caption="Opened by an alert flag, about a thing with a name: an application out of contact (SH 2)">
 								<ContactLostCard app={contactLostExample} />
 							</Captioned>
-							<Captioned caption="Has only an ID: the cluster tile's icon">
-								<InfoCard
-									subsystem="cluster"
-									icon="cluster"
-									kind="Cluster"
-									identifier={
-										<Identifier
-											id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
-											of="cluster"
-										/>
-									}
-								/>
-							</Captioned>
-							<Captioned caption="Has only an ID: a stream on a bar">
+							<Captioned caption="Opened by a segment, about a thing with only an ID: a stream on the events bar">
 								<SegmentCard
 									about={{
 										thing: "event-stream",
