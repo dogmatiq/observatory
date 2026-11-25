@@ -1105,6 +1105,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   reporting their workloads, the engine tile with no signal, the site's tiles while only some applications report
   them, and the applications tile with none sending a signal. A card with two statuses has one flag, whose tooltip
   says both, red if either is. The statuses are in `web/components/statuses.ts`, and the flag is `AlertFlag`.
+  Approved and done since (FL 1I, FL 1K): a compact digest's flag also says whether its rate of events can be given;
+  a flag fades in with a short glitch when a status begins to apply, and fades out when the last one stops, and doesn't
+  move when the page first draws, nor with reduced motion.
   Approved (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole
   doesn't react to the pointer; the name is underlined, with a chevron after it, while it is pointed at or has the
   keyboard's focus. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows
