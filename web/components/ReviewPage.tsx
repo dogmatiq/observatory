@@ -698,6 +698,13 @@ export function ReviewPage() {
 						>
 							<TwoRows trail={<PageTrail steps={engineSteps} />} />
 						</State>
+						<State
+							label="Today, with no views to link to"
+							wide
+							note="An application has only the one view in v1, so the title bar has no links, and is the brand and the color mode control, with the trail under it."
+						>
+							<TwoRows links={[]} trail={<PageTrail steps={clusterSteps} />} />
+						</State>
 						<Choices
 							of="A"
 							title="where the page is"
@@ -1296,9 +1303,13 @@ const exampleNav: NavItem[][] = [
 function TwoRows({
 	trail,
 	trailFirst = false,
+	links = exampleNav,
 }: {
 	trail: ReactNode;
 	trailFirst?: boolean;
+
+	/** The view's links, which are none in v1. */
+	links?: NavItem[][];
 }) {
 	const row = (content: ReactNode, label: string) => (
 		<div className="border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)]">
@@ -1310,7 +1321,7 @@ function TwoRows({
 			</nav>
 		</div>
 	);
-	const links = exampleNav.map((group, g) => (
+	const groups = links.map((group, g) => (
 		// biome-ignore lint/suspicious/noArrayIndexKey: a group has no identity but its position
 		<NavGroup key={g} items={group} divided={g > 0} />
 	));
@@ -1318,11 +1329,11 @@ function TwoRows({
 	return trailFirst ? (
 		<div>
 			<TitleBar trail={trail} />
-			{row(links, "Views")}
+			{row(groups, "Views")}
 		</div>
 	) : (
 		<div>
-			<TitleBar nav={exampleNav} />
+			<TitleBar nav={links} />
 			<div className="border-b border-line bg-[color-mix(in_srgb,var(--color-panel)_86%,transparent)]">
 				<div className="mx-auto flex h-10 max-w-page items-center px-6 max-narrow:px-4">
 					{trail}
