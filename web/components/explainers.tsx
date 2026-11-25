@@ -1,3 +1,4 @@
+import { cloneElement, isValidElement } from "react";
 import { overview } from "../fixtures/overview.ts";
 import {
 	euWest,
@@ -15,6 +16,7 @@ import type {
 	OverviewData,
 	Site,
 	SiteApplication,
+	SiteData,
 } from "../model.ts";
 import { ApplicationName } from "./ApplicationName.tsx";
 import type { ExplainerSpec, Note } from "./Explainer.tsx";
@@ -1425,8 +1427,16 @@ export function handlerExplainer(
 	application: Application,
 	handler: HandlerData,
 ): ExplainerSpec {
+	const spec = explainers[handlerExplainerOf(handler)];
 	return {
-		...explainers[handlerExplainerOf(handler)],
+		...spec,
+		// The copy has the example's figures and the live handler's name, so that
+		// it reads as this handler's digest.
+		card: isValidElement<{ handler: HandlerData }>(spec.card)
+			? cloneElement(spec.card, {
+					handler: { ...spec.card.props.handler, name: handler.name },
+				})
+			: spec.card,
 		label: `${handler.name} ${handler.kind} digest`,
 		title: (
 			<>
@@ -1448,8 +1458,22 @@ export function compactExplainer(
 	site: Site | undefined,
 ): ExplainerSpec {
 	const name = app.application.name;
+	const spec = explainers[compactExplainerOf(app)];
 	return {
-		...explainers[compactExplainerOf(app)],
+		...spec,
+		// The copy has the example's figures and the live application's name, so
+		// that it reads as this application's compact digest.
+		card: isValidElement<{ data: SiteData }>(spec.card)
+			? cloneElement(spec.card, {
+					data: {
+						...spec.card.props.data,
+						applications: spec.card.props.data.applications.map((a) => ({
+							...a,
+							application: { ...a.application, name },
+						})),
+					},
+				})
+			: spec.card,
 		label: `${name} compact digest`,
 		title:
 			site === undefined ? (
