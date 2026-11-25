@@ -1165,7 +1165,7 @@ function Flagged({
 					<Popover content={status}>
 						<span
 							className={cn(
-								"flex size-4 cursor-help",
+								"flex size-4",
 								tone === "bad" ? "text-bad" : "text-fg-soft",
 							)}
 						>

@@ -109,7 +109,7 @@ export function HandlerDigest({
 							{handler.disabled ? `${handler.kind}, disabled` : handler.kind}
 							{handler.minimizesConcurrency && (
 								<Popover content={minimizesConcurrencyText}>
-									<span className="ml-2 inline-block cursor-help text-fg-soft">
+									<span className="ml-2 inline-block text-fg-soft">
 										<Icon
 											name="minimize-concurrency"
 											className="inline size-3 align-[-2px]"
