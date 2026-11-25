@@ -1044,6 +1044,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
   what drills down (a segment's identity and amount), the statuses, as alert
   flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
+  The node hovercard's sentence "Workloads vary in size, so two nodes with the same number of workloads can have very
+  different amounts of work to do." moves to the end of the cluster explainer's paragraph about workloads (approved);
+  its words are under review (CL 6).
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
@@ -1061,7 +1064,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   Under review (ID 2): no card's icon opens a hovercard, so an icon no longer grows when it is pointed at. The
   cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name
   and site, small and faint, after the word "cluster" or "engine", shortened and copyable, because it is the same for
-  every part of the view. `/review` draws the cards of LK and FL that way, so that they look as they will.
+  every part of the view. `/review` draws every card that way, as the views will be once they have explainers.
   Under review (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
   at the right of its top row, where a compact digest has its flag, and so clear of the chevron after a linked name.
   Approved (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole

@@ -14,7 +14,7 @@ import {
 } from "../fixtures/site.ts";
 import { cn } from "../lib/cn.ts";
 import { Covered } from "../lib/distrust.tsx";
-import { formatCompact, formatPercent } from "../lib/format.ts";
+import { formatCompact } from "../lib/format.ts";
 import { LiveData } from "../lib/live.tsx";
 import type {
 	Application,
@@ -40,7 +40,6 @@ import {
 } from "./Overview.tsx";
 import { Popover, panelClasses } from "./Popover.tsx";
 import { partialStatus } from "./partial.ts";
-import { Ramped } from "./Ramped.tsx";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
 import { SegmentCard } from "./SegmentCard.tsx";
 import {
@@ -62,8 +61,7 @@ import { TitleBar } from "./TitleBar.tsx";
  * in the order in which their decisions depend on each other: what is open about
  * a layout first, then about states, then about words. Each tile is
  * shown whole, and then part by part, in the order of review, from the least
- * specific to the most: its icon, its headline, its detail line, its
- * bar and its chart. A hovercard whose words never change, and that has a status in
+ * specific to the most, such as its bar and then its chart. A hovercard whose words never change, and that has a status in
  * some states, is shown once, with its status.
  *
  * A hovercard is drawn where it stands, in the frame of a panel, because a person
@@ -71,336 +69,338 @@ import { TitleBar } from "./TitleBar.tsx";
  */
 export function ReviewPage() {
 	return (
-		<Review>
-			<Tile
-				code="SL"
-				title="Site view: layout"
-				note="The view of a site, designed here before it is built, in chunks that are shown one at a time, each once the one before it is decided. This chunk is the layout only: the totals of the applications at the site as three tiles, the same size as the cluster view's, and each application below them, at the scale that the view is designed for, which is about a hundred applications. The figures are made up. The states, the words and the details come in later chunks."
-			>
-				<Part
-					step={0}
-					title="Tiles above, applications below"
-					deciding="Where the view's parts go: the three tiles above, in a row, and the applications below them, in the order of their names."
-					notDeciding={
-						"What the tiles and the compact digests say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or contact is lost (SS); whether the grid is of compact digests or of squares (SL 1)."
-					}
-					recommendation="Approve the layout. The tiles answer how busy the site is and whether anything is wrong, and the grid below answers where, with every application one click from its view."
-					note="The three tiles are the events per minute, the messages waiting and the applications in contact. The applications are in the order of their names, so that an application keeps its place."
+		// Every card here is drawn as it will be once the explainers are in the
+		// views, which the review designs for.
+		<ExplainersBuilt value={true}>
+			<Review>
+				<Tile
+					code="SL"
+					title="Site view: layout"
+					note="The view of a site, designed here before it is built, in chunks that are shown one at a time, each once the one before it is decided. This chunk is the layout only: the totals of the applications at the site as three tiles, the same size as the cluster view's, and each application below them, at the scale that the view is designed for, which is about a hundred applications. The figures are made up. The states, the words and the details come in later chunks."
 				>
-					<State label="Every application in contact" wide>
-						<SiteDemo data={siteOf(calm, euWest)} />
-					</State>
-				</Part>
+					<Part
+						step={0}
+						title="Tiles above, applications below"
+						deciding="Where the view's parts go: the three tiles above, in a row, and the applications below them, in the order of their names."
+						notDeciding={
+							"What the tiles and the compact digests say, the made-up figures, the bars and the charts, which come in later chunks; how the view looks when messages fail or contact is lost (SS); whether the grid is of compact digests or of squares (SL 1)."
+						}
+						recommendation="Approve the layout. The tiles answer how busy the site is and whether anything is wrong, and the grid below answers where, with every application one click from its view."
+						note="The three tiles are the events per minute, the messages waiting and the applications in contact. The applications are in the order of their names, so that an application keeps its place."
+					>
+						<State label="Every application in contact" wide>
+							<SiteDemo data={siteOf(calm, euWest)} />
+						</State>
+					</Part>
 
-				<Part
-					step={1}
-					title="The grid of applications"
-					deciding="Whether each application below the tiles is a compact digest, with its name and figures, or a square in a grid that names it only when pointed at."
-					notDeciding="What a compact digest's figures are, and its explainer, which is approved; the hovercard of its alert flag (SH 2); how a compact digest looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
-					note="Each application is a compact digest with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
-				>
-					<State
-						label="Compact digests with names and figures"
-						recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred compact digests fit in about a screen."
-						wide
+					<Part
+						step={1}
+						title="The grid of applications"
+						deciding="Whether each application below the tiles is a compact digest, with its name and figures, or a square in a grid that names it only when pointed at."
+						notDeciding="What a compact digest's figures are, and its explainer, which is approved; the hovercard of its alert flag (SH 2); how a compact digest looks when its application's messages fail or contact with it is lost (SS); the order of the applications (SL 0)."
+						note="Each application is a compact digest with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
 					>
-						<SiteBreakdown
-							data={siteOf(calm, euWest)}
-							breakdown="compact-digests"
-						/>
-					</State>
-					<Choices
-						of="A"
-						title="the grid"
-						framed={false}
-						choices={[
-							[
-								"Squares, like a contribution graph",
-								<SiteBreakdown
-									key="squares"
-									data={siteOf(calm, euWest)}
-									breakdown="squares"
-								/>,
-							],
-						]}
-					/>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="SS"
-				title="Site view: states"
-				note="How the view looks as its applications' messages fail and as contact with them is lost: the accents, the blur and the words that take the place of a compact digest's figures. The words of the tiles' hovercards come in the next chunk."
-			>
-				<Part
-					step={0}
-					title="The view in each state"
-					deciding="How the whole view looks in each state: when messages fail, when only some nodes report, and when contact with one application, or with all of them, is lost."
-					notDeciding="The layout (SL); the words on the tiles (SH 1) and their explainers (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
-				>
-					<State
-						label="Three applications with failing messages"
-						note="checkout, mailer and regulatory-reports have the orange accent and the orange &quot;+N&quot;, as a handler digest does, and so does the queues tile."
-						recommendation="Approve, as the cluster view does it."
-						wide
-					>
-						<SiteDemo data={siteOf(siteApplications, euWest)} />
-					</State>
-					<State
-						label="Two applications out of contact, and two with only some nodes in contact"
-						note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as tiles and handler digests have their icon there, and pointing at the icon shows a hovercard that says the application is out of contact, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
-						recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its hovercard gives the words, as the status of a hovercard does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
-						wide
-					>
-						<SiteDemo data={siteOf(someOut, euWest)} />
-					</State>
-					<State
-						label="Every application out of contact"
-						note="The totals are the last ones, distrusted, as a cluster's are when every node is out of contact, and the applications tile's headline is a red 0 alone, with no &quot;+N&quot;, because when every application is out of contact there is nothing to set them apart from."
-						recommendation="Approve, as the cluster view does it."
-						wide
-					>
-						<SiteDemo
-							data={siteOf(
-								withContact(siteApplications.slice(0, 18), {
-									out: siteApplications
-										.slice(0, 18)
-										.map((a) => a.application.name),
-								}),
-								euWest,
-							)}
-						/>
-					</State>
-					<State
-						label="One application"
-						recommendation="Approve. The view keeps its layout, and each bar is one segment."
-						wide
-					>
-						<SiteDemo data={siteOf(siteApplications.slice(81, 82), euWest)} />
-					</State>
-					<State
-						label="Applications at no site"
-						note="The view of the applications that run at no site, at the address of the site whose key is the nil UUID. It looks the same as a site's; its words, which say &quot;the applications that run at no site&quot;, are reviewed with the tiles' words."
-						recommendation="Approve."
-						wide
-					>
-						<SiteDemo
-							data={siteOf(siteApplications.slice(40, 52), undefined)}
-						/>
-					</State>
-					<Choices
-						of="B"
-						title="how a compact digest says that contact is lost"
-						framed={false}
-						choices={(
-							[
-								["Words beside the name: Contact lost", "Contact lost"],
-								["Words beside the name: No contact", "No contact"],
-								["Words beside the name: Offline", "Offline"],
-							] as const
-						).map(([label, words]) => [
-							label,
-							<CompactDigests
-								key={label}
-								data={siteOf(someOut.slice(44, 50), euWest)}
-								alert={{ words }}
-							/>,
-						])}
-					/>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="IC"
-				title="Which thing a hovercard is about"
-				note="A rule for every hovercard that stays once the explainers are built, on every view: where a hovercard says which thing it is about. It comes first, because the hovercards that stay follow it: those of the bars' segments."
-			>
-				<Part
-					step={1}
-					title="The thing's name, or its ID, over its kind"
-					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold capitals first, as a digest has it, then its kind. A thing with no name has its ID in the place of the name, in the same style, shortened, with a copy button that says what it copied. A thing that has a name shows no ID or key."
-					notDeciding="The other words of each segment's hovercard, which are decided with them (SB, and the bars of EV, QU and CL); how an ID is shortened, which is settled; the alert flags, which open a tooltip of their status (SH 2, FL)."
-					note="Once the explainers are built, the hovercards that stay are the drill-downs of a bar's segments, each about one stream, queue, node or application. The moon's hovercard follows the same rule. No icon opens a hovercard, an alert flag opens a tooltip of its status, a digest shows no key, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
-				>
-					<State
-						label="The hovercards of the cluster view's and the site view's bars"
-						note="Every hovercard of a segment about one thing, on the cluster view's and the site view's bars, as it will be once the explainers are in the views: without what it says about the bar or its advice, which the card's explainer says instead."
-						recommendation="Approve the rule as these hovercards show it: the name, or for a thing with no name its ID, first, in bold capitals, then the kind; no key for a thing with a name."
-						wide
-					>
-						<div className="flex flex-col gap-8">
-							<Captioned2 title="The cluster view's bars">
-								<Captioned caption="A stream, on the events bar">
-									<SegmentCard
-										paragraphs={false}
-										about={{
-											thing: "event-stream",
-											id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
-											amount: 612,
-											share: 0.42,
-											total: { amount: 1457, things: 3 },
-										}}
-									/>
-								</Captioned>
-								<Captioned caption="A queue, on the queues bar">
-									<SegmentCard
-										paragraphs={false}
-										about={{
-											thing: "queue",
-											id: "c42e7a19-5d0b-4f3a-8e61-7b2d9f0a3c85",
-											amount: 240,
-											share: 0.65,
-											total: { amount: 370, things: 2 },
-										}}
-									/>
-								</Captioned>
-								<Captioned caption="A node, on the cluster bar">
-									<SegmentCard
-										paragraphs={false}
-										about={{
-											thing: "node",
-											id: nodeId,
-											amount: 2,
-											share: 0.4,
-											total: { amount: 5, things: 3 },
-										}}
-									/>
-								</Captioned>
-								<Captioned caption="A node that doesn't report its workloads, on the cluster bar">
-									<SegmentCard
-										paragraphs={false}
-										about={{ thing: "node", id: nodeId, unreported: true }}
-									/>
-								</Captioned>
-							</Captioned2>
-							<Captioned2 title="The site view's bars">
-								<Captioned caption="An application, on the events bar">
-									<SegmentCard
-										paragraphs={false}
-										about={{
-											thing: "application",
-											of: "events",
-											application: {
-												name: "payments",
-												key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
-											},
-											amount: 2140,
-											share: 0.1834,
-										}}
-									/>
-								</Captioned>
-								<Captioned caption="An application, on the queues bar">
-									<SegmentCard
-										paragraphs={false}
-										about={{
-											thing: "application",
-											of: "messages",
-											application: {
-												name: "payments",
-												key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
-											},
-											amount: 38,
-											share: 0.12,
-										}}
-									/>
-								</Captioned>
-							</Captioned2>
-						</div>
-					</State>
-					<State
-						label="The handler digests' bars"
-						note="Today each segment of a handler digest's bar has a tooltip of one line, with the ID inside the sentence: &quot;100 instances on event stream 8b0081fd ⧉&quot; on an aggregate's bar, &quot;20 instances on deadline queue c42e7a19 ⧉&quot; on a process's, and &quot;120 commands/min on node 113cbdc3 ⧉&quot; on an integration's or a projection's. These follow the rule instead, as cards with the ID in the place of a name, the kind, and the figure. They have no paragraphs, as the digest's explainer says what the bar is."
-						recommendation="Approve: make these segments drill down the way the cluster view's do, so that every segment about one thing follows the rule."
-						wide
-					>
-						<div className="flex flex-wrap items-start gap-6">
-							<Captioned caption="A stream, on an aggregate's bar">
-								<InfoCard
-									subsystem="streams"
-									icon="event-stream"
-									kind="Event stream"
-									id={{
-										id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
-										what: "event stream ID",
-									}}
-									figure={{ value: "100", unit: "instances", aside: "50%" }}
-								/>
-							</Captioned>
-							<Captioned caption="A deadline queue, on a process's bar">
-								<InfoCard
-									subsystem="queues"
-									icon="queue"
-									kind="Deadline queue"
-									id={{
-										id: "c42e7a19-5d0b-4f3a-8e61-7b2d9f0a3c85",
-										what: "deadline queue ID",
-									}}
-									figure={{ value: "20", unit: "instances", aside: "100%" }}
-								/>
-							</Captioned>
-							<Captioned caption="A node, on an integration's bar">
-								<InfoCard
-									subsystem="cluster"
-									icon="node"
-									kind="Node"
-									id={{ id: nodeId, what: "node ID" }}
-									figure={{
-										value: "120",
-										unit: "commands per minute",
-										aside: "60%",
-									}}
-								/>
-							</Captioned>
-						</div>
-					</State>
-					<State
-						label="Segments that are about no one thing"
-						note="The last segment of a bar that has more things than it can draw merges the rest, and a handler's instances that aren't bound yet have a segment of their own. Neither is about one thing, so the rule doesn't apply, and each has a tooltip of one line, as today."
-						recommendation="Approve: these keep their tooltips."
-						wide
-					>
-						<div className="flex flex-wrap items-start gap-6">
-							<Captioned caption="The merged segment, on the cluster view's events bar">
-								<Tip>1.2K events on 4 other event streams</Tip>
-							</Captioned>
-							<Captioned caption="Instances not yet bound, on an aggregate's bar">
-								<Tip>3 instances with no event stream yet</Tip>
-							</Captioned>
-						</div>
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="LK"
-				title="What is a link"
-				note="Which part of a card that leads to another page is a link. A compact digest on the site view leads to its application's view; a handler digest leads to its handler's page once there is one. No vital card links anywhere yet."
-			>
-				<Part
-					step={1}
-					title="A card's name is its link"
-					deciding="That on a card that leads to another page, only the thing's name is a link, and the card as a whole doesn't react to the pointer; and that the name shows that it leads to another page while it is pointed at or has the keyboard's focus: it is underlined, and a chevron appears after it. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows the link."
-					notDeciding="How a vital card links to its page, as it shows no name, and none links anywhere yet."
-					note="A screen that is touched can't point, so the chevron is what says there that a name leads elsewhere. The handler digest here links nowhere, as no handler has a page yet, and is drawn as it will be once the explainers are in the views, with an icon that opens nothing."
-				>
-					<State
-						label="Compact digests"
-						recommendation="Approve. Point at a name to see it: only the name leads elsewhere, and it says so."
-						wide
-					>
-						<div className="max-w-xl">
-							<CompactDigests
-								data={siteOf(siteApplications.slice(0, 3), euWest)}
-								alert="icon"
+						<State
+							label="Compact digests with names and figures"
+							recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred compact digests fit in about a screen."
+							wide
+						>
+							<SiteBreakdown
+								data={siteOf(calm, euWest)}
+								breakdown="compact-digests"
 							/>
-						</div>
-					</State>
-					<State
-						label="A handler digest"
-						recommendation="Approve, as for compact digests."
+						</State>
+						<Choices
+							of="A"
+							title="the grid"
+							framed={false}
+							choices={[
+								[
+									"Squares, like a contribution graph",
+									<SiteBreakdown
+										key="squares"
+										data={siteOf(calm, euWest)}
+										breakdown="squares"
+									/>,
+								],
+							]}
+						/>
+					</Part>
+				</Tile>
+
+				<Tile
+					code="SS"
+					title="Site view: states"
+					note="How the view looks as its applications' messages fail and as contact with them is lost: the accents, the blur and the words that take the place of a compact digest's figures. The words of the tiles' hovercards come in the next chunk."
+				>
+					<Part
+						step={0}
+						title="The view in each state"
+						deciding="How the whole view looks in each state: when messages fail, when only some nodes report, and when contact with one application, or with all of them, is lost."
+						notDeciding="The layout (SL); the words on the tiles (SH 1) and their explainers (SW); the bars (SB); the applications tile's chart (SC). All of them are shown, but none of them is decided here."
 					>
-						<div className="w-80">
-							<ExplainersBuilt value={true}>
+						<State
+							label="Three applications with failing messages"
+							note="checkout, mailer and regulatory-reports have the orange accent and the orange &quot;+N&quot;, as a handler digest does, and so does the queues tile."
+							recommendation="Approve, as the cluster view does it."
+							wide
+						>
+							<SiteDemo data={siteOf(siteApplications, euWest)} />
+						</State>
+						<State
+							label="Two applications out of contact, and two with only some nodes in contact"
+							note="The two out of contact, kyc and payroll, have the red accent and a red alert icon at the right of their names, as tiles and handler digests have their icon there, and pointing at the icon shows a hovercard that says the application is out of contact, whose words are reviewed in SH 2. Their figures keep their places as blurry zeros, which glitch when contact is lost. The blur says how far a figure is trusted, and the red says that contact is lost. The figures of the two partly in contact, orders and payments, are blurred by the coverage rule, and so, slightly, are the totals. The applications tile's headline is the applications in contact, with those out of contact set apart in red, as in &quot;94 +2&quot;, as the queues tile sets apart failing messages in orange, and the tile has the red accent while any application is out of contact, because an application out of contact is one that nothing shows to be working, unlike a node, whose cluster's other nodes carry on."
+							recommendation="Approve, with the icon. It takes no room from the name, so a long name isn't cut short, and its hovercard gives the words, as the status of a hovercard does elsewhere. The red accent and the icon mark an application out of contact as the cluster tile marks a cluster with no nodes, and the blur is the coverage rule's."
+							wide
+						>
+							<SiteDemo data={siteOf(someOut, euWest)} />
+						</State>
+						<State
+							label="Every application out of contact"
+							note="The totals are the last ones, distrusted, as a cluster's are when every node is out of contact, and the applications tile's headline is a red 0 alone, with no &quot;+N&quot;, because when every application is out of contact there is nothing to set them apart from."
+							recommendation="Approve, as the cluster view does it."
+							wide
+						>
+							<SiteDemo
+								data={siteOf(
+									withContact(siteApplications.slice(0, 18), {
+										out: siteApplications
+											.slice(0, 18)
+											.map((a) => a.application.name),
+									}),
+									euWest,
+								)}
+							/>
+						</State>
+						<State
+							label="One application"
+							recommendation="Approve. The view keeps its layout, and each bar is one segment."
+							wide
+						>
+							<SiteDemo data={siteOf(siteApplications.slice(81, 82), euWest)} />
+						</State>
+						<State
+							label="Applications at no site"
+							note="The view of the applications that run at no site, at the address of the site whose key is the nil UUID. It looks the same as a site's; its words, which say &quot;the applications that run at no site&quot;, are reviewed with the tiles' words."
+							recommendation="Approve."
+							wide
+						>
+							<SiteDemo
+								data={siteOf(siteApplications.slice(40, 52), undefined)}
+							/>
+						</State>
+						<Choices
+							of="B"
+							title="how a compact digest says that contact is lost"
+							framed={false}
+							choices={(
+								[
+									["Words beside the name: Contact lost", "Contact lost"],
+									["Words beside the name: No contact", "No contact"],
+									["Words beside the name: Offline", "Offline"],
+								] as const
+							).map(([label, words]) => [
+								label,
+								<CompactDigests
+									key={label}
+									data={siteOf(someOut.slice(44, 50), euWest)}
+									alert={{ words }}
+								/>,
+							])}
+						/>
+					</Part>
+				</Tile>
+
+				<Tile
+					code="IC"
+					title="Which thing a hovercard is about"
+					note="A rule for every hovercard that stays once the explainers are built, on every view: where a hovercard says which thing it is about. It comes first, because the hovercards that stay follow it: those of the bars' segments."
+				>
+					<Part
+						step={1}
+						title="The thing's name, or its ID, over its kind"
+						deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold capitals first, as a digest has it, then its kind. A thing with no name has its ID in the place of the name, in the same style, shortened, with a copy button that says what it copied. A thing that has a name shows no ID or key."
+						notDeciding="The other words of each segment's hovercard, which are decided with them (SB, and the bars of EV, QU and CL); how an ID is shortened, which is settled; the alert flags, which open a tooltip of their status (SH 2, FL)."
+						note="Once the explainers are built, the hovercards that stay are the drill-downs of a bar's segments, each about one stream, queue, node or application. The moon's hovercard follows the same rule. No icon opens a hovercard, an alert flag opens a tooltip of its status, a digest shows no key, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
+					>
+						<State
+							label="The hovercards of the cluster view's and the site view's bars"
+							note="Every hovercard of a segment about one thing, on the cluster view's and the site view's bars, as it will be once the explainers are in the views: without what it says about the bar or its advice, which the card's explainer says instead."
+							recommendation="Approve the rule as these hovercards show it: the name, or for a thing with no name its ID, first, in bold capitals, then the kind; no key for a thing with a name."
+							wide
+						>
+							<div className="flex flex-col gap-8">
+								<Captioned2 title="The cluster view's bars">
+									<Captioned caption="A stream, on the events bar">
+										<SegmentCard
+											paragraphs={false}
+											about={{
+												thing: "event-stream",
+												id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
+												amount: 612,
+												share: 0.42,
+												total: { amount: 1457, things: 3 },
+											}}
+										/>
+									</Captioned>
+									<Captioned caption="A queue, on the queues bar">
+										<SegmentCard
+											paragraphs={false}
+											about={{
+												thing: "queue",
+												id: "c42e7a19-5d0b-4f3a-8e61-7b2d9f0a3c85",
+												amount: 240,
+												share: 0.65,
+												total: { amount: 370, things: 2 },
+											}}
+										/>
+									</Captioned>
+									<Captioned caption="A node, on the cluster bar">
+										<SegmentCard
+											paragraphs={false}
+											about={{
+												thing: "node",
+												id: nodeId,
+												amount: 2,
+												share: 0.4,
+												total: { amount: 5, things: 3 },
+											}}
+										/>
+									</Captioned>
+									<Captioned caption="A node that doesn't report its workloads, on the cluster bar">
+										<SegmentCard
+											paragraphs={false}
+											about={{ thing: "node", id: nodeId, unreported: true }}
+										/>
+									</Captioned>
+								</Captioned2>
+								<Captioned2 title="The site view's bars">
+									<Captioned caption="An application, on the events bar">
+										<SegmentCard
+											paragraphs={false}
+											about={{
+												thing: "application",
+												of: "events",
+												application: {
+													name: "payments",
+													key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+												},
+												amount: 2140,
+												share: 0.1834,
+											}}
+										/>
+									</Captioned>
+									<Captioned caption="An application, on the queues bar">
+										<SegmentCard
+											paragraphs={false}
+											about={{
+												thing: "application",
+												of: "messages",
+												application: {
+													name: "payments",
+													key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+												},
+												amount: 38,
+												share: 0.12,
+											}}
+										/>
+									</Captioned>
+								</Captioned2>
+							</div>
+						</State>
+						<State
+							label="The handler digests' bars"
+							note="Today each segment of a handler digest's bar has a tooltip of one line, with the ID inside the sentence: &quot;100 instances on event stream 8b0081fd ⧉&quot; on an aggregate's bar, &quot;20 instances on deadline queue c42e7a19 ⧉&quot; on a process's, and &quot;120 commands/min on node 113cbdc3 ⧉&quot; on an integration's or a projection's. These follow the rule instead, as cards with the ID in the place of a name, the kind, and the figure. They have no paragraphs, as the digest's explainer says what the bar is."
+							recommendation="Approve: make these segments drill down the way the cluster view's do, so that every segment about one thing follows the rule."
+							wide
+						>
+							<div className="flex flex-wrap items-start gap-6">
+								<Captioned caption="A stream, on an aggregate's bar">
+									<InfoCard
+										subsystem="streams"
+										icon="event-stream"
+										kind="Event stream"
+										id={{
+											id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
+											what: "event stream ID",
+										}}
+										figure={{ value: "100", unit: "instances", aside: "50%" }}
+									/>
+								</Captioned>
+								<Captioned caption="A deadline queue, on a process's bar">
+									<InfoCard
+										subsystem="queues"
+										icon="queue"
+										kind="Deadline queue"
+										id={{
+											id: "c42e7a19-5d0b-4f3a-8e61-7b2d9f0a3c85",
+											what: "deadline queue ID",
+										}}
+										figure={{ value: "20", unit: "instances", aside: "100%" }}
+									/>
+								</Captioned>
+								<Captioned caption="A node, on an integration's bar">
+									<InfoCard
+										subsystem="cluster"
+										icon="node"
+										kind="Node"
+										id={{ id: nodeId, what: "node ID" }}
+										figure={{
+											value: "120",
+											unit: "commands per minute",
+											aside: "60%",
+										}}
+									/>
+								</Captioned>
+							</div>
+						</State>
+						<State
+							label="Segments that are about no one thing"
+							note="The last segment of a bar that has more things than it can draw merges the rest, and a handler's instances that aren't bound yet have a segment of their own. Neither is about one thing, so the rule doesn't apply, and each has a tooltip of one line, as today."
+							recommendation="Approve: these keep their tooltips."
+							wide
+						>
+							<div className="flex flex-wrap items-start gap-6">
+								<Captioned caption="The merged segment, on the cluster view's events bar">
+									<Tip>1.2K events on 4 other event streams</Tip>
+								</Captioned>
+								<Captioned caption="Instances not yet bound, on an aggregate's bar">
+									<Tip>3 instances with no event stream yet</Tip>
+								</Captioned>
+							</div>
+						</State>
+					</Part>
+				</Tile>
+
+				<Tile
+					code="LK"
+					title="What is a link"
+					note="Which part of a card that leads to another page is a link. A compact digest on the site view leads to its application's view; a handler digest leads to its handler's page once there is one. No vital card links anywhere yet."
+				>
+					<Part
+						step={1}
+						title="A card's name is its link"
+						deciding="That on a card that leads to another page, only the thing's name is a link, and the card as a whole doesn't react to the pointer; and that the name shows that it leads to another page while it is pointed at or has the keyboard's focus: it is underlined, and a chevron appears after it. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows the link."
+						notDeciding="How a vital card links to its page, as it shows no name, and none links anywhere yet."
+						note="A screen that is touched can't point, so the chevron is what says there that a name leads elsewhere. The handler digest here links nowhere, as no handler has a page yet."
+					>
+						<State
+							label="Compact digests"
+							recommendation="Approve. Point at a name to see it: only the name leads elsewhere, and it says so."
+							wide
+						>
+							<div className="max-w-xl">
+								<CompactDigests
+									data={siteOf(siteApplications.slice(0, 3), euWest)}
+									alert="icon"
+								/>
+							</div>
+						</State>
+						<State
+							label="A handler digest"
+							recommendation="Approve, as for compact digests."
+						>
+							<div className="w-80">
 								<HandlerDigest
 									application={application}
 									handler={
@@ -408,712 +408,681 @@ export function ReviewPage() {
 									}
 									href="#"
 								/>
-							</ExplainersBuilt>
-						</div>
-					</State>
-					<Choices
-						of="A"
-						title="how a name shows that it leads to another page"
-						framed={false}
-						choices={(
-							[
-								["Underlined, without a chevron", "underline"],
-								["A chevron, without an underline", "chevron"],
-								["In the accent color, with a chevron", "accent"],
-							] as const
-						).map(([label, look]) => [
-							label,
-							<PointedName key={label} look={look} />,
-						])}
-					/>
-				</Part>
-			</Tile>
+							</div>
+						</State>
+						<Choices
+							of="A"
+							title="how a name shows that it leads to another page"
+							framed={false}
+							choices={(
+								[
+									["Underlined, without a chevron", "underline"],
+									["A chevron, without an underline", "chevron"],
+									["In the accent color, with a chevron", "accent"],
+								] as const
+							).map(([label, look]) => [
+								label,
+								<PointedName key={label} look={look} />,
+							])}
+						/>
+					</Part>
+				</Tile>
 
-			<Tile
-				code="SB"
-				title="Site view: the bars"
-				note="The hovercard of a segment of the events and queues tiles' bars."
-			>
-				<Part
-					step={1}
-					title="The bars"
-					deciding="What the bars of the events and queues tiles show: a segment for each of the busiest applications and one for the rest, where the events tile's bar divides the rate of new events, as its headline does, and not the events stored, as the cluster view's bar of streams does; and the figures of a segment's hovercard."
-					notDeciding="How a bar is drawn and shaded, which is as on the cluster view; where a hovercard puts the application's name and kind, which is IC; that a hovercard has no words about the bar, which the tiles' explainers say (SW); that the applications tile has no bar (SL); the alert flag's tooltip (SH 2)."
-					note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's hovercard drills down: the application's name, its amount and its share. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
+				<Tile
+					code="SB"
+					title="Site view: the bars"
+					note="The hovercard of a segment of the events and queues tiles' bars."
 				>
-					<State
-						label="Pointing at an application on the events bar"
-						recommendation="Approve. It drills down to the application: its events per minute and its share of them."
+					<Part
+						step={1}
+						title="The bars"
+						deciding="What the bars of the events and queues tiles show: a segment for each of the busiest applications and one for the rest, where the events tile's bar divides the rate of new events, as its headline does, and not the events stored, as the cluster view's bar of streams does; and the figures of a segment's hovercard."
+						notDeciding="How a bar is drawn and shaded, which is as on the cluster view; where a hovercard puts the application's name and kind, which is IC; that a hovercard has no words about the bar, which the tiles' explainers say (SW); that the applications tile has no bar (SL); the alert flag's tooltip (SH 2)."
+						note="The bars of the events and queues tiles have a segment for each of the busiest applications, largest first, and one for the rest, as a cluster's bars do for streams and queues. A segment's hovercard drills down: the application's name, its amount and its share. With about a hundred applications, the grey segment for the rest takes most of each bar, and whether that is acceptable is part of this decision."
 					>
-						<Panel>
-							<SegmentCard
-								paragraphs={false}
-								about={{
-									thing: "application",
-									of: "events",
-									application: {
-										name: "payments",
-										key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
-									},
-									amount: 2140,
-									share: 0.1834,
-								}}
-							/>
-						</Panel>
-					</State>
-					<State
-						label="Pointing at an application on the queues bar"
-						recommendation="Approve, as for the events bar."
-					>
-						<Panel>
-							<SegmentCard
-								paragraphs={false}
-								about={{
-									thing: "application",
-									of: "messages",
-									application: {
-										name: "payments",
-										key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
-									},
-									amount: 31,
-									share: 0.124,
-								}}
-							/>
-						</Panel>
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="SC"
-				title="Site view: the applications tile's chart"
-				note="The chart along the bottom of the applications tile."
-			>
-				<Part
-					step={1}
-					title="The applications tile's chart"
-					deciding="How the applications tile's heartbeat chart gives each application in contact a share, and what happens to an application's share when contact is lost."
-					notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's words (SH 1) and its explainer (SW 3)."
-					recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
-					note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
-				>
-					<State label="Every application in contact" wide>
-						<div className="max-w-md">
-							<SiteDemo
-								data={siteOf(siteApplications.slice(0, 12), euWest)}
-								only="applications"
-							/>
-						</div>
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="SW"
-				title="Site view: the explainers"
-				note="The words of the explainer of each of the site view's tiles: its annotations, its title and the text under the card. How an explainer looks and works is settled, by the cluster view's explainers; only these words are new, because they speak of all the applications at the site together. Point at a tile and press its &quot;?&quot; to read them."
-			>
-				<Part
-					step={1}
-					title="The events tile"
-					deciding="The words of the events tile's explainer: its five annotations, its title, and the paragraph about event streams under the card."
-					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself, which are SH 1; the alert flag of a status, which is FL."
-					note="It is the cluster view's events card for all the applications at the site together. Its bar is of the applications, and has no advice, because applications record events at whatever rate their work needs."
-				>
-					<State
-						label="The events tile"
-						recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines."
-						wide
-					>
-						<Explained spec={siteEventsExplainer} />
-					</State>
-				</Part>
-				<Part
-					step={2}
-					title="The queues tile"
-					deciding="The words of the queues tile's explainer: its six annotations, its title, and the two paragraphs under the card."
-					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); counting the messages that are due, which is in the plan, and whose words the explainer already has."
-					note="It is the cluster view's queues card for all the applications at the site together. Its bar is of the applications, and has no advice, for the same reason as the events tile's."
-				>
-					<State
-						label="The queues tile"
-						recommendation="Approve. It has the cluster view's annotations and paragraphs, said of the applications together, with no box."
-						wide
-					>
-						<Explained spec={siteQueuesExplainer} />
-					</State>
-				</Part>
-				<Part
-					step={3}
-					title="The applications tile"
-					deciding="The words of the applications tile's explainer: its three annotations, its title, and the paragraph about the heartbeat chart under the card."
-					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); the chart itself (SC 1)."
-					note="Its headline is the applications in contact, with those out of contact set apart in red, and its chart is the heartbeat chart, with a share for each application in contact."
-				>
-					<State
-						label="The applications tile, while two applications are out of contact"
-						recommendation="Approve. It explains the heartbeat chart as the cluster view's explainer does, with an application's share in place of a node's."
-						wide
-					>
-						<Explained spec={siteApplicationsExplainer} />
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="FL"
-				title="Statuses as alert flags"
-				note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose tooltip says the status."
-			>
-				<Part
-					step={1}
-					title="An alert flag while a status applies"
-					deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
-					notDeciding="The words of each status, which are settled; that a flag opens a tooltip of its status, which is IC; the compact digest's alert flag, which it already has and whose tooltip is SH 2."
-					note="On a vital card or a handler digest, the flag goes to the left of the card's icon, at the right of its top row, which is where a compact digest, which has no icon, has its flag. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
-				>
-					{flaggedCards.map((f) => (
 						<State
-							key={f.label}
-							label={f.label}
-							note={f.note}
-							recommendation={f.recommendation}
+							label="Pointing at an application on the events bar"
+							recommendation="Approve. It drills down to the application: its events per minute and its share of them."
 						>
-							<Flagged {...f} />
+							<Panel>
+								<SegmentCard
+									paragraphs={false}
+									about={{
+										thing: "application",
+										of: "events",
+										application: {
+											name: "payments",
+											key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+										},
+										amount: 2140,
+										share: 0.1834,
+									}}
+								/>
+							</Panel>
 						</State>
-					))}
-				</Part>
-			</Tile>
+						<State
+							label="Pointing at an application on the queues bar"
+							recommendation="Approve, as for the events bar."
+						>
+							<Panel>
+								<SegmentCard
+									paragraphs={false}
+									about={{
+										thing: "application",
+										of: "messages",
+										application: {
+											name: "payments",
+											key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+										},
+										amount: 31,
+										share: 0.124,
+									}}
+								/>
+							</Panel>
+						</State>
+					</Part>
+				</Tile>
 
-			<Tile
-				code="SH"
-				title="Site view: the headlines' words"
-				note="What each tile's headline and detail line say, and then what the tooltip of a compact digest's alert flag says."
-			>
-				<Part
-					step={1}
-					title="The headlines and detail lines"
-					deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
-					notDeciding="The tiles' explainers (SW); the tooltip of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
-					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
+				<Tile
+					code="SC"
+					title="Site view: the applications tile's chart"
+					note="The chart along the bottom of the applications tile."
 				>
-					<State
-						label="Two applications out of contact, three with failing messages"
-						recommendation="Approve, with these words. The events and queues tiles' detail lines have the shape of the cluster view's, quoted below, and the applications tile's is its noun alone, because its headline says the rest."
-						precedents={[
-							{
-								where: "On the cluster view, the detail lines",
-								status: "settled",
-								words: (
+					<Part
+						step={1}
+						title="The applications tile's chart"
+						deciding="How the applications tile's heartbeat chart gives each application in contact a share, and what happens to an application's share when contact is lost."
+						notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's and settled (CL 5); the tile's words (SH 1) and its explainer (SW 3)."
+						recommendation="Approve. The heartbeat chart of the cluster tile, with an equal share of its width for each application in contact, so that the site has a pulse."
+						note="Each application's share follows the heartbeats of its node that sent the latest one. An application out of contact has no share, so its share shrinks away when contact is lost."
+					>
+						<State label="Every application in contact" wide>
+							<div className="max-w-md">
+								<SiteDemo
+									data={siteOf(siteApplications.slice(0, 12), euWest)}
+									only="applications"
+								/>
+							</div>
+						</State>
+					</Part>
+				</Tile>
+
+				<Tile
+					code="SW"
+					title="Site view: the explainers"
+					note="The words of the explainer of each of the site view's tiles: its annotations, its title and the text under the card. How an explainer looks and works is settled, by the cluster view's explainers; only these words are new, because they speak of all the applications at the site together. Point at a tile and press its &quot;?&quot; to read them."
+				>
+					<Part
+						step={1}
+						title="The events tile"
+						deciding="The words of the events tile's explainer: its five annotations, its title, and the paragraph about event streams under the card."
+						notDeciding="How an explainer looks and works, which is settled; the words on the tile itself, which are SH 1; the alert flag of a status, which is FL."
+						note="It is the cluster view's events card for all the applications at the site together. Its bar is of the applications, and has no advice, because applications record events at whatever rate their work needs."
+					>
+						<State
+							label="The events tile"
+							recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines."
+							wide
+						>
+							<Explained spec={siteEventsExplainer} />
+						</State>
+					</Part>
+					<Part
+						step={2}
+						title="The queues tile"
+						deciding="The words of the queues tile's explainer: its six annotations, its title, and the two paragraphs under the card."
+						notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); counting the messages that are due, which is in the plan, and whose words the explainer already has."
+						note="It is the cluster view's queues card for all the applications at the site together. Its bar is of the applications, and has no advice, for the same reason as the events tile's."
+					>
+						<State
+							label="The queues tile"
+							recommendation="Approve. It has the cluster view's annotations and paragraphs, said of the applications together, with no box."
+							wide
+						>
+							<Explained spec={siteQueuesExplainer} />
+						</State>
+					</Part>
+					<Part
+						step={3}
+						title="The applications tile"
+						deciding="The words of the applications tile's explainer: its three annotations, its title, and the paragraph about the heartbeat chart under the card."
+						notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); the chart itself (SC 1)."
+						note="Its headline is the applications in contact, with those out of contact set apart in red, and its chart is the heartbeat chart, with a share for each application in contact."
+					>
+						<State
+							label="The applications tile, while two applications are out of contact"
+							recommendation="Approve. It explains the heartbeat chart as the cluster view's explainer does, with an application's share in place of a node's."
+							wide
+						>
+							<Explained spec={siteApplicationsExplainer} />
+						</State>
+					</Part>
+				</Tile>
+
+				<Tile
+					code="FL"
+					title="Statuses as alert flags"
+					note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose tooltip says the status."
+				>
+					<Part
+						step={1}
+						title="An alert flag while a status applies"
+						deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
+						notDeciding="The words of each status, which are settled; that a flag opens a tooltip of its status, which is IC; the compact digest's alert flag, which it already has and whose tooltip is SH 2."
+						note="On a vital card or a handler digest, the flag goes to the left of the card's icon, at the right of its top row, which is where a compact digest, which has no icon, has its flag. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
+					>
+						{flaggedCards.map((f) => (
+							<State
+								key={f.label}
+								label={f.label}
+								note={f.note}
+								recommendation={f.recommendation}
+							>
+								<Flagged {...f} />
+							</State>
+						))}
+					</Part>
+				</Tile>
+
+				<Tile
+					code="SH"
+					title="Site view: the headlines' words"
+					note="What each tile's headline and detail line say, and then what the tooltip of a compact digest's alert flag says."
+				>
+					<Part
+						step={1}
+						title="The headlines and detail lines"
+						deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
+						notDeciding="The tiles' explainers (SW); the tooltip of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
+						note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
+					>
+						<State
+							label="Two applications out of contact, three with failing messages"
+							recommendation="Approve, with these words. The events and queues tiles' detail lines have the shape of the cluster view's, quoted below, and the applications tile's is its noun alone, because its headline says the rest."
+							precedents={[
+								{
+									where: "On the cluster view, the detail lines",
+									status: "settled",
+									words: (
+										<>
+											<p>events per minute, 844 events in 1 stream</p>
+											<p>messages in 2 queues, 370/min</p>
+										</>
+									),
+								},
+							]}
+							wide
+						>
+							<SiteDemo data={siteOf(someOut, euWest)} only="totals" />
+						</State>
+					</Part>
+
+					<Part
+						step={2}
+						title="The tooltip of a compact digest's alert flag"
+						deciding="The words of the tooltip of a compact digest's alert flag, which say what losing contact means."
+						notDeciding={
+							"That an alert flag opens a tooltip, which is IC; the words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
+						}
+						note="The tooltip of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
+					>
+						<State
+							label="The tooltip of a compact digest's alert icon"
+							note="It says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
+							recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
+							precedents={[
+								{
+									where:
+										"On the cluster view, the status of the engine card while the engine is out of contact, for its words",
+									status: { underReview: "FL 1" },
+									words: <p>{engineOutText}</p>,
+								},
+							]}
+						>
+							<Tip>{contactLostText}</Tip>
+						</State>
+					</Part>
+				</Tile>
+
+				<Tile
+					code="ID"
+					title="The cluster's and the engine's IDs"
+					note="The ID of the cluster that runs the application, or of the engine if it doesn't cluster, is the same for every part of the cluster view, so it belongs to the view, not to a card. It moves from the hovercard of the vital card's icon to the title bar, and no card's icon opens a hovercard any more."
+				>
+					<Part
+						step={2}
+						title="The ID in the title bar"
+						deciding="That the cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word &quot;cluster&quot; or &quot;engine&quot;, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
+						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards."
+						note="The title bar names the application and its site, so the ID sits beside them, after a short gap, where it reads as part of where the page is."
+					>
+						<State
+							label="An engine that clusters"
+							recommendation="Approve. The ID is on every view of the application, in one place, without belonging to one card."
+							wide
+						>
+							<TitleBar
+								application={atSite}
+								identifier={
 									<>
-										<p>events per minute, 844 events in 1 stream</p>
-										<p>messages in 2 queues, 370/min</p>
+										cluster{" "}
+										<Identifier
+											id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
+											what="cluster ID"
+										/>
 									</>
-								),
-							},
-						]}
-						wide
-					>
-						<SiteDemo data={siteOf(someOut, euWest)} only="totals" />
-					</State>
-				</Part>
-
-				<Part
-					step={2}
-					title="The tooltip of a compact digest's alert flag"
-					deciding="The words of the tooltip of a compact digest's alert flag, which say what losing contact means."
-					notDeciding={
-						"That an alert flag opens a tooltip, which is IC; the words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
-					}
-					note="The tooltip of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
-				>
-					<State
-						label="The tooltip of a compact digest's alert icon"
-						note="It says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
-						recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
-						precedents={[
-							{
-								where:
-									"On the cluster view, the status of the engine card while the engine is out of contact, for its words",
-								status: { underReview: "FL 1" },
-								words: <p>{engineOutText}</p>,
-							},
-						]}
-					>
-						<Tip>{contactLostText}</Tip>
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="ID"
-				title="The cluster's and the engine's IDs"
-				note="The ID of the cluster that runs the application, or of the engine if it doesn't cluster, is the same for every part of the cluster view, so it belongs to the view, not to a card. It moves from the hovercard of the vital card's icon to the title bar, and no card's icon opens a hovercard any more."
-			>
-				<Part
-					step={2}
-					title="The ID in the title bar"
-					deciding="That the cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word &quot;cluster&quot; or &quot;engine&quot;, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
-					notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards."
-					note="The title bar names the application and its site, so the ID sits beside them, after a short gap, where it reads as part of where the page is."
-				>
-					<State
-						label="An engine that clusters"
-						recommendation="Approve. The ID is on every view of the application, in one place, without belonging to one card."
-						wide
-					>
-						<TitleBar
-							application={atSite}
-							identifier={
-								<>
-									cluster{" "}
-									<Identifier
-										id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
-										what="cluster ID"
-									/>
-								</>
-							}
-						/>
-					</State>
-					<State
-						label="An engine that doesn't cluster"
-						recommendation="Approve, as for a cluster."
-						wide
-					>
-						<TitleBar
-							application={atSite}
-							identifier={
-								<>
-									engine{" "}
-									<Identifier
-										id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
-										what="engine ID"
-									/>
-								</>
-							}
-						/>
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="EV"
-				title="Events tile"
-				note="Under review: the hovercard of a segment of the bar, which drills down to one stream. The rest of the tile is settled, including the tile of an engine that appends every event to one stream, and the tile while only some nodes report what it shows."
-			>
-				<Part
-					step={0}
-					title="The tile"
-					deciding="How the events tile looks in each of its states."
-					notDeciding="What the hovercards say: the status, which becomes an alert flag (FL), and the hovercard of a segment of the bar (EV 4)."
-				>
-					<State label="Several streams" decided>
-						<EventsTile
-							application={application}
-							data={overview.events}
-							href={undefined}
-						/>
-					</State>
-					<State
-						label="An engine that appends every event to one stream"
-						note="The engine says so, so the one stream is the only one there is. The tile doesn't count streams, and has no bar, because there is no spread to show."
-						decided
-					>
-						<EventsTile
-							application={application}
-							data={{
-								...overview.events,
-								streams: [{ id: "85d749b5", size: 1181 }],
-								oneStream: true,
-							}}
-							href={undefined}
-						/>
-					</State>
-					<State
-						label="Only some of the nodes report what the tile shows"
-						note="The coverage rule: the numbers are the sums of the nodes that report, blurred by the share of nodes that don't, and they glitch for a moment each time another node stops reporting. The bar and the chart stay live. Stop and start nodes to see it."
-						recommendation="Approve. The reader keeps the numbers and their trend while a deploy is under way, and the blur says how far to trust them, by the same means as a figure that is going stale."
-					>
-						<CoverageDemo />
-					</State>
-				</Part>
-
-				<Part
-					step={4}
-					title="The bar"
-					deciding="What a segment of the events tile's bar shows when it is pointed at: its stream, its events and its share of them."
-					notDeciding="Which streams the bar shows, and how it is drawn, which are settled; where the hovercard puts the stream's ID, which is IC; the words about the bar, which are in the explainer."
-					decided={false}
-					recommendation="Approve. It drills down to the stream: its events and its share of them."
-					note="Each segment is an event stream, and has the hovercard of that stream: its ID, its events and its share of them. What the bar shows, and how it is best spread, are in the tile's explainer. An engine that appends every event to one stream has no bar, so the hovercard is only ever of one of several streams."
-				>
-					{(
-						[
-							[
-								"A stream with a share",
-								7612,
-								0.6234,
-								{ amount: 12_210, things: 2 },
-							],
-						] as const
-					).map(([label, amount, share, total]) => (
-						<State key={label} label={`Pointing at ${label.toLowerCase()}`}>
-							<Panel>
-								<SegmentCard
-									paragraphs={false}
-									about={{
-										thing: "event-stream",
-										id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
-										amount,
-										share,
-										total,
-									}}
-								/>
-							</Panel>
+								}
+							/>
 						</State>
-					))}
-				</Part>
-			</Tile>
-
-			<Tile
-				code="QU"
-				title="Queues tile"
-				note="Under review: the hovercard of a segment of the bar, as on the events tile. The rest of the tile is settled, including the tile of an engine that keeps every message in one queue."
-			>
-				<Part step={0} title="The tile" decided>
-					<State label="Several queues" decided>
-						<QueuesTile
-							application={application}
-							data={{
-								...overview.queues,
-								queues: [
-									{ id: "113cbdc3", size: 12 },
-									{ id: "4aeaa462", size: 7 },
-								],
-							}}
-							href={undefined}
-						/>
-					</State>
-					<State
-						label="An engine that keeps every message in one queue"
-						note="The engine says so, so the one queue is the only one there is. The tile doesn't count queues, and has no bar, because there is no spread to show."
-						decided
-					>
-						<QueuesTile
-							application={application}
-							data={{ ...overview.queues, oneQueue: true }}
-							href={undefined}
-						/>
-					</State>
-				</Part>
-				<Part
-					step={4}
-					title="The bar"
-					deciding="What a segment of the queues tile's bar shows when it is pointed at: its queue, its messages and its share of them."
-					notDeciding="Which queues the bar shows, and how it is drawn, which are settled; where the hovercard puts the queue's ID, which is IC; the words about the bar, which are in the explainer."
-					decided={false}
-					recommendation="Approve, as the events tile's bar."
-					note="Each segment is a queue, and has the hovercard of that queue: its ID, its messages and its share of them. What the bar shows, and how it is best spread, are in the tile's explainer. An engine that keeps every message in one queue has no bar, so the hovercard is only ever of one of several queues."
-				>
-					{(
-						[
-							["A queue with a share", 12, 0.6, { amount: 20, things: 3 }],
-						] as const
-					).map(([label, amount, share, total]) => (
-						<State key={label} label={`Pointing at ${label.toLowerCase()}`}>
-							<Panel>
-								<SegmentCard
-									paragraphs={false}
-									about={{
-										thing: "queue",
-										id: "113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93",
-										amount,
-										share,
-										total,
-									}}
-								/>
-							</Panel>
+						<State
+							label="An engine that doesn't cluster"
+							recommendation="Approve, as for a cluster."
+							wide
+						>
+							<TitleBar
+								application={atSite}
+								identifier={
+									<>
+										engine{" "}
+										<Identifier
+											id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
+											what="engine ID"
+										/>
+									</>
+								}
+							/>
 						</State>
-					))}
-				</Part>
-			</Tile>
+					</Part>
+				</Tile>
 
-			<Tile
-				code="CL"
-				title="Cluster tile"
-				note="The tile of an engine that clusters, in each of its states, then the hovercards of its bar's segments, and its chart. The explainer, which is approved, says what the rest of the tile shows."
-			>
-				<Part
-					step={0}
-					title="The tile"
-					deciding="How the cluster tile looks while a node doesn't report its workloads."
-					notDeciding="The statuses, which become alert flags (FL); the explainer, which is approved; the chart, which is settled (CL 5)."
+				<Tile
+					code="EV"
+					title="Events tile"
+					note="Under review: the hovercard of a segment of the bar, which drills down to one stream. The rest of the tile is settled, including the tile of an engine that appends every event to one stream, and the tile while only some nodes report what it shows."
 				>
-					{(
-						[
-							["Several nodes", undefined, 3],
-							["One node", "The words are singular.", 1],
-							[
-								"No live nodes",
-								"The cluster is offline. The number is red, and so is the accent along the top. The words still make a sentence with the number.",
-								0,
-							],
-						] as const
-					).map(([label, note, nodes]) => (
-						<State key={label} label={label} note={note} decided>
-							<ClusterTile
+					<Part
+						step={0}
+						title="The tile"
+						deciding="How the events tile looks in each of its states."
+						notDeciding="What the hovercards say: the status, which becomes an alert flag (FL), and the hovercard of a segment of the bar (EV 4)."
+					>
+						<State label="Several streams" decided>
+							<EventsTile
 								application={application}
-								data={clusterTile(nodes)}
+								data={overview.events}
 								href={undefined}
 							/>
 						</State>
-					))}
-					<State
-						label="An engine that doesn't divide its work"
-						note="The tile leaves the workloads out, and has no bar, because a bar of nodes alone would only say how many there are, which the headline says."
-						decided
-					>
-						<ClusterTile
-							application={application}
-							data={{
-								nodes: overview.cluster.nodes.map(
-									({ workloads: _, ...n }) => n,
-								),
-							}}
-							href={undefined}
-						/>
-					</State>
-					<State
-						label="A node that doesn't report its workloads"
-						note="Other nodes report their workloads and this one doesn't, so this one is supported and not working, and its hovercard says only that its workloads are unknown: its share isn't known, and its segment is a faint square. The number of workloads counts only the nodes that report them, blurred by how few they are."
-						decided={false}
-						recommendation="Approve. The cluster supports what any of its nodes supports, and a node that doesn't is supported and not working, which it stops being when every node supports the same things."
-					>
-						<ClusterTile
-							application={application}
-							data={{
-								...overview.cluster,
-								nodes: overview.cluster.nodes.map((n, i) =>
-									i === 1 ? { id: n.id, heartbeats: n.heartbeats } : n,
-								),
-							}}
-							href={undefined}
-						/>
-					</State>
-				</Part>
-
-				<Part
-					step={4}
-					title="The bar"
-					deciding="What a segment of the cluster tile's bar shows when it is pointed at: its node, its workloads and its share of them."
-					notDeciding="How the bar is drawn, which is settled; the explainer, which is approved."
-					decided={false}
-					recommendation="Approve. A node's hovercard drills down: its workloads and its share are its figures, a node that owns none has no share, and a node that doesn't report its workloads, while others do, shows only its ID, with a status. The words about the bar never change."
-					note="Each segment is a node, and has the hovercard of that node. The hovercard drills down: its figures are the node's workloads and its share of them, and its words, about the bar, never change. A node that owns none has no share."
-				>
-					{(
-						[
-							[
-								"A node that owns some",
-								3,
-								0.6,
-								"Approve, with these words about the bar, which 4B shows too. The first paragraph is the one the other bars have. The second is apart, where the other bars have their advice, and says briefly why a count of workloads is not how busy a node is. Nothing in the spec says how big a workload is.",
-							],
-							["A node that owns none", 0, 0, undefined],
-						] as const
-					).map(([label, amount, share, recommendation]) => (
 						<State
-							key={label}
-							label={`Pointing at ${label.toLowerCase()}`}
-							decided={recommendation === undefined ? undefined : false}
-							recommendation={recommendation}
+							label="An engine that appends every event to one stream"
+							note="The engine says so, so the one stream is the only one there is. The tile doesn't count streams, and has no bar, because there is no spread to show."
+							decided
+						>
+							<EventsTile
+								application={application}
+								data={{
+									...overview.events,
+									streams: [{ id: "85d749b5", size: 1181 }],
+									oneStream: true,
+								}}
+								href={undefined}
+							/>
+						</State>
+						<State
+							label="Only some of the nodes report what the tile shows"
+							note="The coverage rule: the numbers are the sums of the nodes that report, blurred by the share of nodes that don't, and they glitch for a moment each time another node stops reporting. The bar and the chart stay live. Stop and start nodes to see it."
+							recommendation="Approve. The reader keeps the numbers and their trend while a deploy is under way, and the blur says how far to trust them, by the same means as a figure that is going stale."
+						>
+							<CoverageDemo />
+						</State>
+					</Part>
+
+					<Part
+						step={4}
+						title="The bar"
+						deciding="What a segment of the events tile's bar shows when it is pointed at: its stream, its events and its share of them."
+						notDeciding="Which streams the bar shows, and how it is drawn, which are settled; where the hovercard puts the stream's ID, which is IC; the words about the bar, which are in the explainer."
+						decided={false}
+						recommendation="Approve. It drills down to the stream: its events and its share of them."
+						note="Each segment is an event stream, and has the hovercard of that stream: its ID, its events and its share of them. What the bar shows, and how it is best spread, are in the tile's explainer. An engine that appends every event to one stream has no bar, so the hovercard is only ever of one of several streams."
+					>
+						{(
+							[
+								[
+									"A stream with a share",
+									7612,
+									0.6234,
+									{ amount: 12_210, things: 2 },
+								],
+							] as const
+						).map(([label, amount, share, total]) => (
+							<State key={label} label={`Pointing at ${label.toLowerCase()}`}>
+								<Panel>
+									<SegmentCard
+										paragraphs={false}
+										about={{
+											thing: "event-stream",
+											id: "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10",
+											amount,
+											share,
+											total,
+										}}
+									/>
+								</Panel>
+							</State>
+						))}
+					</Part>
+				</Tile>
+
+				<Tile
+					code="QU"
+					title="Queues tile"
+					note="Under review: the hovercard of a segment of the bar, as on the events tile. The rest of the tile is settled, including the tile of an engine that keeps every message in one queue."
+				>
+					<Part step={0} title="The tile" decided>
+						<State label="Several queues" decided>
+							<QueuesTile
+								application={application}
+								data={{
+									...overview.queues,
+									queues: [
+										{ id: "113cbdc3", size: 12 },
+										{ id: "4aeaa462", size: 7 },
+									],
+								}}
+								href={undefined}
+							/>
+						</State>
+						<State
+							label="An engine that keeps every message in one queue"
+							note="The engine says so, so the one queue is the only one there is. The tile doesn't count queues, and has no bar, because there is no spread to show."
+							decided
+						>
+							<QueuesTile
+								application={application}
+								data={{ ...overview.queues, oneQueue: true }}
+								href={undefined}
+							/>
+						</State>
+					</Part>
+					<Part
+						step={4}
+						title="The bar"
+						deciding="What a segment of the queues tile's bar shows when it is pointed at: its queue, its messages and its share of them."
+						notDeciding="Which queues the bar shows, and how it is drawn, which are settled; where the hovercard puts the queue's ID, which is IC; the words about the bar, which are in the explainer."
+						decided={false}
+						recommendation="Approve, as the events tile's bar."
+						note="Each segment is a queue, and has the hovercard of that queue: its ID, its messages and its share of them. What the bar shows, and how it is best spread, are in the tile's explainer. An engine that keeps every message in one queue has no bar, so the hovercard is only ever of one of several queues."
+					>
+						{(
+							[
+								["A queue with a share", 12, 0.6, { amount: 20, things: 3 }],
+							] as const
+						).map(([label, amount, share, total]) => (
+							<State key={label} label={`Pointing at ${label.toLowerCase()}`}>
+								<Panel>
+									<SegmentCard
+										paragraphs={false}
+										about={{
+											thing: "queue",
+											id: "113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93",
+											amount,
+											share,
+											total,
+										}}
+									/>
+								</Panel>
+							</State>
+						))}
+					</Part>
+				</Tile>
+
+				<Tile
+					code="CL"
+					title="Cluster tile"
+					note="The tile of an engine that clusters, in each of its states, then the hovercards of its bar's segments, and its chart. The explainer, which is approved, says what the rest of the tile shows."
+				>
+					<Part
+						step={0}
+						title="The tile"
+						deciding="How the cluster tile looks while a node doesn't report its workloads."
+						notDeciding="The statuses, which become alert flags (FL); the explainer, which is approved; the chart, which is settled (CL 5)."
+					>
+						{(
+							[
+								["Several nodes", undefined, 3],
+								["One node", "The words are singular.", 1],
+								[
+									"No live nodes",
+									"The cluster is offline. The number is red, and so is the accent along the top. The words still make a sentence with the number.",
+									0,
+								],
+							] as const
+						).map(([label, note, nodes]) => (
+							<State key={label} label={label} note={note} decided>
+								<ClusterTile
+									application={application}
+									data={clusterTile(nodes)}
+									href={undefined}
+								/>
+							</State>
+						))}
+						<State
+							label="An engine that doesn't divide its work"
+							note="The tile leaves the workloads out, and has no bar, because a bar of nodes alone would only say how many there are, which the headline says."
+							decided
+						>
+							<ClusterTile
+								application={application}
+								data={{
+									nodes: overview.cluster.nodes.map(
+										({ workloads: _, ...n }) => n,
+									),
+								}}
+								href={undefined}
+							/>
+						</State>
+						<State
+							label="A node that doesn't report its workloads"
+							note="Other nodes report their workloads and this one doesn't, so this one is supported and not working, and its hovercard says only that its workloads are unknown: its share isn't known, and its segment is a faint square. The number of workloads counts only the nodes that report them, blurred by how few they are."
+							decided={false}
+							recommendation="Approve. The cluster supports what any of its nodes supports, and a node that doesn't is supported and not working, which it stops being when every node supports the same things."
+						>
+							<ClusterTile
+								application={application}
+								data={{
+									...overview.cluster,
+									nodes: overview.cluster.nodes.map((n, i) =>
+										i === 1 ? { id: n.id, heartbeats: n.heartbeats } : n,
+									),
+								}}
+								href={undefined}
+							/>
+						</State>
+					</Part>
+
+					<Part
+						step={4}
+						title="The bar"
+						deciding="What a segment of the cluster tile's bar shows when it is pointed at: its node, its workloads and its share of them; and what it says about a node that doesn't report its workloads."
+						notDeciding="How the bar is drawn, which is settled; where the hovercard puts the node's ID, which is IC; the words about the bar, which are in the explainer (CL 6)."
+						decided={false}
+						note="Each segment is a node, and has the hovercard of that node. The hovercard drills down: its figures are the node's workloads and its share of them. A node that owns none has no share. What the bar shows, and that workloads vary in size, are in the tile's explainer."
+					>
+						{(
+							[
+								["A node that owns some", 3, 0.6],
+								["A node that owns none", 0, 0],
+							] as const
+						).map(([label, amount, share]) => (
+							<State
+								key={label}
+								label={`Pointing at ${label.toLowerCase()}`}
+								decided={false}
+								recommendation={
+									amount === 0
+										? "Approve, as for a node that owns some, with no share."
+										: "Approve. It drills down to the node: its workloads and its share of them."
+								}
+							>
+								<Panel>
+									<SegmentCard
+										paragraphs={false}
+										about={{
+											thing: "node",
+											id: nodeId,
+											amount,
+											share,
+											total: { amount: 5, things: 3 },
+										}}
+									/>
+								</Panel>
+							</State>
+						))}
+						<State
+							label="Pointing at a node that doesn't report its workloads"
+							note="Other nodes report their workloads and this one doesn't, so its hovercard has a status. One or several nodes can be in this state at once."
+							decided={false}
+							recommendation="Approve, with this wording. It is supported and not working, so it keeps its place in the bar, as a faint square, and its hovercard says why, as a status, without a negation."
 						>
 							<Panel>
 								<SegmentCard
-									about={{
-										thing: "node",
-										id: nodeId,
-										amount,
-										share,
-										total: { amount: 5, things: 3 },
-									}}
+									paragraphs={false}
+									about={{ thing: "node", id: nodeId, unreported: true }}
 								/>
 							</Panel>
 						</State>
-					))}
-					<State
-						label="Pointing at a node that doesn't report its workloads"
-						note="Other nodes report their workloads and this one doesn't, so its hovercard has a status. One or several nodes can be in this state at once."
-						decided={false}
-						recommendation="Approve, with this wording. It is supported and not working, so it keeps its place in the bar, as a faint square, and its hovercard says why, as a status, without a negation."
-					>
-						<Panel>
-							<SegmentCard
-								about={{ thing: "node", id: nodeId, unreported: true }}
-							/>
-						</Panel>
-					</State>
-					<Choices
-						of="A"
-						title="the words about the bar, on 4A and 4B"
-						choices={[
-							[
-								"One node busier than another",
-								<NodeCardWith
-									key="busier-than"
-									paragraphs={[
-										"This bar shows how the cluster's workloads are spread across its nodes.",
-										"Workloads vary in size, so one node can be busier than another node with the same number of workloads.",
-									]}
-								/>,
-							],
-							[
-								"Two nodes, as busy as each other or not",
-								<NodeCardWith
-									key="two-busy"
-									paragraphs={[
-										"This bar shows how the cluster's workloads are spread across its nodes.",
-										"Workloads vary in size, so two nodes with the same number of workloads can be very different in how busy they are.",
-									]}
-								/>,
-							],
-							[
-								"Counts and work",
-								<NodeCardWith
-									key="0"
-									paragraphs={[
-										"This bar shows how the cluster's workloads are spread across its nodes.",
-										"Some workloads take more work than others, so equal counts can mean unequal work.",
-									]}
-								/>,
-							],
-							[
-								"Not always busier",
-								<NodeCardWith
-									key="1"
-									paragraphs={[
-										"This bar shows how the cluster's workloads are spread across its nodes.",
-										"Workloads vary in size, so a node with more workloads isn't always busier.",
-									]}
-								/>,
-							],
-							[
-								"Naming the resources",
-								<NodeCardWith
-									key="2"
-									paragraphs={[
-										"This bar shows how the cluster's workloads are spread across its nodes.",
-										"Workloads vary in size, so nodes with the same number of workloads can use very different amounts of CPU and memory.",
-									]}
-								/>,
-							],
-							[
-								"One paragraph, as before",
-								<NodeCardWith
-									key="3"
-									paragraphs={[
-										"This bar shows how the cluster's workloads are spread across its nodes. Some workloads have much more to do than others, so one node can be much busier than another with the same number of workloads.",
-									]}
-								/>,
-							],
-						]}
-					/>
-					<Choices
-						of="C"
-						title="the status"
-						choices={[
-							[
-								"The consequence first",
-								<NodeCardWith
-									key="first"
-									status="This node's workloads are unknown. Other nodes in the cluster report their workloads."
-								/>,
-							],
-							[
-								"As a contrast",
-								<NodeCardWith
-									key="contrast"
-									status="Some of the cluster's nodes report their workloads and this node doesn't report its workloads."
-								/>,
-							],
-						]}
-					/>
-				</Part>
-
-				<Part
-					step={5}
-					title="The chart"
-					decided={true}
-					note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. Add and remove nodes to see each."
-				>
-					<State label="Nodes coming and going">
-						<Nodes application={application} />
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="EN"
-				title="Engine tile"
-				note="The tile of an engine that doesn't cluster, in place of the cluster tile, in each of its states, and then its parts, from the least specific to the most. It has no detail line and no bar."
-			>
-				<Part step={0} title="The tile" decided>
-					<State label="Online" decided>
-						<EngineTile
-							application={application}
-							data={{ node: overview.cluster.nodes[0] }}
-							href={undefined}
+						<Choices
+							of="B"
+							title="the status"
+							choices={[
+								[
+									"The consequence first",
+									<NodeCardWith
+										key="first"
+										status="This node's workloads are unknown. Other nodes in the cluster report their workloads."
+									/>,
+								],
+								[
+									"As a contrast",
+									<NodeCardWith
+										key="contrast"
+										status="Some of the cluster's nodes report their workloads and this node doesn't report its workloads."
+									/>,
+								],
+							]}
 						/>
-					</State>
-					<State
-						label="Offline"
-						note="The headline is red, and so is the accent along the top."
-						decided
-					>
-						<EngineTile application={application} data={{}} href={undefined} />
-					</State>
-					<State
-						label="In the row of tiles"
-						note="In place of the cluster tile, beside the events and queues tiles."
-						wide
-						decided
-					>
-						<div style={{ width: 960 }}>
-							<Totals
-								application={application}
-								data={{
-									...overview,
-									cluster: undefined,
-									engine: { node: overview.cluster.nodes[0] },
-								}}
-							/>
-						</div>
-					</State>
-				</Part>
+					</Part>
 
-				<Part
-					step={3}
-					title="The chart"
-					decided={true}
-					note="The heartbeat of the engine, which behaves as the cluster tile's does for one node."
-				/>
-				<Part
-					step={4}
-					title="The explainer"
-					deciding="The words of the engine tile's explainer: its two annotations, its title, and the paragraph about heartbeats under the card."
-					notDeciding="The alert flag of the engine while it is out of contact, which is FL; how an explainer looks and opens, which is settled."
-					note="It takes the place of the hovercards of the icon and the headline, by the rules of the cluster view's explainers. What &quot;online&quot; means, which the headline's hovercard said, is in its text."
-				>
-					<State
-						label="Online"
-						recommendation="Approve. It explains the heartbeat chart as the cluster card's explainer does, for one process, and says what the card shows when the heartbeats stop, which gives &quot;online&quot; its meaning."
-						wide
+					<Part
+						step={5}
+						title="The chart"
+						decided={true}
+						note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. Add and remove nodes to see each."
 					>
-						<Explained spec={engineExplainer} />
-					</State>
-				</Part>
-			</Tile>
-		</Review>
+						<State label="Nodes coming and going">
+							<Nodes application={application} />
+						</State>
+					</Part>
+
+					<Part
+						step={6}
+						title="The explainer's sentence about workloads"
+						deciding="That the explainer says that workloads vary in size, at the end of its paragraph about workloads, which is there only when the engine reports workloads; and the sentence's words."
+						notDeciding="The rest of the explainer, which is approved; the hovercards of the bar's segments (CL 4)."
+						note="The sentence was a paragraph of each node's hovercard. It tells the reader not to read a node's count of workloads as how busy the node is, and its words never change, so it explains, which is the explainer's job. Point at the tile and press its &quot;?&quot; to read it."
+					>
+						<State
+							label="The explainer"
+							recommendation="Approve, with this wording, which the node's hovercard had. Nothing in the spec says how big a workload is."
+							wide
+						>
+							<Explained spec={clusterExplainer(workloadsVary[0][1])} />
+						</State>
+						<Choices
+							of="A"
+							title="the sentence"
+							framed={false}
+							choices={workloadsVary.slice(1).map(([label, sentence]) => [
+								label,
+								<p
+									key={label}
+									className="max-w-md rounded-card bg-panel p-4 text-fg-soft [box-shadow:var(--shadow-raised)]"
+								>
+									{workloadsParagraph} {sentence}
+								</p>,
+							])}
+						/>
+					</Part>
+				</Tile>
+
+				<Tile
+					code="EN"
+					title="Engine tile"
+					note="The tile of an engine that doesn't cluster, in place of the cluster tile, in each of its states, and then its parts, from the least specific to the most. It has no detail line and no bar."
+				>
+					<Part step={0} title="The tile" decided>
+						<State label="Online" decided>
+							<EngineTile
+								application={application}
+								data={{ node: overview.cluster.nodes[0] }}
+								href={undefined}
+							/>
+						</State>
+						<State
+							label="Offline"
+							note="The headline is red, and so is the accent along the top."
+							decided
+						>
+							<EngineTile
+								application={application}
+								data={{}}
+								href={undefined}
+							/>
+						</State>
+						<State
+							label="In the row of tiles"
+							note="In place of the cluster tile, beside the events and queues tiles."
+							wide
+							decided
+						>
+							<div style={{ width: 960 }}>
+								<Totals
+									application={application}
+									data={{
+										...overview,
+										cluster: undefined,
+										engine: { node: overview.cluster.nodes[0] },
+									}}
+								/>
+							</div>
+						</State>
+					</Part>
+
+					<Part
+						step={3}
+						title="The chart"
+						decided={true}
+						note="The heartbeat of the engine, which behaves as the cluster tile's does for one node."
+					/>
+					<Part
+						step={4}
+						title="The explainer"
+						deciding="The words of the engine tile's explainer: its two annotations, its title, and the paragraph about heartbeats under the card."
+						notDeciding="The alert flag of the engine while it is out of contact, which is FL; how an explainer looks and opens, which is settled."
+						note="It takes the place of the hovercards of the icon and the headline, by the rules of the cluster view's explainers. What &quot;online&quot; means, which the headline's hovercard said, is in its text."
+					>
+						<State
+							label="Online"
+							recommendation="Approve. It explains the heartbeat chart as the cluster card's explainer does, for one process, and says what the card shows when the heartbeats stop, which gives &quot;online&quot; its meaning."
+							wide
+						>
+							<Explained spec={engineExplainer} />
+						</State>
+					</Part>
+				</Tile>
+			</Review>
+		</ExplainersBuilt>
 	);
 }
 
@@ -1121,8 +1090,7 @@ export function ReviewPage() {
 /**
  * Flagged draws a card with an alert flag to the left of its anchor, which is the
  * card's icon. Pointing at the flag shows the status in a tooltip. It shows how a
- * status would look once the hovercards that explain stop carrying statuses, so
- * the card is drawn as it will be once the explainers are in the views.
+ * status would look once the hovercards that explain stop carrying statuses.
  */
 function Flagged({
 	card,
@@ -1160,7 +1128,7 @@ function Flagged({
 	}, [anchor]);
 	return (
 		<div ref={ref} className="relative" style={{ width }}>
-			<ExplainersBuilt value={true}>{card}</ExplainersBuilt>
+			{card}
 			{at && (
 				<span className="absolute z-20" style={{ left: at.x, top: at.y }}>
 					<Popover content={status}>
@@ -1615,35 +1583,125 @@ const nodeId = "113cbdc3-5b2d-4e8a-a1c6-0d4b8e2f7a93";
  * than its own, for a choice of wording: `paragraphs` for one that owns three of
  * five workloads, or `status` for one that doesn't report its workloads.
  */
-function NodeCardWith({
-	paragraphs,
-	status,
-}: {
-	paragraphs?: readonly string[];
-	status?: string;
-}) {
+function NodeCardWith({ status }: { status: string }) {
 	return (
 		<InfoCard
 			subsystem="cluster"
 			icon="node"
 			kind="Node"
 			id={{ id: nodeId, what: "node ID" }}
-			figure={
-				paragraphs && {
-					value: <Ramped value={3} format={formatCompact} />,
-					unit: "workloads",
-					aside: <Ramped value={0.6} format={formatPercent} />,
-				}
-			}
-			status={
-				status === undefined ? undefined : { icon: "alert", text: status }
-			}
-		>
-			{paragraphs?.map((p) => (
-				<p key={p}>{p}</p>
-			))}
-		</InfoCard>
+			status={{ icon: "alert", text: status }}
+		/>
 	);
+}
+
+/**
+ * The cluster explainer's paragraph about workloads, without the sentence that
+ * says that workloads vary in size.
+ */
+const workloadsParagraph =
+	"The work is divided into ongoing tasks, such as delivering messages to a handler, which are called workloads. Each workload is given to one node at a time.";
+
+/**
+ * The wordings of the sentence that says that workloads vary in size, which CL 6
+ * chooses between, the recommended one first.
+ */
+const workloadsVary = [
+	[
+		"Two nodes, with different amounts of work",
+		"Workloads vary in size, so two nodes with the same number of workloads can have very different amounts of work to do.",
+	],
+	[
+		"One node busier than another",
+		"Workloads vary in size, so one node can be busier than another node with the same number of workloads.",
+	],
+	[
+		"Two nodes, as busy as each other or not",
+		"Workloads vary in size, so two nodes with the same number of workloads can be very different in how busy they are.",
+	],
+	[
+		"Counts and work",
+		"Some workloads take more work than others, so equal counts can mean unequal work.",
+	],
+	[
+		"Not always busier",
+		"Workloads vary in size, so a node with more workloads isn't always busier.",
+	],
+	[
+		"Naming the resources",
+		"Workloads vary in size, so nodes with the same number of workloads can use very different amounts of CPU and memory.",
+	],
+] as const;
+
+/**
+ * The data of the cluster tile in its explainer, whose last node has just sent a
+ * heartbeat, so that the chart is high at its right end, where its arrow ends.
+ */
+const explainedCluster = {
+	...overview.cluster,
+	nodes: overview.cluster.nodes.map((node, i, nodes) => ({
+		...node,
+		heartbeats: nodes[nodes.length - 1 - i]?.heartbeats ?? node.heartbeats,
+	})),
+};
+
+/**
+ * clusterExplainer is the approved explainer of the cluster tile, with the given
+ * sentence about the size of workloads at the end of its paragraph about them.
+ */
+function clusterExplainer(sentence: string): ExplainerSpec {
+	return {
+		label: "cluster vital card",
+		icon: "svg.size-5",
+		title: (
+			<>
+				The nodes of the cluster that runs the{" "}
+				<ApplicationName application={atSite} />
+			</>
+		),
+		width: 360,
+		card: (
+			<ClusterTile
+				application={application}
+				data={explainedCluster}
+				href={undefined}
+			/>
+		),
+		notes: [
+			{
+				at: ".text-4xl",
+				text: "the number of nodes in contact now",
+				side: "left",
+				atText: true,
+				with: [{ at: ":scope > article > span", atText: "cluster nodes" }],
+				approach: "top-left",
+				dy: -40,
+			},
+			{
+				at: ":scope > article > span",
+				text: "the number of workloads in the cluster",
+				side: "top",
+				atText: "5 workloads",
+			},
+			{
+				at: "div.h-2",
+				text: "how the workloads are spread across the nodes",
+				side: "left",
+				dy: 6,
+			},
+			{
+				at: "canvas",
+				text: "how recently each node sent a heartbeat",
+				side: "right",
+				into: "chart",
+			},
+		],
+		paragraphs: [
+			"Each node is a running process of the application's engine, and the nodes share the application's work.",
+			{ text: `${workloadsParagraph} ${sentence}`, when: { has: "workload" } },
+			"Each node sends heartbeats to show that it is running. Its section of the heartbeat chart rises with each heartbeat and falls until the next, so it sinks to the bottom if the heartbeats stop.",
+		],
+	};
 }
 
 /**

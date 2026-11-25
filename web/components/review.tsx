@@ -31,9 +31,8 @@ export function Review({ children }: { children: ReactNode }) {
 			<Page>
 				<div className="mb-8 flex items-center justify-between gap-4">
 					<p className="text-muted">
-						Each tile under review, whole and then part by part, from its icon
-						to its chart. Animations play when the page opens, and again when
-						they are replayed.
+						Each tile under review, whole and then part by part. Animations play
+						when the page opens, and again when they are replayed.
 					</p>
 					<button
 						type="button"
