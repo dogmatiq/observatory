@@ -1,4 +1,4 @@
-import { createContext } from "react";
+import { createContext, type ReactNode } from "react";
 
 /**
  * ExplainersBuilt is true where a card is drawn without the hovercard of its
@@ -8,3 +8,10 @@ import { createContext } from "react";
  * part of a card at once, which makes the icon's hovercard unnecessary.
  */
 export const ExplainersBuilt = createContext(false);
+
+/**
+ * TileFlag is the alert flag that a vital card shows in its top row, between the
+ * readout of its chart and its icon, if it has one. Only /review sets it, to show
+ * how a status would look as a flag.
+ */
+export const TileFlag = createContext<ReactNode>(undefined);

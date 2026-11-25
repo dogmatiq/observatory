@@ -1079,6 +1079,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   every part of the view. `/review` draws every card that way, as the views will be once they have explainers.
   Under review (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
   at the right of its top row, where a compact digest has its flag, and so clear of the chevron after a linked name.
+  On a vital card, the readout of the chart, while the chart is pointed at, is to the left of the flag.
   Approved (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole
   doesn't react to the pointer; the name is underlined, with a chevron after it, while it is pointed at or has the
   keyboard's focus. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows

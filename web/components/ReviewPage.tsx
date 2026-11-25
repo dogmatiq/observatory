@@ -27,7 +27,7 @@ import { ApplicationName } from "./ApplicationName.tsx";
 import { noNodesText } from "./ClusterCards.tsx";
 import { engineOutText } from "./EngineCard.tsx";
 import { Explained, type ExplainerSpec } from "./Explainer.tsx";
-import { ExplainersBuilt } from "./explained.ts";
+import { ExplainersBuilt, TileFlag } from "./explained.ts";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import { Icon } from "./Icon.tsx";
 import { Identifier } from "./Identifier.tsx";
@@ -1119,9 +1119,11 @@ export function ReviewPage() {
 }
 
 /**
- * Flagged draws a card with an alert flag to the left of its anchor, which is the
- * card's icon. Pointing at the flag shows the status in a tooltip. It shows how a
- * status would look once the hovercards that explain stop carrying statuses.
+ * Flagged draws a card with an alert flag to the left of its icon. Pointing at the
+ * flag shows the status in a tooltip. It shows how a status would look once the
+ * hovercards that explain stop carrying statuses. A vital card draws the flag in
+ * its top row, between its chart's readout and its icon; for another card, the
+ * flag is placed to the left of `anchor`.
  */
 function Flagged({
 	card,
@@ -1133,8 +1135,8 @@ function Flagged({
 	card: ReactNode;
 	width: number;
 
-	/** A CSS selector for what the flag goes to the left of. */
-	anchor: string;
+	/** A CSS selector for what the flag goes to the left of, on a card that isn't a vital card. */
+	anchor?: string;
 
 	/** "bad" for red, "qualifies" for the grey of a status that qualifies. */
 	tone: "bad" | "qualifies";
@@ -1146,7 +1148,7 @@ function Flagged({
 	const [at, setAt] = useState<{ x: number; y: number }>();
 	useLayoutEffect(() => {
 		const el = ref.current;
-		const target = el?.querySelector(anchor);
+		const target = anchor === undefined ? null : el?.querySelector(anchor);
 		if (!el || !target) {
 			return;
 		}
@@ -1157,22 +1159,25 @@ function Flagged({
 			y: r.top + r.height / 2 - box.top - 8,
 		});
 	}, [anchor]);
+	const flag = (
+		<Popover content={status}>
+			<span
+				className={cn(
+					"flex size-4 flex-none",
+					tone === "bad" ? "text-bad" : "text-fg-soft",
+				)}
+			>
+				<Icon name="alert" className="size-4" />
+				<span className="sr-only">Status</span>
+			</span>
+		</Popover>
+	);
 	return (
 		<div ref={ref} className="relative" style={{ width }}>
-			{card}
+			{anchor === undefined ? <TileFlag value={flag}>{card}</TileFlag> : card}
 			{at && (
 				<span className="absolute z-20" style={{ left: at.x, top: at.y }}>
-					<Popover content={status}>
-						<span
-							className={cn(
-								"flex size-4",
-								tone === "bad" ? "text-bad" : "text-fg-soft",
-							)}
-						>
-							<Icon name="alert" className="size-4" />
-							<span className="sr-only">Status</span>
-						</span>
-					</Popover>
+					{flag}
 				</span>
 			)}
 		</div>
@@ -1187,7 +1192,6 @@ const flaggedCards = [
 		recommendation:
 			"Approve. The status shows only while it applies, in grey, because the figures are still worth reading.",
 		width: 360,
-		anchor: "svg.size-5",
 		tone: "qualifies" as const,
 		card: (
 			<EventsTile
@@ -1203,7 +1207,6 @@ const flaggedCards = [
 		note: "Today the status is in the hovercard of the rate.",
 		recommendation: "Approve, as for the events tile.",
 		width: 360,
-		anchor: "svg.size-5",
 		tone: "qualifies" as const,
 		card: (
 			<QueuesTile
@@ -1220,7 +1223,6 @@ const flaggedCards = [
 		recommendation:
 			"Approve, in red, because something is wrong, as the tile's red 0 and accent already say.",
 		width: 360,
-		anchor: "svg.size-5",
 		tone: "bad" as const,
 		card: (
 			<ClusterTile

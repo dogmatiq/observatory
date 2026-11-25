@@ -4,7 +4,7 @@ import { useCurrent } from "../lib/distrust.tsx";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
 import { type Readout, ReadoutContext } from "../lib/readout.tsx";
-import { ExplainersBuilt } from "./explained.ts";
+import { ExplainersBuilt, TileFlag } from "./explained.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { Popover } from "./Popover.tsx";
@@ -128,6 +128,7 @@ export function MetricTile({
 	const shownReadout = readout ?? lastReadout.current;
 
 	const explainersBuilt = useContext(ExplainersBuilt);
+	const flag = useContext(TileFlag);
 
 	const content = (
 		<ReadoutContext.Provider value={setReadout}>
@@ -155,6 +156,7 @@ export function MetricTile({
 							</>
 						)}
 					</span>
+					{flag}
 					{explainersBuilt ? (
 						<span className="flex-none text-(--subsystem)">
 							<Icon name={icon} className="inline size-5 align-text-bottom" />
