@@ -1039,7 +1039,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   The "?" that opens an explainer, at the bottom right of a card while it is pointed at, is a filled circle in the
   color of the card's chart, or of the ground of the sky in its place, or in the accent color on a card with neither, a
   step larger than before, after a viewer
-  didn't notice the muted outline. It doesn't depend on whether the viewer has used an explainer before. Done: the segment hovercards' advice says
+  didn't notice the muted outline. It doesn't depend on whether the viewer has used an explainer before.
+  When the explainers are built into the views, every hovercard that explains goes: each card's icon hovercard, the
+  hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
+  what drills down (a segment's identity and amount, and the cluster's and the engine's IDs), the statuses, as alert
+  flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
+  `/review` no longer reviews the words of the hovercards that explain (it retired EV 1, CL 1–3, EN 1–2, WD, and SH 2's
+  headline hovercards), and reviews the site view's explainers (SW) and the engine tile's (EN 4). Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
