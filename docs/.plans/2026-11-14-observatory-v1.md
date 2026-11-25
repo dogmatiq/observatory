@@ -1048,8 +1048,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   its "?" and explainer, which `web/components/explainers.tsx` gives, chosen by what the card shows; the icon and figure
   hovercards, the icons' growth, the sunken ground of the figures, the segment cards' paragraphs and the review-only
   switches are gone, with the cards that only those hovercards drew and the `/-/vitals` page of their words. The
-  statuses that those hovercards carried are kept as texts for the alert flags (FL), which come next; until then the
-  views don't say them. The cluster's or engine's ID, which only the cluster tile's icon hovercard gave, waits for the
+  statuses that those hovercards carried are said by the alert flags (FL), below. The cluster's or engine's ID, which only the cluster tile's icon hovercard gave, waits for the
   title bar's trail (ID 2).
   The node hovercard's sentence "Workloads vary in size, so two nodes with the same number of workloads can have very
   different amounts of work to do." moves to the end of the cluster explainer's paragraph about workloads (approved);
@@ -1097,9 +1096,15 @@ Tick each item when it is done, and write the pull request or commit that did it
   links in the title bar with the trail in a row under it; it isn't decided. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
   prototype's links fit a wide window only just. The trail's hovercard lays each step out as a card's heading: its
   name over its kind, with its key at the right of its kind, or its ID in its name's place if it has no name.
-  Under review (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
+  Approved (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
   at the right of its top row, where a compact digest has its flag, and so clear of the chevron after a linked name.
-  On a vital card, the readout of the chart, while the chart is pointed at, is to the left of the flag.
+  On a vital card, the readout of the chart, while the chart is pointed at, is to the left of the flag. Done: every
+  status that the removed hovercards carried is a flag, grey for one that qualifies the figures and red for one that
+  says something is wrong, and its tooltip says it: the events and queues tiles and a handler digest while only some
+  nodes report them, a rate that is lost or not known yet, the cluster tile with no node sending a signal or only some
+  reporting their workloads, the engine tile with no signal, the site's tiles while only some applications report
+  them, and the applications tile with none sending a signal. A card with two statuses has one flag, whose tooltip
+  says both, red if either is. The statuses are in `web/components/statuses.ts`, and the flag is `AlertFlag`.
   Approved (LK): on a card that leads to another page, only the thing's name is a link, and the card as a whole
   doesn't react to the pointer; the name is underlined, with a chevron after it, while it is pointed at or has the
   keyboard's focus. On a screen that is touched, the chevron is always there, and tapping the name or the kind follows

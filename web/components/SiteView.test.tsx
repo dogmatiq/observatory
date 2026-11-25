@@ -10,6 +10,7 @@ import { formatCompact } from "../lib/format.ts";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { stubBrowser, tipOf } from "../test-support.ts";
 import { SiteBreakdown, SiteOverview } from "./SiteView.tsx";
+import { noSignalFromApplications } from "./statuses.ts";
 
 beforeEach(stubBrowser);
 afterEach(() => {
@@ -109,7 +110,9 @@ test("the applications tile is a red zero alone when no applications are sending
 
 	const tile = screen.getByRole("article", { name: "Applications" });
 
-	expect(tile.textContent).toMatch(/^0applications$/);
+	expect(tile.textContent).toBe(
+		`0${noSignalFromApplications.text}applications`,
+	);
 });
 
 test("the events tile counts the events and event streams of all the applications together", () => {

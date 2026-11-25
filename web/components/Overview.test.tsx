@@ -11,6 +11,11 @@ import { application, overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
 import { stubBrowser } from "../test-support.ts";
 import { Overview } from "./Overview.tsx";
+import {
+	noSignalFromEngine,
+	noSignalFromNodes,
+	rateUnavailable,
+} from "./statuses.ts";
 
 beforeEach(stubBrowser);
 
@@ -123,7 +128,8 @@ test("a cluster with no live nodes has a red number, and the words after it stil
 	);
 
 	const tile = screen.getByRole("article", { name: "Cluster" });
-	expect(tile.textContent).toBe("0cluster nodes");
+	// The alert flag reads its status where it is, after the number.
+	expect(tile.textContent).toBe(`0${noSignalFromNodes.text}cluster nodes`);
 	expect(tile.querySelector(".text-bad")?.textContent).toBe("0");
 });
 
@@ -235,10 +241,13 @@ test("a rate that the Observatory has never had is a zero in dot-matrix type, th
 
 	const events = screen.getByRole("article", { name: "Events" });
 	const queues = screen.getByRole("article", { name: "Queues" });
+	// Neither rate is known yet, which each tile's alert flag reads where it is.
 	expect(events.textContent).toBe(
-		"0events per minute, 1.2K events in 2 streams",
+		`0${rateUnavailable.text}events per minute, 1.2K events in 2 streams`,
 	);
-	expect(queues.textContent).toBe("19messages in 1 queue, 0/min");
+	expect(queues.textContent).toBe(
+		`19${rateUnavailable.text}messages in 1 queue, 0/min`,
+	);
 	expect(
 		within(events).getByRole("img", { name: "not available" }),
 	).toBeDefined();
@@ -362,7 +371,7 @@ test("the engine tile of an engine whose process isn't live says that it is offl
 	const engine = within(
 		screen.getByRole("region", { name: "Totals" }),
 	).getByRole("article", { name: "Engine" });
-	expect(engine.textContent).toBe("Offline");
+	expect(engine.textContent).toBe(`Offline${noSignalFromEngine.text}`);
 	expect(engine.className).toContain("--color-bad");
 	expect(within(engine).getByText("Offline").className).toContain("text-bad");
 });

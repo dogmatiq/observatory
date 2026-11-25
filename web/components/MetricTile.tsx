@@ -1,13 +1,14 @@
-import { type ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { useCurrent } from "../lib/distrust.tsx";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
 import { type Readout, ReadoutContext } from "../lib/readout.tsx";
-import { TileFlag } from "./explained.ts";
+import { AlertFlag } from "./AlertFlag.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
+import type { Status } from "./statuses.ts";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
 /**
@@ -39,6 +40,10 @@ export const linkedCardClasses =
  * one headline number, with a few words that say what the number counts, and a
  * bar and a chart along its bottom.
  *
+ * While any of its `statuses` apply, it has an alert flag in its top row, between
+ * the readout of its chart and its icon, so that the readout, which appears while
+ * the chart is pointed at, comes before the flag and never covers it.
+ *
  * The tile is a link if it has an `href`, and is outlined when pointed at.
  * Otherwise it is an article named by its `label`, and nothing happens when it is
  * pointed at.
@@ -53,6 +58,7 @@ export function MetricTile({
 	chart,
 	href,
 	accent,
+	statuses = [],
 }: {
 	subsystem: Subsystem;
 
@@ -83,6 +89,9 @@ export function MetricTile({
 	 * too, so that the color is not the only sign.
 	 */
 	accent?: "failing" | "bad";
+
+	/** The statuses that apply to what the tile shows, which its alert flag says. */
+	statuses?: readonly Status[];
 }) {
 	const classes = cn(
 		cardClasses,
@@ -104,8 +113,6 @@ export function MetricTile({
 		lastReadout.current = readout;
 	}
 	const shownReadout = readout ?? lastReadout.current;
-
-	const flag = useContext(TileFlag);
 
 	const content = (
 		<ReadoutContext.Provider value={setReadout}>
@@ -133,7 +140,7 @@ export function MetricTile({
 							</>
 						)}
 					</span>
-					{flag}
+					<AlertFlag statuses={statuses} />
 					<span className="flex-none text-(--subsystem)">
 						<Icon name={icon} className="inline size-5 align-text-bottom" />
 					</span>

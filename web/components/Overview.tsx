@@ -28,6 +28,13 @@ import { Ramped } from "./Ramped.tsx";
 import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
+import {
+	noSignalFromEngine,
+	noSignalFromNodes,
+	rateStatuses,
+	someNodesReport,
+	someNodesReportWorkloads,
+} from "./statuses.ts";
 import { useRate } from "./useRate.ts";
 
 /**
@@ -238,7 +245,7 @@ export function EventsTile({
 	// A rate is a whole number of events per minute, or per hour or per day if it
 	// is less than one per minute, and is lost, as the figure shows it, for a
 	// minute at most.
-	const { scaled, per } = useRate(rate?.perMinute);
+	const { scaled, per, state } = useRate(rate?.perMinute);
 
 	// The tile shows what the nodes can tell it. Its headline is the events per
 	// minute, or, if no node supports that, how many events there are.
@@ -248,6 +255,10 @@ export function EventsTile({
 			label="Events"
 			icon="event"
 			href={href}
+			statuses={[
+				...(data.coverage === undefined ? [] : [someNodesReport]),
+				...(rate ? rateStatuses(state) : []),
+			]}
 			value={
 				rate ? (
 					<span>
@@ -380,7 +391,7 @@ export function QueuesTile({
 
 	// The rate of removal is a whole number per minute, or per hour or per day if
 	// it is less than one per minute, as the rate of events is.
-	const { scaled, per } = useRate(throughput?.perMinute);
+	const { scaled, per, state } = useRate(throughput?.perMinute);
 
 	// What the rate counts, which is the messages that handlers have handled, or
 	// those that are removed from the queues, or only the commands, or only the
@@ -401,6 +412,10 @@ export function QueuesTile({
 			label="Queues"
 			icon="message"
 			href={href}
+			statuses={[
+				...(data.coverage === undefined ? [] : [someNodesReport]),
+				...(throughput ? rateStatuses(state) : []),
+			]}
 			accent={failing > 0 ? "failing" : undefined}
 			value={
 				queues ? (
@@ -500,6 +515,13 @@ export function ClusterTile({
 			label="Cluster"
 			icon="cluster"
 			href={href}
+			statuses={
+				data.nodes.length === 0
+					? [noSignalFromNodes]
+					: divided && coverage < 1
+						? [someNodesReportWorkloads]
+						: []
+			}
 			accent={data.nodes.length === 0 ? "bad" : undefined}
 			value={
 				<span>
@@ -579,6 +601,7 @@ export function EngineTile({
 			label="Engine"
 			icon="engine"
 			href={href}
+			statuses={node === undefined ? [noSignalFromEngine] : []}
 			accent={node === undefined ? "bad" : undefined}
 			value={
 				<span>{node === undefined ? <Alarm>Offline</Alarm> : "Online"}</span>

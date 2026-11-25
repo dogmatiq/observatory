@@ -5,6 +5,7 @@ import { formatCompact, nounFor } from "../lib/format.ts";
 import { useRamped } from "../lib/ramped.ts";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
+import { AlertFlag } from "./AlertFlag.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
 	accentClasses,
@@ -18,6 +19,7 @@ import { Presence } from "./Presence.tsx";
 import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
+import { someNodesReport } from "./statuses.ts";
 import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
 
 /**
@@ -41,7 +43,8 @@ const chartedWords: Record<HandlerData["kind"], string> = {
 /**
  * HandlerDigest is the digest of one handler, on the cluster view. It shows the
  * handler's name and kind, the numbers that matter for that kind of handler, and
- * how many of its messages are failing. Along its bottom are a bar of how its
+ * how many of its messages are failing, and, while only some of the cluster's
+ * nodes report it, an alert flag that says so. Along its bottom are a bar of how its
  * instances are spread, if it has instances, and a chart of the events that it
  * records or handles per minute, if it has one.
  *
@@ -115,16 +118,18 @@ export function HandlerDigest({
 						</span>
 					</span>
 				</span>
-				<span
-					className={cn(
-						"ml-auto flex-none self-start",
-						kindColors[handler.kind],
-					)}
-				>
-					<Icon
-						name={handler.kind}
-						className="inline size-5 align-text-bottom"
+				{/* The alert flag is to the left of the kind icon, where a compact
+				digest has its flag, and clear of the chevron after a linked name. */}
+				<span className="ml-auto flex flex-none items-center gap-2.5 self-start">
+					<AlertFlag
+						statuses={handler.coverage === undefined ? [] : [someNodesReport]}
 					/>
+					<span className={kindColors[handler.kind]}>
+						<Icon
+							name={handler.kind}
+							className="inline size-5 align-text-bottom"
+						/>
+					</span>
 				</span>
 			</div>
 			<Summary handler={handler} summary={summary} />

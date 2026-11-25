@@ -1,11 +1,4 @@
-import {
-	Fragment,
-	type ReactNode,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
-} from "react";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { application, overview } from "../fixtures/overview.ts";
 import {
 	euWest,
@@ -19,7 +12,6 @@ import { shortId } from "../lib/format.ts";
 import { LiveData } from "../lib/live.tsx";
 import type { OverviewData, SiteApplication, SiteData } from "../model.ts";
 import { Explained } from "./Explainer.tsx";
-import { TileFlag } from "./explained.ts";
 import {
 	cardExplainers,
 	engineExplainer,
@@ -38,7 +30,6 @@ import {
 	Totals,
 } from "./Overview.tsx";
 import { Popover, panelClasses } from "./Popover.tsx";
-import { partialStatus } from "./partial.ts";
 import { Choices, Panel, Part, Review, State, Tile } from "./review.tsx";
 import { SegmentCard } from "./SegmentCard.tsx";
 import {
@@ -46,10 +37,11 @@ import {
 	CompactDigests,
 	noSignalText,
 	SiteBreakdown,
+	SiteEventsTile,
 	SiteOverview,
 	SiteTotals,
 } from "./SiteView.tsx";
-import { engineOutText, noNodesText } from "./statuses.ts";
+import { noSignalFromEngine } from "./statuses.ts";
 import { TitleBar } from "./TitleBar.tsx";
 
 /**
@@ -574,25 +566,127 @@ export function ReviewPage() {
 			<Tile
 				code="FL"
 				title="Statuses as alert flags"
-				note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose tooltip says the status."
+				note="Explainers took over explaining from the hovercards, so the statuses that those hovercards carried have a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status is an alert flag, whose tooltip says the status. These are the real cards, with their real flags."
 			>
 				<Part
 					step={1}
 					title="An alert flag while a status applies"
 					deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
 					notDeciding="The words of each status, which are settled; that a flag opens a tooltip of its status, which is IC; the compact digest's alert flag, which it already has and whose tooltip is SH 2."
-					note="On a vital card or a handler digest, the flag goes to the left of the card's icon, at the right of its top row, which is where a compact digest, which has no icon, has its flag. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
+					note="On a vital card, the flag is in its top row, between the readout of its chart and its icon, so that the readout, which appears while the chart is pointed at, comes before the flag. On a handler digest, it is to the left of the kind icon, which is where a compact digest, which has no icon, has its flag. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. A card with two statuses at once has one flag, whose tooltip says both, red if either is. Point at a flag for its status."
 				>
-					{flaggedCards.map((f) => (
-						<State
-							key={f.label}
-							label={f.label}
-							note={f.note}
-							recommendation={f.recommendation}
-						>
-							<Flagged {...f} />
-						</State>
-					))}
+					<State
+						label="The events tile, while only some nodes report it"
+						recommendation="Approve. The status shows only while it applies, in grey, because the figures are still worth reading."
+					>
+						<FlaggedCard>
+							<EventsTile
+								data={{ ...overview.events, coverage: 0.67 }}
+								href={undefined}
+							/>
+						</FlaggedCard>
+					</State>
+					<State
+						label="The queues tile, while no new samples are arriving"
+						note="The rate is lost a moment after the card is drawn, and is kept as the last rate that there was. After a minute without samples, the flag says that there aren't enough samples yet."
+						recommendation="Approve, as for the events tile."
+					>
+						<FlaggedCard>
+							<LosingRate />
+						</FlaggedCard>
+					</State>
+					<State
+						label="The cluster tile, while no nodes are sending a signal"
+						recommendation="Approve, in red, because something is wrong, as the tile's red 0 and accent already say."
+					>
+						<FlaggedCard>
+							<ClusterTile
+								data={{ ...overview.cluster, nodes: [] }}
+								href={undefined}
+							/>
+						</FlaggedCard>
+					</State>
+					<State
+						label="A handler digest, while only some nodes report it"
+						note="The flag goes to the left of the kind icon, where a compact digest has its flag, and clear of the chevron that follows the name when it is pointed at."
+						recommendation="Approve, as for the events tile."
+					>
+						<FlaggedCard>
+							<HandlerDigest
+								handler={{
+									...(overview.handlers[0] as OverviewData["handlers"][number]),
+									coverage: 0.5,
+								}}
+								href="#"
+							/>
+						</FlaggedCard>
+					</State>
+					<State
+						label="The cluster tile, while only some nodes report their workloads"
+						note="Built by the rule of FL 1A, for the status of the number of workloads."
+						decided
+					>
+						<FlaggedCard>
+							<ClusterTile
+								data={{
+									...overview.cluster,
+									nodes: overview.cluster.nodes.map((n, i) =>
+										i === 1 ? { id: n.id, heartbeats: n.heartbeats } : n,
+									),
+								}}
+								href={undefined}
+							/>
+						</FlaggedCard>
+					</State>
+					<State
+						label="The engine tile, while there is no signal from the engine"
+						note="Built by the rule of FL 1C, in red, as the tile's red &quot;Offline&quot; and accent already say."
+						decided
+					>
+						<FlaggedCard>
+							<EngineTile data={{}} href={undefined} />
+						</FlaggedCard>
+					</State>
+					<State
+						label="The site's events tile, while only some applications report it"
+						note="Built by the rule of FL 1A."
+						decided
+					>
+						<FlaggedCard>
+							<SiteEventsTile
+								data={flaggedSite}
+								events={{
+									...(flaggedSite.events as NonNullable<SiteData["events"]>),
+									coverage: 0.8,
+								}}
+							/>
+						</FlaggedCard>
+					</State>
+					<State
+						label="The site's applications tile, while no applications are sending a signal"
+						note="Built by the rule of FL 1C."
+						decided
+					>
+						<FlaggedCard>
+							<ApplicationsTile data={silentSite} />
+						</FlaggedCard>
+					</State>
+					<State
+						label="The events tile, with two statuses at once"
+						note="Only some nodes report it, and its rate isn't known yet: one flag, whose tooltip says both."
+						decided
+					>
+						<FlaggedCard>
+							<EventsTile
+								data={{
+									...overview.events,
+									coverage: 0.67,
+									rate: { perMinute: undefined },
+								}}
+								href={undefined}
+							/>
+						</FlaggedCard>
+					</State>
 				</Part>
 			</Tile>
 
@@ -647,7 +741,7 @@ export function ReviewPage() {
 								where:
 									"On the cluster view, the status of the engine card while there is no signal from the engine, for its words",
 								status: { underReview: "FL 1" },
-								words: <p>{engineOutText}</p>,
+								words: <p>{noSignalFromEngine.text}</p>,
 							},
 						]}
 					>
@@ -1121,128 +1215,40 @@ export function ReviewPage() {
 }
 
 /**
- * Flagged draws a card with an alert flag to the left of its icon. Pointing at the
- * flag shows the status in a tooltip. It shows how a status would look once the
- * hovercards that explain stop carrying statuses. A vital card draws the flag in
- * its top row, between its chart's readout and its icon; for another card, the
- * flag is placed to the left of `anchor`.
+ * FlaggedCard draws one of FL's cards at the width of a card in a row of three.
  */
-function Flagged({
-	card,
-	width,
-	anchor,
-	tone,
-	status,
-}: {
-	card: ReactNode;
-	width: number;
+function FlaggedCard({ children }: { children: ReactNode }) {
+	return <div style={{ width: 360 }}>{children}</div>;
+}
 
-	/** A CSS selector for what the flag goes to the left of, on a card that isn't a vital card. */
-	anchor?: string;
-
-	/** "bad" for red, "qualifies" for the grey of a status that qualifies. */
-	tone: "bad" | "qualifies";
-
-	/** The words of the status, which the flag's tooltip says. */
-	status: ReactNode;
-}) {
-	const ref = useRef<HTMLDivElement>(null);
-	const [at, setAt] = useState<{ x: number; y: number }>();
-	useLayoutEffect(() => {
-		const el = ref.current;
-		const target = anchor === undefined ? null : el?.querySelector(anchor);
-		if (!el || !target) {
-			return;
-		}
-		const box = el.getBoundingClientRect();
-		const r = target.getBoundingClientRect();
-		setAt({
-			x: r.left - box.left - 22,
-			y: r.top + r.height / 2 - box.top - 8,
-		});
-	}, [anchor]);
-	const flag = (
-		<Popover content={status}>
-			<span
-				className={cn(
-					"flex size-4 flex-none",
-					tone === "bad" ? "text-bad" : "text-fg-soft",
-				)}
-			>
-				<Icon name="alert" className="size-4" />
-				<span className="sr-only">Status</span>
-			</span>
-		</Popover>
-	);
+/**
+ * LosingRate is the queues tile whose rate is lost a moment after it is drawn,
+ * so that it shows the flag of a rate whose samples have stopped arriving.
+ */
+function LosingRate() {
+	const [throughput, setThroughput] = useState(overview.queues.throughput);
+	useEffect(() => {
+		const timer = window.setTimeout(
+			() => setThroughput((t) => t && { ...t, perMinute: undefined }),
+			50,
+		);
+		return () => window.clearTimeout(timer);
+	}, []);
 	return (
-		<div ref={ref} className="relative" style={{ width }}>
-			{anchor === undefined ? <TileFlag value={flag}>{card}</TileFlag> : card}
-			{at && (
-				<span className="absolute z-20" style={{ left: at.x, top: at.y }}>
-					{flag}
-				</span>
-			)}
-		</div>
+		<QueuesTile data={{ ...overview.queues, throughput }} href={undefined} />
 	);
 }
 
-/** The cards of FL 1, each with the status that it would flag. */
-const flaggedCards = [
-	{
-		label: "The events tile, while only some nodes report it",
-		note: "The status was in the hovercard of the tile's icon, which the explainer replaced, so the views don't show it until the flags are built.",
-		recommendation:
-			"Approve. The status shows only while it applies, in grey, because the figures are still worth reading.",
-		width: 360,
-		tone: "qualifies" as const,
-		card: (
-			<EventsTile
-				data={{ ...overview.events, coverage: 0.67 }}
-				href={undefined}
-			/>
-		),
-		status: partialStatus.text,
-	},
-	{
-		label: "The queues tile, while no new samples are arriving",
-		note: "The status was in the hovercard of the rate, which the explainer replaced.",
-		recommendation: "Approve, as for the events tile.",
-		width: 360,
-		tone: "qualifies" as const,
-		card: <QueuesTile data={overview.queues} href={undefined} />,
-		status: "No new samples are arriving, so this average is out of date.",
-	},
-	{
-		label: "The cluster tile, while no nodes are sending a signal",
-		note: "The status was in the hovercard of the nodes, which the explainer replaced.",
-		recommendation:
-			"Approve, in red, because something is wrong, as the tile's red 0 and accent already say.",
-		width: 360,
-		tone: "bad" as const,
-		card: (
-			<ClusterTile data={{ ...overview.cluster, nodes: [] }} href={undefined} />
-		),
-		status: noNodesText,
-	},
-	{
-		label: "A handler digest, while only some nodes report it",
-		note: "The status was in the hovercard of the kind icon, which the explainer replaced. The flag goes to the left of the kind icon, where a compact digest has its flag, and clear of the chevron that follows the name when it is pointed at.",
-		recommendation: "Approve, as for the events tile.",
-		width: 360,
-		anchor: "svg.size-5",
-		tone: "qualifies" as const,
-		card: (
-			<HandlerDigest
-				handler={{
-					...(overview.handlers[0] as OverviewData["handlers"][number]),
-					coverage: 0.5,
-				}}
-				href="#"
-			/>
-		),
-		status: partialStatus.text,
-	},
-];
+/** The site of FL's site tiles: twelve applications, all sending a signal. */
+const flaggedSite = siteOf(siteApplications.slice(0, 12), euWest);
+
+/** A site whose applications are all without a signal, for FL. */
+const silentSite = siteOf(
+	withSignal(siteApplications.slice(0, 12), {
+		out: siteApplications.slice(0, 12).map((a) => a.application.name),
+	}),
+	euWest,
+);
 
 /** The key of the site of the review page's examples. */
 const siteKey = "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43";

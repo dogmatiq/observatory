@@ -35,6 +35,11 @@ import { Ramped } from "./Ramped.tsx";
 import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { StackedBar } from "./StackedBar.tsx";
+import {
+	noSignalFromApplications,
+	rateStatuses,
+	someApplicationsReport,
+} from "./statuses.ts";
 import { subsystemColors } from "./subsystems.ts";
 import { useRate } from "./useRate.ts";
 
@@ -138,17 +143,6 @@ export function SiteTotals({ data }: { data: SiteData }) {
 }
 
 /**
- * sitePartialStatus is the status of the card of a tile's icon while only some of
- * the applications report what the tile shows in full: some of their nodes, or
- * all of them, don't report it, or have no signal. Its numbers can then only
- * appear lower than they really are. See [partialStatus] for a cluster's.
- */
-export const sitePartialStatus = {
-	icon: "alert",
-	text: "Only some of the applications fully report the metrics shown in this section, so the numbers may appear lower than they really are.",
-} as const;
-
-/**
  * SiteEventsTile is the site's events tile, whose headline is the events per
  * minute across the applications, whose detail line gives the events in the
  * event streams of all the applications together, and how many streams there
@@ -162,13 +156,17 @@ export function SiteEventsTile({
 	data: SiteData;
 	events: NonNullable<SiteData["events"]>;
 }) {
-	const { scaled, per } = useRate(events.rate.perMinute);
+	const { scaled, per, state } = useRate(events.rate.perMinute);
 
 	return (
 		<MetricTile
 			subsystem="streams"
 			label="Events"
 			icon="event"
+			statuses={[
+				...(events.coverage === undefined ? [] : [someApplicationsReport]),
+				...rateStatuses(state),
+			]}
 			value={
 				<span>
 					<Figure number={scaled?.amount} format={formatCompact} unit={per} />
@@ -233,7 +231,7 @@ export function SiteQueuesTile({
 	data: SiteData;
 	queues: NonNullable<SiteData["queues"]>;
 }) {
-	const { scaled, per } = useRate(queues.throughput?.perMinute);
+	const { scaled, per, state } = useRate(queues.throughput?.perMinute);
 	const healthy = Math.max(0, queues.messages - queues.failing);
 
 	return (
@@ -241,6 +239,10 @@ export function SiteQueuesTile({
 			subsystem="queues"
 			label="Queues"
 			icon="message"
+			statuses={[
+				...(queues.coverage === undefined ? [] : [someApplicationsReport]),
+				...(queues.throughput ? rateStatuses(state) : []),
+			]}
 			accent={queues.failing > 0 ? "failing" : undefined}
 			value={
 				<span>
@@ -333,6 +335,7 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 			subsystem="cluster"
 			label="Applications"
 			icon="application"
+			statuses={live.length === 0 ? [noSignalFromApplications] : []}
 			accent={out > 0 ? "bad" : undefined}
 			value={
 				<span>
