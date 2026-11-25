@@ -679,31 +679,32 @@ export function ReviewPage() {
 				>
 					<Part
 						step={2}
-						title="Where the page is, under the title bar"
-						deciding="That the title bar has the view's links, and a row under it says where the page is as a trail: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
+						title="Where the page is, in the title bar"
+						deciding="That the title bar says where the page is as a trail, which moves to a row under the title bar once the views have links: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
 						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
-						note="Every page has its own address, so each step of the trail is a page to go to, and the trail reads in the order of the address: the site, then the application, then the cluster. The application and the site have names, so the trail shows their names and no keys; the cluster has no name, so it shows its shortened ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the page has to leave room for them. In one row with the trail they fit a wide window only just, so the links are in the title bar and the trail is in a row of its own under it."
+						note="Every page has its own address, so each step of the trail is a page to go to, and the trail reads in the order of the address: the site, then the application, then the cluster. The application and the site have names, so the trail shows their names and no keys; the cluster has no name, so it shows its shortened ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the page has to leave room for them. An application has only the one view in v1, so the title bar has no links, and the trail is in it."
 					>
 						<State
 							label="An engine that clusters"
-							recommendation="Approve. The title bar has the view's links, with the room that they need, and the row under it says where the page is: every step of it is a link, and every key and ID can be copied from one place, without showing a key beside a name."
+							recommendation="Approve. The title bar says where the page is: every step of it is a link, and every key and ID can be copied from one place, without showing a key beside a name."
 							wide
 						>
-							<TwoRows trail={<PageTrail steps={clusterSteps} />} />
+							<TitleBar trail={<PageTrail steps={clusterSteps} />} />
 						</State>
 						<State
 							label="An engine that doesn't cluster"
 							recommendation="Approve, as for a cluster."
 							wide
 						>
-							<TwoRows trail={<PageTrail steps={engineSteps} />} />
+							<TitleBar trail={<PageTrail steps={engineSteps} />} />
 						</State>
 						<State
-							label="Today, with no views to link to"
+							label="Once the views have links"
 							wide
-							note="An application has only the one view in v1, so the title bar has no links, and is the brand and the color mode control, with the trail under it."
+							note="The links, here the prototype's as an example, take the title bar, and the trail moves to a row of its own under it, because in one row with the trail they fit a wide window only just. The trail keeps its place on the left, and nothing else moves."
+							recommendation="Approve. The links have the room that they need, and the trail stays where it was."
 						>
-							<TwoRows links={[]} trail={<PageTrail steps={clusterSteps} />} />
+							<TwoRows trail={<PageTrail steps={clusterSteps} />} />
 						</State>
 						<Choices
 							of="A"
@@ -1369,19 +1370,26 @@ function PageTrail({
 			card
 			interactive
 			content={
-				<div className="grid grid-cols-[auto_auto_auto] items-center gap-x-4 gap-y-2 px-4 py-3 text-sm">
+				// Each step is drawn as a card's heading is: its name, or its ID if it
+				// has no name, over its kind; a step with a name has its key at the
+				// right of its kind.
+				<div className="flex min-w-64 flex-col divide-y divide-line">
 					{steps.map((s) => (
-						<Fragment key={s.kind}>
-							<span className="text-2xs font-medium tracking-[0.08em] text-muted uppercase">
-								{s.kind}
+						<div key={s.kind} className="flex flex-col gap-1 px-3.5 py-3">
+							<span className="font-bold tracking-[0.04em] text-fg uppercase">
+								{s.name ?? <Identifier id={s.id.id} what={s.id.what} />}
 							</span>
-							<span className="font-bold tracking-[0.04em] uppercase">
-								{s.name ?? ""}
+							<span className="flex items-center justify-between gap-6">
+								<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
+									{s.kind}
+								</span>
+								{s.name !== undefined && (
+									<span className="text-xs text-fg-soft tabular-nums">
+										<Identifier id={s.id.id} what={s.id.what} />
+									</span>
+								)}
 							</span>
-							<span className="text-fg-soft">
-								<Identifier id={s.id.id} what={s.id.what} />
-							</span>
-						</Fragment>
+						</div>
 					))}
 				</div>
 			}

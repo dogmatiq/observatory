@@ -1077,11 +1077,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name
   and site, small and faint, after the word "cluster" or "engine", shortened and copyable, because it is the same for
   every part of the view. `/review` draws every card that way, as the views will be once they have explainers.
-  Proposed since, on ID 2: the title bar has the links of an application's views, and a row under it says where the
-  page is as a trail, the site, the application and the cluster or the engine, each a link to its own page, by name, or by its shortened ID for the cluster or engine; pointing at the
+  Proposed since, on ID 2: the title bar says where the page is as a trail, the site, the application and the cluster or
+  the engine; once an application's views have links, the links take the title bar and the trail moves to a row under
+  it (decided); each a link to its own page, by name, or by its shortened ID for the cluster or engine; pointing at the
   trail shows a hovercard of every key and ID, each copyable, so that the keys have a place to be copied from without
-  showing beside a name. Done: the title bar's tooltip no longer gives the application's key. The links have the title bar's
-  room, because in one row with the trail the prototype's links fit a wide window only just.
+  showing beside a name. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
+  prototype's links fit a wide window only just. The trail's hovercard lays each step out as a card's heading: its
+  name over its kind, with its key at the right of its kind, or its ID in its name's place if it has no name.
   Under review (FL): a status is an alert flag, which goes to the left of a vital card's or a handler digest's icon,
   at the right of its top row, where a compact digest has its flag, and so clear of the chevron after a linked name.
   On a vital card, the readout of the chart, while the chart is pointed at, is to the left of the flag.
