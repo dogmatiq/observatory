@@ -1458,8 +1458,9 @@ function PageTrail({
 								{/* The name and the kind are on the left, and the version and
 								the key or ID on the right, so that each lines up with the one
 								of the other steps. A long name is cut short before its
-								version. */}
-								<span className="flex items-center justify-between gap-6">
+								version. The row is positioned, so that on a screen that is
+								touched the name's link covers the row and no more. */}
+								<span className="relative flex items-center justify-between gap-6">
 									{s.name === undefined ? (
 										<span className="min-w-0 truncate font-bold tracking-[0.04em] text-fg uppercase">
 											<Identifier id={s.id.id} what={s.id.what} />
