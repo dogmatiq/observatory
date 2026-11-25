@@ -41,10 +41,10 @@ test("the handlers are the prototype's", () => {
 	const handlers = within(screen.getByRole("region", { name: "Handlers" }));
 
 	expect(handlers.getAllByRole("article").map((e) => e.textContent)).toEqual([
-		"accountaggregate100instances0commands",
-		"statement-scheduleprocess20in progress0events20deadlines",
-		"mailerintegration0commands",
-		"balancesprojection0events",
+		"accountaggregate23b6d1c5100instances0commands",
+		"statement-scheduleprocess9135fb6120in progress0events20deadlines",
+		"mailerintegration7e9585230commands",
+		"balancesprojection92be83330events",
 	]);
 });
 

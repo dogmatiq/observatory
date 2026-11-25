@@ -1,4 +1,9 @@
-import type { ComponentProps, CSSProperties, ReactNode } from "react";
+import {
+	type ComponentProps,
+	type CSSProperties,
+	type ReactNode,
+	useId,
+} from "react";
 import { cn } from "../lib/cn.ts";
 import { Covered, Distrusted } from "../lib/distrust.tsx";
 import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
@@ -7,6 +12,7 @@ import { useElapsed } from "../lib/live.tsx";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { applicationSegments } from "../lib/segments.ts";
 import type { SiteApplication, SiteData } from "../model.ts";
+import { DigestKey } from "./DigestKey.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Figure } from "./Figure.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
@@ -21,12 +27,12 @@ import {
 	accentClasses,
 	cardClasses,
 	Failing,
-	linkedCardClasses,
 	MetricTile,
 	Noun,
 	OutOfContact,
 	raisedClasses,
 } from "./MetricTile.tsx";
+import { NameLink } from "./NameLink.tsx";
 import { eventRateWords } from "./Overview.tsx";
 import { describedClasses, Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
@@ -513,18 +519,30 @@ export type DigestAlert = "icon" | { words: string };
 export function CompactDigests({
 	data,
 	alert,
+	keepsKeyRoom = false,
 }: {
 	data: SiteData;
 
 	/** How a compact digest says that its application is out of contact. */
 	alert: DigestAlert;
+
+	/**
+	 * True to keep room for each key while it is not there, for /review to
+	 * compare with the digests that don't. Only /review sets it.
+	 */
+	keepsKeyRoom?: boolean;
 }) {
 	return (
 		<ul className="grid grid-cols-[repeat(auto-fill,minmax(176px,1fr))] gap-3">
 			{data.applications.map((a) => (
 				<li key={a.application.key} className="min-w-0">
 					<ErrorBoundary>
-						<CompactDigest site={data.site} app={a} alert={alert} />
+						<CompactDigest
+							site={data.site}
+							app={a}
+							alert={alert}
+							keepsKeyRoom={keepsKeyRoom}
+						/>
 					</ErrorBoundary>
 				</li>
 			))}
@@ -533,7 +551,11 @@ export function CompactDigests({
 }
 
 /**
- * CompactDigest is the compact digest of one application in [CompactDigests]. An
+ * CompactDigest is the compact digest of one application in [CompactDigests]. Its
+ * name is the link to its application view, and is the only part of it that is a
+ * link. While it is pointed at, or anything in it has the keyboard's focus, the
+ * application's identity key is at the right of its name, which gives up room for
+ * it, as the digest is too narrow to keep room for it. An
  * application that is out of contact has the red accent along its top, and says
  * so in red at the right of its name, as `alert` says. Its figures keep their places, as zeros that are not
  * available, which glitch when contact is lost, so that the blur alone says how
@@ -546,48 +568,61 @@ function CompactDigest({
 	site,
 	app,
 	alert,
+	keepsKeyRoom,
 }: {
 	site: SiteData["site"];
 	app: SiteApplication;
 	alert: DigestAlert;
+	keepsKeyRoom: boolean;
 }) {
 	const out = app.nodes === 0;
 	const failing = app.queues?.failing ?? 0;
 	const accent = out ? "bad" : failing > 0 ? "failing" : undefined;
 
+	const nameId = useId();
+
 	return (
-		<a
-			href={applicationAtSitePath(site?.key, app.application.key)}
+		<article
+			aria-labelledby={nameId}
 			className={cn(
 				cardClasses,
 				accent ? accentClasses[accent] : raisedClasses,
-				// A compact digest with an accent keeps it when pointed at, as a tile does.
-				accent ? "no-underline hover:no-underline" : linkedCardClasses,
-				"flex flex-col gap-1.5 px-3.5 pt-3 pb-2.5 text-fg",
+				"group/digest flex flex-col gap-1.5 px-3.5 pt-3 pb-2.5 text-fg",
 			)}
 		>
-			<span className="flex items-baseline justify-between gap-2">
-				<span className="min-w-0 truncate text-xs font-bold tracking-[0.04em] uppercase">
+			<span className="flex items-center gap-2">
+				<NameLink
+					id={nameId}
+					href={applicationAtSitePath(site?.key, app.application.key)}
+					className="min-w-0 truncate text-xs font-bold tracking-[0.04em] uppercase"
+				>
 					{app.application.name}
+				</NameLink>
+				<span className="ml-auto flex items-center gap-2">
+					<DigestKey
+						id={app.application.key}
+						what="application key"
+						keepsRoom={keepsKeyRoom}
+					/>
+					{out &&
+						(alert === "icon" ? (
+							<Popover card content={<ContactLostCard app={app} />}>
+								<span className="flex-none self-center text-bad">
+									<Icon name="alert" className="size-4" />
+									<span className="sr-only">Contact lost</span>
+								</span>
+							</Popover>
+						) : (
+							<span className="flex-none text-xs text-bad">{alert.words}</span>
+						))}
 				</span>
-				{out &&
-					(alert === "icon" ? (
-						<Popover card content={<ContactLostCard app={app} />}>
-							<span className="flex-none self-center text-bad">
-								<Icon name="alert" className="size-4" />
-								<span className="sr-only">Contact lost</span>
-							</span>
-						</Popover>
-					) : (
-						<span className="flex-none text-xs text-bad">{alert.words}</span>
-					))}
 			</span>
 			<Distrusted value={out}>
 				<Covered coverage={app.coverage ?? 1}>
 					<ApplicationFigures app={app} explained />
 				</Covered>
 			</Distrusted>
-		</a>
+		</article>
 	);
 }
 

@@ -58,7 +58,10 @@ test("pointing at the kind icon of a handler's card shows the card of its kind",
 		/>,
 	);
 
-	const icon = container.querySelector("svg")?.parentElement as Element;
+	// The first icon that isn't a button's, which is the copy button's of the key.
+	const icon = [...container.querySelectorAll("svg")].find(
+		(svg) => svg.closest("button") === null,
+	)?.parentElement as Element;
 	const tip = await tipOf(icon);
 
 	expect(tip).toContain(

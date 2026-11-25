@@ -122,7 +122,12 @@ function random(seed: number): () => number {
 
 /** keyOf returns a UUID for the application at the given position. */
 function keyOf(i: number): string {
-	return `5173a1c0-0000-4000-8000-${String(i + 1).padStart(12, "0")}`;
+	// The first part differs from one application to the next, as it would, so
+	// that the keys differ where they are shortened.
+	const first = ((0x5173a1c0 + i * 0x9e3779b1) >>> 0)
+		.toString(16)
+		.padStart(8, "0");
+	return `${first}-0000-4000-8000-${String(i + 1).padStart(12, "0")}`;
 }
 
 /**

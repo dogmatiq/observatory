@@ -219,12 +219,12 @@ export function ReviewPage() {
 					step={1}
 					title="The thing's name, its kind and its ID"
 					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold capitals first, as a digest has it, then its kind; the thing's ID or identity key, shortened and copyable, at the right of its kind, with a copy button that says what it copied. A thing with no name starts with its kind."
-					notDeciding="The other words of each of these hovercards, which are decided with them: a segment's (SB, and the bars of EV, QU and CL), a digest's name's (DI), which also gives the thing's key, and an alert flag's (SH 2); how an ID is shortened and copied, which is settled."
-					note="Three kinds of hovercard stay once the explainers are built, each about one thing, and each opened by something that stands for that thing: a segment of a bar, which drills down to one stream, queue, node or application; a digest's name, which previews the thing that the digest leads to; and an alert flag, which says a status about one thing. No icon opens a hovercard, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
+					notDeciding="The other words of each of these hovercards, which are decided with them: a segment's (SB, and the bars of EV, QU and CL) and an alert flag's (SH 2); how an ID is shortened and copied, which is settled."
+					note="Two kinds of hovercard stay once the explainers are built, each about one thing, and each opened by something that stands for that thing: a segment of a bar, which drills down to one stream, queue, node or application; and an alert flag, which says a status about one thing. The moon's hovercard follows the same rule. No icon opens a hovercard, a digest shows its own key (DI), and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
 				>
 					<State
 						label="The hovercards that stay, by what opens them"
-						note="The segments' and the alert flag's hovercards are as they are today; the digest's name's is new, and is reviewed at DI."
+						note="The segments' and the alert flag's hovercards are as they are today, with the name, kind and ID or key where this rule puts them."
 						recommendation="Approve the rule as these hovercards show it: the name first, in capitals, where the thing has one, then the kind, with the ID or key at its right; a cryptic ID never leads."
 						wide
 					>
@@ -242,25 +242,6 @@ export function ReviewPage() {
 										share: 0.1834,
 									}}
 								/>
-							</Captioned>
-							<Captioned caption="Opened by a digest's name, about a thing with a name: a handler (DI)">
-								<InfoCard
-									subsystem={handlerSubsystem("aggregate")}
-									icon="aggregate"
-									iconColor={kindColors.aggregate}
-									kind="aggregate"
-									name="account"
-									id={{
-										id: (
-											overview.handlers[0] as OverviewData["handlers"][number]
-										).key,
-										what: "aggregate key",
-									}}
-								>
-									<p>
-										In the <ApplicationName application={atSite} />.
-									</p>
-								</InfoCard>
 							</Captioned>
 							<Captioned caption="Opened by an alert flag, about a thing with a name: an application out of contact (SH 2)">
 								<ContactLostCard app={contactLostExample} />
@@ -282,62 +263,120 @@ export function ReviewPage() {
 			</Tile>
 
 			<Tile
-				code="DI"
-				title="A digest's identity"
-				note="Every digest stands for something with its own page, and a compact digest is a link to it, so pointing at a digest's name opens a hovercard that says exactly what the thing is, as a preview of where the digest leads. Its icon opens nothing, as no card's icon does."
+				code="LK"
+				title="What is a link"
+				note="Which part of a card that leads to another page is a link. A compact digest on the site view leads to its application's view; a handler digest leads to its handler's page once there is one. No vital card links anywhere yet."
 			>
 				<Part
 					step={1}
-					title="The hovercard of a digest's name"
-					deciding="That pointing at a digest's name opens a hovercard with the thing's name and kind, its identity key, and where it is; and that it has no figures."
-					notDeciding="Where a hovercard puts the thing's name, kind and ID, which is IC; the digest's explainer, which is approved; the hovercard of a compact digest's alert flag, which is SH 2."
-					note="The hovercard follows IC, with the identity key at the right of the kind, because previewing a thing is when its key is wanted. Its line about where the thing is says which application and site it is in, which the digest doesn't."
+					title="A card's name is its link"
+					deciding="That on a card that leads to another page, only the thing's name is a link, and the card as a whole doesn't react to the pointer; and that the name shows that it leads to another page while it is pointed at or has the keyboard's focus: it is underlined, and a chevron appears after it."
+					notDeciding="How a vital card links to its page, as it shows no name, and none links anywhere yet; the key that a digest shows while it is pointed at, which is DI."
+					note="A finger can tap a little past the name, so that a short name is still easy to tap. The handler digest here links nowhere, as no handler has a page yet."
 				>
 					<State
-						label="A handler digest's name"
-						recommendation="Approve. It previews the handler that the digest stands for, and gives its key, which nothing else shows."
+						label="Compact digests"
+						recommendation="Approve. Point at a name to see it: only the name leads elsewhere, and it says so."
+						wide
 					>
-						<Panel>
-							<InfoCard
-								subsystem={handlerSubsystem("aggregate")}
-								icon="aggregate"
-								iconColor={kindColors.aggregate}
-								kind="aggregate"
-								name="account"
-								id={{
-									id: (overview.handlers[0] as OverviewData["handlers"][number])
-										.key,
-									what: "aggregate key",
-								}}
-							>
-								<p>
-									In the <ApplicationName application={atSite} />.
-								</p>
-							</InfoCard>
-						</Panel>
+						<div className="max-w-xl">
+							<CompactDigests
+								data={siteOf(siteApplications.slice(0, 3), euWest)}
+								alert="icon"
+							/>
+						</div>
 					</State>
 					<State
-						label="A compact digest's name"
-						recommendation="Approve, as for a handler digest."
+						label="A handler digest"
+						recommendation="Approve, as for compact digests."
 					>
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="application"
-								kind="Application"
-								name={contactLostExample.application.name}
-								id={{
-									id: contactLostExample.application.key,
-									what: "application key",
-								}}
-							>
-								<p>
-									At the <span className="font-semibold text-fg">eu-west</span>{" "}
-									site.
-								</p>
-							</InfoCard>
-						</Panel>
+						<div className="w-80">
+							<HandlerDigest
+								application={application}
+								handler={
+									overview.handlers[0] as OverviewData["handlers"][number]
+								}
+								href="#"
+							/>
+						</div>
 					</State>
+					<Choices
+						of="A"
+						title="how a name shows that it leads to another page"
+						framed={false}
+						choices={(
+							[
+								["Underlined, without a chevron", "underline"],
+								["A chevron, without an underline", "chevron"],
+								["In the accent color, with a chevron", "accent"],
+							] as const
+						).map(([label, look]) => [
+							label,
+							<PointedName key={label} look={look} />,
+						])}
+					/>
+				</Part>
+			</Tile>
+
+			<Tile
+				code="DI"
+				title="A digest's key"
+				note="Every digest stands for something with its own page. Its identity key is on the digest itself, so that no hovercard is needed to give it."
+			>
+				<Part
+					step={1}
+					title="The key on a digest"
+					deciding="That a digest shows the thing's identity key, shortened and copyable, while it is pointed at or anything in it has the keyboard's focus, and always on a screen that is touched: at the right of the kind on a handler digest, and at the right of the name, before any alert flag, on a compact digest, which has no kind. On a handler digest its room is kept, so nothing moves when it appears; a compact digest is too narrow to keep room for it, so its name gives up room while the key is there. A digest's name opens no hovercard."
+					notDeciding="How a key is shortened and copied, which is settled; which part of a digest is a link, which is LK; the digest's explainer, which is approved."
+					note="A compact digest's kind is always an application, so it doesn't show one, and its key goes on its name's line. Keeping room for the key there would cut most names short, such as &quot;address-book&quot;, all the time."
+				>
+					<State
+						label="A handler digest"
+						recommendation="Approve. The key is where a hovercard puts an ID, without a hovercard to open. Point at the digest to see it."
+					>
+						<div className="w-80">
+							<HandlerDigest
+								application={application}
+								handler={
+									overview.handlers[0] as OverviewData["handlers"][number]
+								}
+							/>
+						</div>
+					</State>
+					<State
+						label="Compact digests, one out of contact"
+						recommendation="Approve, as for a handler digest."
+						wide
+					>
+						<div className="max-w-xl">
+							<CompactDigests
+								data={siteOf(
+									withContact(siteApplications.slice(0, 3), {
+										out: [siteApplications[1]?.application.name ?? ""],
+									}),
+									euWest,
+								)}
+								alert="icon"
+							/>
+						</div>
+					</State>
+					<Choices
+						of="B"
+						title="where a compact digest's key goes"
+						framed={false}
+						choices={[
+							[
+								"At the right of the name, with its room kept, so names are cut short all the time",
+								<div key="kept" className="max-w-xl">
+									<CompactDigests
+										data={siteOf(siteApplications.slice(0, 3), euWest)}
+										alert="icon"
+										keepsKeyRoom
+									/>
+								</div>,
+							],
+						]}
+					/>
 				</Part>
 			</Tile>
 
@@ -592,7 +631,7 @@ export function ReviewPage() {
 					step={2}
 					title="The ID in the title bar"
 					deciding="That the cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word &quot;cluster&quot; or &quot;engine&quot;, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
-					notDeciding="How an ID is shortened and copied, which is settled; a digest's identity, which is in the hovercard of its name (DI); the IDs of the things in a card, which are in their segments' hovercards."
+					notDeciding="How an ID is shortened and copied, which is settled; a digest's key, which is on the digest (DI); the IDs of the things in a card, which are in their segments' hovercards."
 					note="The title bar names the application and its site, so the ID sits beside them, after a short gap, where it reads as part of where the page is."
 				>
 					<State
@@ -1229,6 +1268,29 @@ const flaggedCards = [
 const contactLostExample = withContact(siteApplications, { out: ["kyc"] }).find(
 	(a) => a.application.name === "kyc",
 ) as SiteData["applications"][number];
+
+/**
+ * PointedName is a compact digest's name as it looks while it is pointed at, in
+ * one of the looks that LK chooses between, drawn as it stands, so that the looks
+ * can be compared side by side.
+ */
+function PointedName({ look }: { look: "underline" | "chevron" | "accent" }) {
+	return (
+		<span
+			className={cn(
+				"block w-fit rounded-card bg-panel px-3.5 py-3 text-xs font-bold tracking-[0.04em] uppercase [box-shadow:var(--shadow-raised)]",
+				look === "underline" &&
+					"underline decoration-from-font underline-offset-2",
+				look === "accent" && "text-accent",
+			)}
+		>
+			payments
+			{look !== "underline" && (
+				<Icon name="chevron" className="ml-0.5 inline size-3 align-[-1px]" />
+			)}
+		</span>
+	);
+}
 
 /**
  * Captioned shows a hovercard in the frame of a panel, with a caption above it that

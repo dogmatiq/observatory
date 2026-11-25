@@ -44,11 +44,11 @@ test("an application that is out of contact says so by an icon beside its name, 
 	);
 
 	const grid = screen.getByRole("region", { name: "Applications" });
-	const link = within(grid).getByRole("link", { name: new RegExp(`^${name}`) });
+	const digest = within(grid).getByRole("article", { name });
 
-	expect(link.textContent).toMatch(new RegExp(`^${name}Contact lost`));
+	expect(within(digest).getByText("Contact lost")).toBeDefined();
 	expect(
-		within(link).getAllByRole("img", { name: "not available" }).length,
+		within(digest).getAllByRole("img", { name: "not available" }).length,
 	).toBeGreaterThan(0);
 });
 
