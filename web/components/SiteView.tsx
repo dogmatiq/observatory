@@ -474,17 +474,18 @@ function CompactDigest({
 				>
 					<span className="min-w-0 truncate">{app.application.name}</span>
 				</NameLink>
-				{alert === "icon"
-					? statuses.length > 0 && (
-							<span className="ml-auto flex flex-none self-center">
-								<AlertFlag statuses={statuses} />
-							</span>
-						)
-					: out && (
-							<span className="ml-auto flex-none text-xs text-bad">
-								{alert.words}
-							</span>
-						)}
+				{alert === "icon" ? (
+					// The flag is always placed, so that it can fade out.
+					<span className="ml-auto flex flex-none self-center">
+						<AlertFlag statuses={statuses} />
+					</span>
+				) : (
+					out && (
+						<span className="ml-auto flex-none text-xs text-bad">
+							{alert.words}
+						</span>
+					)
+				)}
 			</span>
 			<Distrusted value={out}>
 				<Covered coverage={app.coverage ?? 1}>

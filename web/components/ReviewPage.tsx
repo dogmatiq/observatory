@@ -713,6 +713,14 @@ export function ReviewPage() {
 							/>
 						</FlaggedCard>
 					</State>
+					<State
+						label="A flag coming and going"
+						note="A flag fades in with a short glitch when a status begins to apply, so that the eye goes to it, and fades out when the last one stops, as a card's bar or chart does. It doesn't move when the page first draws, nor for a viewer who asks for less motion. Press the button to make only some nodes report the tile, and again to make them all report it."
+						recommendation="Approve. The flag is noticed at the moment that something changes, by the effect that already says that something needs attention, and the card doesn't jump."
+						wide
+					>
+						<FlagComingAndGoing />
+					</State>
 				</Part>
 			</Tile>
 
@@ -1303,6 +1311,38 @@ interface TrailStep {
 	 * and others don't says on how many nodes it runs.
 	 */
 	versions?: string[];
+}
+
+/**
+ * FlagComingAndGoing is an events tile with a button that makes only some of its
+ * nodes report it, and then all of them again, so that its flag comes and goes.
+ */
+function FlagComingAndGoing() {
+	const [partial, setPartial] = useState(false);
+	return (
+		<div className="flex flex-col gap-3">
+			<FlaggedCard>
+				<EventsTile
+					data={{
+						...overview.events,
+						coverage: partial ? 0.67 : undefined,
+					}}
+					href={undefined}
+				/>
+			</FlaggedCard>
+			<div>
+				<button
+					type="button"
+					className={button}
+					onClick={() => setPartial(!partial)}
+				>
+					{partial
+						? "Make every node report it"
+						: "Make only some nodes report it"}
+				</button>
+			</div>
+		</div>
+	);
 }
 
 /**

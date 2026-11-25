@@ -218,6 +218,17 @@
 	animation: glitch-bottom 1.7s steps(1) infinite;
 }
 
+/* An icon glitches as a figure does, with shadows that follow its shape. */
+.glitch-icon {
+	line-height: 0;
+}
+
+.glitch-icon .glitch-half {
+	text-shadow: none;
+	filter: drop-shadow(calc(var(--distrust) * -1.5px) 0 0 rgb(255 45 85 / 0.85))
+		drop-shadow(calc(var(--distrust) * 1.5px) 0 0 rgb(0 210 200 / 0.85));
+}
+
 /* A burst slips once, in the time that --glitch-burst says. */
 .glitch-burst .glitch-half {
 	animation-duration: var(--glitch-burst);
