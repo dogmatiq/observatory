@@ -964,9 +964,9 @@ Tick each item when it is done, and write the pull request or commit that did it
 - For the design review: the kinds of hovercard. First the kinds are worked out, and then each is written into the
   design doc with what it must have. Then, as decided: the application's name in the title bar, and each cluster in the
   list of clusters, gets a hovercard with its identity in place of a tooltip, once the kinds are settled; every segment
-  of a bar gets a segment hovercard in place of its line of text, including the bars of a handler digest and the merged
-  segment of every bar; and the minimize-concurrency icon and the labels of a handler digest's figures get hovercards
-  that explain them. A tooltip is only for text that is cut short. Done: the color mode control has no tooltip.
+  of a bar that is about one thing gets a segment hovercard in place of its line of text, including the bars of a handler
+  digest (a segment about no one thing, such as the merged last segment, keeps its line, IC 1C); and the minimize-concurrency icon and the labels of a handler digest's figures get hovercards
+  that explain them. A tooltip is only for text that is cut short, an alert flag's status, and a segment about no one thing. Done: the color mode control has no tooltip.
   Decided since, and being explored at `/-/annotations`: a vital card or digest is explained all at once by an
   explainer, a dialog that zooms a copy of the card, with made-up figures, to the middle of the window, with annotations
   around it that point at its parts. Hovercards are then only for drilling down, so the kinds above are worked out
