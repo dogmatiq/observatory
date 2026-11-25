@@ -1035,7 +1035,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   annotations are "the application's name", "the rate of new events, averaged over the last minute", "the number of
   messages ready to be delivered now" and "the number of messages that are failing", and its text, when it shows
   messages, is the queues card's first paragraph and advice. The orange accent along the top of a card has no
-  annotation. Done: the segment hovercards' advice says
+  annotation.
+  The "?" that opens an explainer, at the bottom right of a card while it is pointed at, is a filled circle in the
+  color of the card's chart, or in the accent color on a card with no chart, a step larger than before, after a viewer
+  didn't notice the muted outline. It doesn't depend on whether the viewer has used an explainer before. Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
   the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
