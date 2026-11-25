@@ -680,7 +680,7 @@ export function ReviewPage() {
 					<Part
 						step={2}
 						title="Where the page is, in the title bar"
-						deciding="That the title bar says where the page is as a trail, which moves to a row under the title bar once the views have links: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page, by its name, the cluster's or engine's being the name of the engine's software while its nodes agree on it, and otherwise its shortened ID; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable, and of the versions of the application and the engine's software, which lists each version with how many nodes run it while they differ; and that no card's icon, on a vital card or a digest, opens a hovercard."
+						deciding="That the title bar says where the page is as a trail, which moves to a row under the title bar once the views have links: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page, by its name, the cluster's or engine's being the name of the engine's software while its nodes agree on it, and otherwise its shortened ID; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable, and of the versions of the application and the engine's software, which, while the nodes give different versions, are the range of the engine's versions and &quot;multiple versions&quot; for the application's; and that no card's icon, on a vital card or a digest, opens a hovercard."
 						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
 						note="Every page has its own address, so each step of the trail is a page to go to, and the trail reads in the order of the address: the site, then the application, then the cluster. The application and the site have names, so the trail shows their names and no keys. The cluster, or the engine that doesn't cluster, is named by the name of the engine's software, which its nodes give in their preambles, such as runkit, and the trail shows its shortened ID after it; if its nodes give different names, it has no name, and the trail shows the word cluster or engine before its shortened ID. In the hovercard, each version is a tag after the name. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the page has to leave room for them. An application has only the one view in v1, so the title bar has no links, and the trail is in it."
 					>
@@ -700,7 +700,7 @@ export function ReviewPage() {
 						</State>
 						<State
 							label="Nodes that give different engines"
-							note="Some nodes give one name of the engine's software and some another, so the cluster has no name: the trail and the hovercard show its shortened ID in the name's place, and the hovercard gives each engine, with its version and how many nodes run it."
+							note="Some nodes give one name of the engine's software and some another, so the cluster has no name: the trail and the hovercard show its shortened ID in the name's place, and the hovercard gives a tag for each engine, with its version."
 							recommendation="Approve. A name that the nodes disagree on isn't the cluster's name, so the cluster is shown as a thing with no name."
 							wide
 						>
@@ -708,8 +708,8 @@ export function ReviewPage() {
 						</State>
 						<State
 							label="Nodes that run different versions"
-							note="Part of the way through a deploy, some nodes run one version of the application or the engine and some another. The hovercard lists each version, with how many nodes run it. Point at the trail to see it."
-							recommendation="Approve. The reader sees that the versions differ, and by how much, without a status that guesses why."
+							note="Part of the way through a deploy, some nodes run one version of the application or the engine and some another. The engine's versions are semantic versions, so its tag is the range from the lowest to the highest; the application's versions can be in any form, so its tag says &quot;multiple versions&quot;. Point at the trail to see it."
+							recommendation="Approve. The reader sees that the versions differ, and for the engine by how much, without a status that guesses why."
 							wide
 						>
 							<TitleBar trail={<PageTrail steps={mixedSteps} />} />
@@ -1374,9 +1374,11 @@ interface TrailStep {
 	idInTrail?: boolean;
 
 	/**
-	 * The versions of the step, if it has any, as tags after its name: the application's version, or the
-	 * version of the engine's software, with its name while the nodes give
-	 * different ones. A version that some nodes give
+	 * The versions of the step, if it has any, as tags after its name: the
+	 * application's version, or "multiple versions" while the nodes give
+	 * different ones; or the version of the engine's software, as the range from
+	 * the lowest to the highest by semantic versioning while the nodes give
+	 * different ones, with the engine's name while they give different engines. A version that some nodes give
 	 * and others don't says on how many nodes it runs.
 	 */
 	versions?: string[];
@@ -1597,7 +1599,7 @@ const mixedEngineSteps: TrailStep[] = [
 		kind: "Cluster",
 		href: "#",
 		id: { id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58", what: "cluster ID" },
-		versions: ["runkit 0.3.1 on 2 nodes", "veritas 1.0.0 on 1 node"],
+		versions: ["runkit 0.3.1", "veritas 1.0.0"],
 	},
 ];
 
@@ -1609,11 +1611,11 @@ const mixedSteps: TrailStep[] = [
 	clusterSteps[0] as TrailStep,
 	{
 		...(clusterSteps[1] as TrailStep),
-		versions: ["2026.11.3 on 2 nodes", "2026.11.4 on 1 node"],
+		versions: ["multiple versions"],
 	},
 	{
 		...(clusterSteps[2] as TrailStep),
-		versions: ["0.3.1 on 2 nodes", "0.4.0 on 1 node"],
+		versions: ["0.3.1–0.4.0"],
 	},
 ];
 
