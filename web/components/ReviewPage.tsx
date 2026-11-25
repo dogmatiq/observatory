@@ -217,15 +217,15 @@ export function ReviewPage() {
 			>
 				<Part
 					step={1}
-					title="The thing's name or ID, under its kind"
-					deciding="Where every hovercard that stays says which thing it is about: under its kind, the thing's name in bold, or, if it has no name, its ID, shortened and copyable."
+					title="The thing's name, its kind and its ID"
+					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold first, then its kind; the thing's ID, shortened and copyable, at the right of its kind. A thing with no name starts with its kind."
 					notDeciding="The other words of each of these hovercards, which are decided with them: a segment's (SB, and the bars of EV, QU and CL), a digest's name's (DI), which also gives the thing's key, and an alert flag's (SH 2); how an ID is shortened and copied, which is settled."
 					note="Three kinds of hovercard stay once the explainers are built, each about one thing, and each opened by something that stands for that thing: a segment of a bar, which drills down to one stream, queue, node or application; a digest's name, which previews the thing that the digest leads to; and an alert flag, which says a status about one thing. No icon opens a hovercard, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
 				>
 					<State
 						label="The hovercards that stay, by what opens them"
 						note="The segments' and the alert flag's hovercards are as they are today; the digest's name's is new, and is reviewed at DI."
-						recommendation="Approve the rule as these hovercards show it: a name in bold where the thing has one, and an ID where it has only an ID."
+						recommendation="Approve the rule as these hovercards show it: the name first where the thing has one, then the kind, with the ID at its right; a cryptic ID never leads."
 						wide
 					>
 						<div className="flex flex-wrap items-start gap-6">
@@ -247,19 +247,14 @@ export function ReviewPage() {
 									iconColor={kindColors.aggregate}
 									kind="aggregate"
 									identifier={
-										<>
-											<span className="font-semibold text-fg">account</span>
-											<Identifier
-												id={
-													(
-														overview
-															.handlers[0] as OverviewData["handlers"][number]
-													).key
-												}
-												of="aggregate"
-											/>
-										</>
+										<span className="font-semibold text-fg">account</span>
 									}
+									id={{
+										id: (
+											overview.handlers[0] as OverviewData["handlers"][number]
+										).key,
+										of: "aggregate",
+									}}
 								>
 									<p>
 										In the <ApplicationName application={atSite} />.
@@ -293,9 +288,9 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The hovercard of a digest's name"
-					deciding="That pointing at a digest's name opens a hovercard with the thing's kind, its name in bold, its identity key, shortened and copyable, and where it is; and that it has no figures."
-					notDeciding="The rule that a hovercard shows the thing's name, or its ID, under its kind, which is IC; the digest's explainer, which is approved; the hovercard of a compact digest's alert flag, which is SH 2."
-					note="The hovercard follows IC, with the identity key under the name, because previewing a thing is when its key is wanted. Its line about where the thing is says which application and site it is in, which the digest doesn't."
+					deciding="That pointing at a digest's name opens a hovercard with the thing's name and kind, its identity key, and where it is; and that it has no figures."
+					notDeciding="Where a hovercard puts the thing's name, kind and ID, which is IC; the digest's explainer, which is approved; the hovercard of a compact digest's alert flag, which is SH 2."
+					note="The hovercard follows IC, with the identity key at the right of the kind, because previewing a thing is when its key is wanted. Its line about where the thing is says which application and site it is in, which the digest doesn't."
 				>
 					<State
 						label="A handler digest's name"
@@ -308,19 +303,13 @@ export function ReviewPage() {
 								iconColor={kindColors.aggregate}
 								kind="aggregate"
 								identifier={
-									<>
-										<span className="font-semibold text-fg">account</span>
-										<Identifier
-											id={
-												(
-													overview
-														.handlers[0] as OverviewData["handlers"][number]
-												).key
-											}
-											of="aggregate"
-										/>
-									</>
+									<span className="font-semibold text-fg">account</span>
 								}
+								id={{
+									id: (overview.handlers[0] as OverviewData["handlers"][number])
+										.key,
+									of: "aggregate",
+								}}
 							>
 								<p>
 									In the <ApplicationName application={atSite} />.
@@ -338,16 +327,14 @@ export function ReviewPage() {
 								icon="application"
 								kind="Application"
 								identifier={
-									<>
-										<span className="font-semibold text-fg">
-											{contactLostExample.application.name}
-										</span>
-										<Identifier
-											id={contactLostExample.application.key}
-											of="application"
-										/>
-									</>
+									<span className="font-semibold text-fg">
+										{contactLostExample.application.name}
+									</span>
 								}
+								id={{
+									id: contactLostExample.application.key,
+									of: "application",
+								}}
 							>
 								<p>
 									At the <span className="font-semibold text-fg">eu-west</span>{" "}
@@ -1565,7 +1552,7 @@ function NodeCardWith({
 			subsystem="cluster"
 			icon="node"
 			kind="Node"
-			identifier={<Identifier id={nodeId} of="node" />}
+			id={{ id: nodeId, of: "node" }}
 			figure={
 				paragraphs && {
 					value: <Ramped value={3} format={formatCompact} />,

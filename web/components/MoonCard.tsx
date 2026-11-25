@@ -33,26 +33,19 @@ export function MoonCard({
 		<InfoCard
 			subsystem="neutral"
 			icon="moon"
-			kind={
-				// The word that the author used for the moon, and, if it is foreign, what it
-				// means, in a lighter style and on the same line.
-				<span className="block truncate whitespace-nowrap">
-					<span className="text-fg-soft">{quote.moon ?? "Moon"}</span>
+			// The moon's name leads, as a thing's name does on every card: the word
+			// that the author used for it, and, if it is foreign, what it means, in a
+			// lighter style and on the same line. Its phase tonight is under it, in the
+			// place of a kind.
+			identifier={
+				<span className="block truncate font-semibold whitespace-nowrap text-fg">
+					{quote.moon ?? "Moon"}
 					{quote.moon && (
-						<>
-							{" "}
-							<span className="font-normal tracking-normal normal-case">
-								the moon
-							</span>
-						</>
+						<span className="font-normal text-fg-soft"> the moon</span>
 					)}
 				</span>
 			}
-			identifier={
-				<span className="text-fg-soft">
-					{phaseName.charAt(0).toUpperCase() + phaseName.slice(1)}
-				</span>
-			}
+			kind={phaseName.charAt(0).toUpperCase() + phaseName.slice(1)}
 			status={{
 				icon: "chart",
 				text: `There are no samples of ${missing}, so here's a quote about the moon instead.`,

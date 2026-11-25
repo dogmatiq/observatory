@@ -4,7 +4,6 @@ import {
 	applicationAmounts,
 	type SegmentAbout,
 } from "../lib/segments.ts";
-import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
 import { Ramped } from "./Ramped.tsx";
 
@@ -69,7 +68,7 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 				subsystem={of.subsystem}
 				icon={of.icon}
 				kind={of.kind}
-				identifier={<Identifier id={about.id} of={of.kind.toLowerCase()} />}
+				id={{ id: about.id, of: of.kind.toLowerCase() }}
 				status={{
 					icon: "alert",
 					text: "This node's workloads are unknown, but other nodes in the cluster report their workloads.",
@@ -85,7 +84,7 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 			subsystem={of.subsystem}
 			icon={of.icon}
 			kind={of.kind}
-			identifier={<Identifier id={about.id} of={of.kind.toLowerCase()} />}
+			id={{ id: about.id, of: of.kind.toLowerCase() }}
 			figure={{
 				value: <Ramped value={amount} format={formatCompact} />,
 				unit: of.amount[amount === 1 ? 0 : 1],

@@ -29,9 +29,11 @@ export interface Scope {
  * InfoCard is the frame of a small card of information, which is the content of
  * a popover that says more about something on the page. From the top it has:
  *
- * - a header, with an icon in the color of a subsystem, the kind of thing that
- *   the card is about, its scope, if it has one, such as "within the Account
- *   application", and what identifies it, if there is something;
+ * - a header, with an icon in the color of a subsystem, then what identifies
+ *   the thing that the card is about, if it is about one thing, such as its name
+ *   in bold, with its kind under it, as a digest has its name over its kind; its
+ *   ID at the right of the kind, if it has a name and an ID; and its scope, if it
+ *   has one, such as "within the Account application";
  * - a figure that is the card's main number, with a unit, and an aside at the
  *   right, such as a share, if the card has them;
  * - paragraphs that say what the figure is;
@@ -48,6 +50,7 @@ export function InfoCard({
 	kind,
 	scope,
 	identifier,
+	id,
 	figure,
 	children,
 	status,
@@ -64,8 +67,17 @@ export function InfoCard({
 	/** Where the thing is, or what it is of, shown under its kind. */
 	scope?: Scope;
 
-	/** What identifies the thing, shown under its kind. */
+	/**
+	 * The thing's name, which leads the header, over its kind. A thing with no
+	 * name has none, and its kind leads.
+	 */
 	identifier?: ReactNode;
+
+	/**
+	 * The thing's ID, shown at the right of its kind, such as a stream's ID or a
+	 * handler's identity key.
+	 */
+	id?: { id: string; of: string };
 
 	figure?: {
 		value: ReactNode;
@@ -101,9 +113,13 @@ export function InfoCard({
 				>
 					<Icon name={icon} className="size-5" />
 				</span>
-				<div className="flex min-w-0 flex-col gap-1">
-					<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
-						{kind}
+				<div className="flex min-w-0 flex-1 flex-col gap-1">
+					{identifier}
+					<span className="flex items-baseline justify-between gap-3">
+						<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
+							{kind}
+						</span>
+						{id && <Identifier id={id.id} of={id.of} named />}
 					</span>
 					{scope && (
 						<span className="text-fg-soft">
@@ -123,7 +139,6 @@ export function InfoCard({
 					{scope?.id !== undefined && (
 						<Identifier id={scope.id} of={scope.kind} named />
 					)}
-					{identifier}
 				</div>
 			</div>
 

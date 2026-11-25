@@ -50,7 +50,7 @@ export function MetricTile({
 	icon,
 	about,
 	aboutStatus,
-	identifier,
+	id,
 	value,
 	detail,
 	bar,
@@ -72,10 +72,10 @@ export function MetricTile({
 	about?: ReactNode;
 
 	/**
-	 * What identifies what the tile is about, for the card of the icon to show under
-	 * its kind, such as the ID of a cluster, which has no name.
+	 * The ID of what the tile is about, for the card of the icon to show at the
+	 * right of its kind, such as the ID of a cluster, which has no name.
 	 */
-	identifier?: ReactNode;
+	id?: { id: string; of: string };
 
 	/**
 	 * What the card of the icon says, as a status, about the section being
@@ -154,7 +154,7 @@ export function MetricTile({
 					</span>
 					<Popover
 						card={about !== undefined}
-						interactive={identifier !== undefined}
+						interactive={id !== undefined}
 						content={
 							about === undefined ? (
 								label
@@ -163,7 +163,7 @@ export function MetricTile({
 									subsystem={subsystem}
 									icon={icon}
 									kind={label}
-									identifier={identifier}
+									id={id}
 									status={aboutStatus}
 								>
 									{about}

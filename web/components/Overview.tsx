@@ -15,7 +15,6 @@ import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Figure } from "./Figure.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
-import { Identifier } from "./Identifier.tsx";
 import { MessagesWaitingCard } from "./MessagesWaitingCard.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
 import { describedClasses, Popover } from "./Popover.tsx";
@@ -566,10 +565,8 @@ export function ClusterTile({
 			label="Cluster"
 			icon="cluster"
 			about={clusterAbout(application)}
-			identifier={
-				clusterId === undefined ? undefined : (
-					<Identifier id={clusterId} of="cluster" />
-				)
+			id={
+				clusterId === undefined ? undefined : { id: clusterId, of: "cluster" }
 			}
 			href={href}
 			accent={data.nodes.length === 0 ? "bad" : undefined}
@@ -677,9 +674,7 @@ export function EngineTile({
 			label="Engine"
 			icon="engine"
 			about={engineAbout(application)}
-			identifier={
-				node === undefined ? undefined : <Identifier id={node.id} of="engine" />
-			}
+			id={node === undefined ? undefined : { id: node.id, of: "engine" }}
 			href={href}
 			accent={node === undefined ? "bad" : undefined}
 			value={

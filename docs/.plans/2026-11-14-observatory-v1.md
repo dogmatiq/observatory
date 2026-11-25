@@ -1044,8 +1044,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   hovercards of the figures, and the advice and "this bar shows…" sentences of the segments' hovercards. What stays is
   what drills down (a segment's identity and amount, and a digest's identity), the statuses, as alert
   flags, the moon's hovercard, and tooltips. The engine tile gets an explainer too, which says what "online" means.
-  A digest's name opens an identity hovercard, as a preview of the page that the digest leads to: the thing's kind, its
-  name in bold, its identity key, shortened and copyable, and where it is, with no figures. No card's icon opens a
+  A digest's name opens an identity hovercard, as a preview of the page that the digest leads to: the thing's name and
+  kind, its identity key, shortened and copyable, and where it is, with no figures. Every hovercard that is about one
+  thing starts with the thing's name, in bold, then its kind, as a card does; its ID, if any, is at the right of the
+  kind. A thing with no name, such as a stream, starts with its kind, so that a shortened ID never leads. No card's icon opens a
   hovercard, so an icon no longer grows when it is pointed at. The cluster's ID, or the engine's for an engine that
   doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word "cluster"
   or "engine", shortened and copyable, because it is the same for every part of the view.
