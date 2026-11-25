@@ -5,6 +5,7 @@ import {
 	render,
 	screen,
 	waitFor,
+	within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { App } from "./App.tsx";
@@ -16,7 +17,6 @@ import {
 	FakeEventSource,
 	stubBrowser,
 	stubEventSource,
-	tipOf,
 } from "./test-support.ts";
 
 beforeEach(() => {
@@ -119,12 +119,12 @@ test("the brand links to the first page", () => {
 	).toBe("/");
 });
 
-test("the title bar says which application the page is about, and its key", async () => {
+test("the title bar says which application the page is about, by its name and not its key", () => {
 	render(<App path="/-/fixture" />);
 
-	expect(await tipOf(screen.getByText("statements"))).toBe(
-		"Application statements, key d0137119-2660-4bc2-ab4c-bc156e08521c",
-	);
+	const bar = screen.getByRole("banner");
+	expect(within(bar).getByText("statements")).toBeDefined();
+	expect(bar.textContent).not.toContain("d0137119");
 });
 
 test("the title bar's color mode control changes the page's colors", () => {

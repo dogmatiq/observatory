@@ -1,4 +1,5 @@
 import {
+	Fragment,
 	type ReactNode,
 	useEffect,
 	useLayoutEffect,
@@ -14,7 +15,7 @@ import {
 } from "../fixtures/site.ts";
 import { cn } from "../lib/cn.ts";
 import { Covered } from "../lib/distrust.tsx";
-import { formatCompact } from "../lib/format.ts";
+import { formatCompact, shortId } from "../lib/format.ts";
 import { LiveData } from "../lib/live.tsx";
 import type {
 	Application,
@@ -53,7 +54,7 @@ import {
 	SiteQueuesTile,
 	SiteTotals,
 } from "./SiteView.tsx";
-import { TitleBar } from "./TitleBar.tsx";
+import { type NavItem, TitleBar } from "./TitleBar.tsx";
 
 /**
  * ReviewPage shows every state of the tiles that are being worked on, or that
@@ -673,31 +674,48 @@ export function ReviewPage() {
 
 				<Tile
 					code="ID"
-					title="The cluster's and the engine's IDs"
-					note="The ID of the cluster that runs the application, or of the engine if it doesn't cluster, is the same for every part of the cluster view, so it belongs to the view, not to a card. It moves from the hovercard of the vital card's icon to the title bar, and no card's icon opens a hovercard any more."
+					title="Where the page is"
+					note="The ID of the cluster that runs the application, or of the engine if it doesn't cluster, is the same for every part of the cluster view, so it belongs to the view, not to a card. It moves from the hovercard of the vital card's icon to the title bar, with the site and the application, and no card's icon opens a hovercard any more."
 				>
 					<Part
 						step={2}
-						title="The ID in the title bar"
-						deciding="That the cluster's ID, or the engine's for an engine that doesn't cluster, is in the title bar after the application's name and site, small and faint, after the word &quot;cluster&quot; or &quot;engine&quot;, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
-						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards."
-						note="The title bar names the application and its site, so the ID sits beside them, after a short gap, where it reads as part of where the page is."
+						title="Where the page is, in the title bar"
+						deciding="That the title bar says where the page is as a trail: the site, the application and the cluster, or the engine for an engine that doesn't cluster, each a link to its own page; that pointing at the trail shows a hovercard of each one's key or ID, shortened and copyable; and that no card's icon, on a vital card or a digest, opens a hovercard."
+						notDeciding="How an ID is shortened and copied, which is settled; the IDs of the things in a card, which are in their segments' hovercards; what the site's and the application's own pages look like."
+						note="Every page has its own address, so each step of the trail is a page to go to, and the trail reads in the order of the address: the site, then the application, then the cluster. The application and the site have names, so the trail shows their names and no keys; the cluster has no name, so it shows its shortened ID. The keys, for a person who needs to copy one, are in the hovercard of the trail. An application that runs at no site has &quot;no site&quot; as its first step. Point at the trail to see its hovercard. The links after the trail are an example of the navigation that an application's views will need, from the prototype's: its streams, queues, nodes and handlers. None of those pages is in v1, but the title bar has to leave room for them."
 					>
 						<State
 							label="An engine that clusters"
-							recommendation="Approve. The ID is on every view of the application, in one place, without belonging to one card."
+							recommendation="Approve. The title bar says where the page is, every step of it is a link, and every key and ID can be copied from one place, without showing a key beside a name."
 							wide
 						>
 							<TitleBar
-								application={atSite}
-								identifier={
-									<>
-										cluster{" "}
-										<Identifier
-											id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
-											what="cluster ID"
-										/>
-									</>
+								nav={exampleNav}
+								trail={
+									<PageTrail
+										steps={[
+											{
+												kind: "Site",
+												name: "eu-west",
+												href: "#",
+												id: { id: siteKey, what: "site key" },
+											},
+											{
+												kind: "Application",
+												name: atSite.name,
+												href: "#",
+												id: { id: atSite.key, what: "application key" },
+											},
+											{
+												kind: "Cluster",
+												href: "#",
+												id: {
+													id: "5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58",
+													what: "cluster ID",
+												},
+											},
+										]}
+									/>
 								}
 							/>
 						</State>
@@ -707,18 +725,59 @@ export function ReviewPage() {
 							wide
 						>
 							<TitleBar
-								application={atSite}
-								identifier={
-									<>
-										engine{" "}
-										<Identifier
-											id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
-											what="engine ID"
-										/>
-									</>
+								nav={exampleNav}
+								trail={
+									<PageTrail
+										steps={[
+											{
+												kind: "Site",
+												name: "eu-west",
+												href: "#",
+												id: { id: siteKey, what: "site key" },
+											},
+											{
+												kind: "Application",
+												name: atSite.name,
+												href: "#",
+												id: { id: atSite.key, what: "application key" },
+											},
+											{
+												kind: "Engine",
+												href: "#",
+												id: {
+													id: "2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24",
+													what: "engine ID",
+												},
+											},
+										]}
+									/>
 								}
 							/>
 						</State>
+						<Choices
+							of="A"
+							title="where the page is"
+							framed={false}
+							choices={[
+								[
+									"As before: the name, the site and the ID",
+									<TitleBar
+										key="before"
+										nav={exampleNav}
+										application={atSite}
+										identifier={
+											<>
+												cluster{" "}
+												<Identifier
+													id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
+													what="cluster ID"
+												/>
+											</>
+										}
+									/>,
+								],
+							]}
+						/>
 					</Part>
 				</Tile>
 
@@ -1253,6 +1312,95 @@ const flaggedCards = [
 		status: partialStatus.text,
 	},
 ];
+
+/**
+ * An example of the navigation of an application's views, from the prototype's,
+ * to show how much room the title bar leaves for it. None of these pages is in
+ * v1.
+ */
+const exampleNav: NavItem[][] = [
+	[{ label: "Overview", icon: "cluster", href: "#", current: true }],
+	[
+		{ label: "Event streams", icon: "event-stream", href: "#" },
+		{ label: "Queues", icon: "queue", href: "#" },
+		{ label: "Nodes", icon: "node", href: "#" },
+		{ label: "Handlers", icon: "aggregate", href: "#" },
+	],
+];
+
+/** The key of the site of the review page's examples. */
+const siteKey = "3a7d9c21-0b4e-4f6a-8d15-6c2e9f0b7a43";
+
+/**
+ * PageTrail is where a page is, in the title bar, as LK's and ID's proposal: a
+ * trail of steps, the site, the application and the cluster or the engine, each
+ * a link to its own page, by its name, or by its shortened ID if it has no name.
+ * Pointing at the trail shows a hovercard of each step's key or ID, which can be
+ * copied. It is a mockup for ID 2, and becomes part of the title bar if it is
+ * accepted.
+ */
+function PageTrail({
+	steps,
+}: {
+	steps: {
+		kind: string;
+		name?: string;
+		href: string;
+		id: { id: string; what: string };
+	}[];
+}) {
+	return (
+		<Popover
+			card
+			interactive
+			content={
+				<div className="grid grid-cols-[auto_auto_auto] items-center gap-x-4 gap-y-2 px-4 py-3 text-sm">
+					{steps.map((s) => (
+						<Fragment key={s.kind}>
+							<span className="text-2xs font-medium tracking-[0.08em] text-muted uppercase">
+								{s.kind}
+							</span>
+							<span className="font-bold tracking-[0.04em] uppercase">
+								{s.name ?? ""}
+							</span>
+							<span className="text-fg-soft">
+								<Identifier id={s.id.id} what={s.id.what} />
+							</span>
+						</Fragment>
+					))}
+				</div>
+			}
+		>
+			<nav
+				aria-label="Where this page is"
+				className="flex items-center gap-1.5 text-sm whitespace-nowrap text-muted"
+			>
+				{steps.map((s, i) => (
+					<Fragment key={s.kind}>
+						{i > 0 && (
+							<Icon name="chevron" className="size-3 flex-none text-faint" />
+						)}
+						<a
+							href={s.href}
+							className={cn(
+								"no-underline decoration-from-font underline-offset-2 hover:underline",
+								i === steps.length - 1
+									? "font-medium text-fg-soft"
+									: "text-muted",
+							)}
+						>
+							{s.name ?? (
+								<>
+									{s.kind.toLowerCase()} {shortId(s.id.id)}
+								</>
+							)}
+						</a>
+					</Fragment>
+				))}
+			</nav>
+		</Popover>
+	);
+}
 
 /**
  * PointedName is a compact digest's name as it looks while it is pointed at, in

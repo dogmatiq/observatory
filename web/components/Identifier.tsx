@@ -21,6 +21,20 @@ const gap = 6;
  * It is made to be inside a popover that can be pointed at.
  */
 export function Identifier({ id, what }: { id: string; what: string }) {
+	return (
+		<span className="inline-flex items-center gap-1.5 align-baseline">
+			<span>{shortId(id)}</span>
+			<CopyButton value={id} what={what} />
+		</span>
+	);
+}
+
+/**
+ * CopyButton is a button that copies `value`, such as a key or an ID, and then
+ * says what it copied, as "Copied site key", in a note above it that moves
+ * nothing. `what` says what the value is.
+ */
+export function CopyButton({ value, what }: { value: string; what: string }) {
 	const [copied, setCopied] = useState<DOMRect>();
 	const button = useRef<HTMLButtonElement>(null);
 	const timer = useRef<number | undefined>(undefined);
@@ -29,7 +43,7 @@ export function Identifier({ id, what }: { id: string; what: string }) {
 
 	async function copy() {
 		try {
-			await navigator.clipboard.writeText(id);
+			await navigator.clipboard.writeText(value);
 		} catch {
 			// The page has no permission to write to the clipboard, so there is
 			// nothing that it can say about it.
@@ -42,8 +56,7 @@ export function Identifier({ id, what }: { id: string; what: string }) {
 	}
 
 	return (
-		<span className="inline-flex items-center gap-1.5 align-baseline">
-			<span>{shortId(id)}</span>
+		<>
 			<button
 				ref={button}
 				type="button"
@@ -72,6 +85,6 @@ export function Identifier({ id, what }: { id: string; what: string }) {
 					</span>,
 					document.body,
 				)}
-		</span>
+		</>
 	);
 }

@@ -3,7 +3,6 @@ import { cn } from "../lib/cn.ts";
 import type { Application } from "../model.ts";
 import { Icon, type IconName } from "./Icon.tsx";
 import { Logo } from "./Logo.tsx";
-import { Popover } from "./Popover.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 
 /**
@@ -39,6 +38,7 @@ export interface NavItem {
 export function TitleBar({
 	application,
 	identifier,
+	trail,
 	nav = [],
 	aside,
 }: {
@@ -54,6 +54,9 @@ export function TitleBar({
 	 * page, so it is shown here rather than on any one card.
 	 */
 	identifier?: ReactNode;
+
+	/** Where the page is, as a trail of links, in place of the application and the ID. */
+	trail?: ReactNode;
 
 	/**
 	 * The page's links, in groups. A line separates one group from the next.
@@ -80,17 +83,14 @@ export function TitleBar({
 						observatory
 					</span>
 				</a>
+				{trail}
 				{application && (
-					<Popover
-						content={`Application ${application.name}${application.site === undefined ? "" : ` at the ${application.site} site`}, key ${application.key}`}
-					>
-						<span className="font-medium whitespace-nowrap text-muted">
-							{application.name}
-							{application.site !== undefined && (
-								<span className="font-normal"> at {application.site}</span>
-							)}
-						</span>
-					</Popover>
+					<span className="font-medium whitespace-nowrap text-muted">
+						{application.name}
+						{application.site !== undefined && (
+							<span className="font-normal"> at {application.site}</span>
+						)}
+					</span>
 				)}
 				{identifier && (
 					<span className="-ml-3 text-xs whitespace-nowrap text-faint">
