@@ -75,7 +75,7 @@ export function MetricTile({
 	 * The ID of what the tile is about, for the card of the icon to show at the
 	 * right of its kind, such as the ID of a cluster, which has no name.
 	 */
-	id?: { id: string; of: string };
+	id?: { id: string; what: string };
 
 	/**
 	 * What the card of the icon says, as a status, about the section being

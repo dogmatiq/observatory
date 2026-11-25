@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../lib/cn.ts";
 import { shortId } from "../lib/format.ts";
 import { Icon } from "./Icon.tsx";
+import { panelClasses } from "./Popover.tsx";
 
 /** How long the copy button shows that it has copied, in milliseconds. */
 const copiedTime = 1500;
 
+/** The room between the copy button and the note that says what it copied. */
+const gap = 6;
+
 /**
- * Identifier shows an ID, which is a UUID, as its first eight characters in
- * monospace type, with a button that copies the whole ID. `of` says what the ID is
- * of, such as "cluster", so that the button can say what it copied: "Copied
- * cluster ID".
+ * Identifier shows an ID or a key, which is a UUID, as its first eight characters
+ * in monospace type, with a button that copies the whole UUID. `what` says what
+ * it is, such as "cluster ID" or "application key", so that the button can say
+ * what it copied: "Copied cluster ID".
  *
  * An ID is the identity of a thing that has no name, so it is in the color of
  * the text. If the thing has a name, which the page shows beside it, the name is
@@ -20,14 +25,15 @@ const copiedTime = 1500;
  */
 export function Identifier({
 	id,
-	of,
+	what,
 	named,
 }: {
 	id: string;
-	of: string;
+	what: string;
 	named?: boolean;
 }) {
-	const [copied, setCopied] = useState(false);
+	const [copied, setCopied] = useState<DOMRect>();
+	const button = useRef<HTMLButtonElement>(null);
 	const timer = useRef<number | undefined>(undefined);
 
 	useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -41,9 +47,9 @@ export function Identifier({
 			return;
 		}
 
-		setCopied(true);
+		setCopied(button.current?.getBoundingClientRect());
 		window.clearTimeout(timer.current);
-		timer.current = window.setTimeout(() => setCopied(false), copiedTime);
+		timer.current = window.setTimeout(() => setCopied(undefined), copiedTime);
 	}
 
 	return (
@@ -57,18 +63,33 @@ export function Identifier({
 				{shortId(id)}
 			</code>
 			<button
+				ref={button}
 				type="button"
 				className="-m-1 inline-flex cursor-pointer rounded-control p-1 text-muted transition-colors duration-150 hover:bg-sunk hover:text-fg motion-reduce:transition-none"
-				aria-label={copied ? `Copied ${of} ID` : `Copy ${of} ID`}
+				aria-label={copied ? `Copied ${what}` : `Copy ${what}`}
 				onClick={copy}
 			>
 				<Icon name={copied ? "check" : "copy"} className="size-3" />
 			</button>
-			{copied && (
-				<span className="text-[0.625rem]/[1.5] text-muted" role="status">
-					Copied {of} ID
-				</span>
-			)}
+			{copied &&
+				// The note floats above the button, in the window's layer, so that it
+				// moves nothing around it and no card cuts it off.
+				createPortal(
+					<span
+						role="status"
+						className={cn(
+							panelClasses,
+							"pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full px-2.5 py-1.5 whitespace-nowrap transition-opacity duration-150 starting:opacity-0 motion-reduce:transition-none",
+						)}
+						style={{
+							left: copied.left + copied.width / 2,
+							top: copied.top - gap,
+						}}
+					>
+						Copied {what}
+					</span>,
+					document.body,
+				)}
 		</span>
 	);
 }

@@ -566,7 +566,9 @@ export function ClusterTile({
 			icon="cluster"
 			about={clusterAbout(application)}
 			id={
-				clusterId === undefined ? undefined : { id: clusterId, of: "cluster" }
+				clusterId === undefined
+					? undefined
+					: { id: clusterId, what: "cluster ID" }
 			}
 			href={href}
 			accent={data.nodes.length === 0 ? "bad" : undefined}
@@ -674,7 +676,7 @@ export function EngineTile({
 			label="Engine"
 			icon="engine"
 			about={engineAbout(application)}
-			id={node === undefined ? undefined : { id: node.id, of: "engine" }}
+			id={node === undefined ? undefined : { id: node.id, what: "engine ID" }}
 			href={href}
 			accent={node === undefined ? "bad" : undefined}
 			value={

@@ -68,7 +68,7 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 				subsystem={of.subsystem}
 				icon={of.icon}
 				kind={of.kind}
-				id={{ id: about.id, of: of.kind.toLowerCase() }}
+				id={{ id: about.id, what: `${of.kind.toLowerCase()} ID` }}
 				status={{
 					icon: "alert",
 					text: "This node's workloads are unknown, but other nodes in the cluster report their workloads.",
@@ -84,7 +84,7 @@ export function SegmentCard({ about }: { about: SegmentAbout }) {
 			subsystem={of.subsystem}
 			icon={of.icon}
 			kind={of.kind}
-			id={{ id: about.id, of: of.kind.toLowerCase() }}
+			id={{ id: about.id, what: `${of.kind.toLowerCase()} ID` }}
 			figure={{
 				value: <Ramped value={amount} format={formatCompact} />,
 				unit: of.amount[amount === 1 ? 0 : 1],
@@ -137,9 +137,8 @@ function ApplicationSegmentCard({ about }: { about: ApplicationAbout }) {
 			subsystem={subsystem}
 			icon="application"
 			kind="Application"
-			identifier={
-				<span className="font-semibold text-fg">{about.application.name}</span>
-			}
+			name={about.application.name}
+			id={{ id: about.application.key, what: "application key" }}
 			figure={{
 				value: <Ramped value={about.amount} format={formatCompact} />,
 				unit: about.amount === 1 ? singular : plural,

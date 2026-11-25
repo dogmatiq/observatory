@@ -29,11 +29,11 @@ export interface Scope {
  * InfoCard is the frame of a small card of information, which is the content of
  * a popover that says more about something on the page. From the top it has:
  *
- * - a header, with an icon in the color of a subsystem, then what identifies
- *   the thing that the card is about, if it is about one thing, such as its name
- *   in bold, with its kind under it, as a digest has its name over its kind; its
- *   ID at the right of the kind, if it has a name and an ID; and its scope, if it
- *   has one, such as "within the Account application";
+ * - a header, with an icon in the color of a subsystem, then the name of the
+ *   thing that the card is about, if it has one, with its kind under it, as a
+ *   digest has its name over its kind; its ID or key at the right of the kind, if
+ *   it has one; and its scope, if it has one, such as "within the Account
+ *   application";
  * - a figure that is the card's main number, with a unit, and an aside at the
  *   right, such as a share, if the card has them;
  * - paragraphs that say what the figure is;
@@ -49,7 +49,7 @@ export function InfoCard({
 	iconColor,
 	kind,
 	scope,
-	identifier,
+	name,
 	id,
 	figure,
 	children,
@@ -68,16 +68,16 @@ export function InfoCard({
 	scope?: Scope;
 
 	/**
-	 * The thing's name, which leads the header, over its kind. A thing with no
-	 * name has none, and its kind leads.
+	 * The thing's name, which leads the header, over its kind, in capitals as a
+	 * digest shows it. A thing with no name has none, and its kind leads.
 	 */
-	identifier?: ReactNode;
+	name?: ReactNode;
 
 	/**
-	 * The thing's ID, shown at the right of its kind, such as a stream's ID or a
-	 * handler's identity key.
+	 * The thing's ID or key, shown at the right of its kind, and `what` it is,
+	 * such as "event stream ID" or "aggregate key".
 	 */
-	id?: { id: string; of: string };
+	id?: { id: string; what: string };
 
 	figure?: {
 		value: ReactNode;
@@ -101,25 +101,29 @@ export function InfoCard({
 			<div
 				className={cn(
 					"flex gap-3 px-3.5 py-3",
-					identifier || scope ? "items-start" : "items-center",
+					name || scope ? "items-start" : "items-center",
 				)}
 			>
 				<span
 					className={cn(
 						"flex-none",
 						iconColor ?? "text-(--subsystem)",
-						identifier || scope ? "mt-px" : "",
+						name || scope ? "mt-px" : "",
 					)}
 				>
 					<Icon name={icon} className="size-5" />
 				</span>
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
-					{identifier}
+					{name !== undefined && (
+						<span className="truncate font-bold tracking-[0.04em] text-fg uppercase">
+							{name}
+						</span>
+					)}
 					<span className="flex items-baseline justify-between gap-3">
 						<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
 							{kind}
 						</span>
-						{id && <Identifier id={id.id} of={id.of} named />}
+						{id && <Identifier id={id.id} what={id.what} named />}
 					</span>
 					{scope && (
 						<span className="text-fg-soft">
@@ -137,7 +141,7 @@ export function InfoCard({
 						</span>
 					)}
 					{scope?.id !== undefined && (
-						<Identifier id={scope.id} of={scope.kind} named />
+						<Identifier id={scope.id} what={`${scope.kind} ID`} named />
 					)}
 				</div>
 			</div>

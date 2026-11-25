@@ -91,7 +91,7 @@ function describe(s: {
 		s.title
 	) : (
 		<>
-			{s.lead} <Identifier id={s.id} of={s.of ?? "thing"} />
+			{s.lead} <Identifier id={s.id} what={`${s.of ?? "thing"} ID`} />
 		</>
 	);
 }

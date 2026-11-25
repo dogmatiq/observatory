@@ -37,13 +37,16 @@ export function MoonCard({
 			// that the author used for it, and, if it is foreign, what it means, in a
 			// lighter style and on the same line. Its phase tonight is under it, in the
 			// place of a kind.
-			identifier={
-				<span className="block truncate font-semibold whitespace-nowrap text-fg">
+			name={
+				<>
 					{quote.moon ?? "Moon"}
 					{quote.moon && (
-						<span className="font-normal text-fg-soft"> the moon</span>
+						<span className="font-normal tracking-normal text-fg-soft normal-case">
+							{" "}
+							the moon
+						</span>
 					)}
-				</span>
+				</>
 			}
 			kind={phaseName.charAt(0).toUpperCase() + phaseName.slice(1)}
 			status={{

@@ -218,14 +218,14 @@ export function ReviewPage() {
 				<Part
 					step={1}
 					title="The thing's name, its kind and its ID"
-					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold first, then its kind; the thing's ID, shortened and copyable, at the right of its kind. A thing with no name starts with its kind."
+					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold capitals first, as a digest has it, then its kind; the thing's ID or identity key, shortened and copyable, at the right of its kind, with a copy button that says what it copied. A thing with no name starts with its kind."
 					notDeciding="The other words of each of these hovercards, which are decided with them: a segment's (SB, and the bars of EV, QU and CL), a digest's name's (DI), which also gives the thing's key, and an alert flag's (SH 2); how an ID is shortened and copied, which is settled."
 					note="Three kinds of hovercard stay once the explainers are built, each about one thing, and each opened by something that stands for that thing: a segment of a bar, which drills down to one stream, queue, node or application; a digest's name, which previews the thing that the digest leads to; and an alert flag, which says a status about one thing. No icon opens a hovercard, and the cluster's or the engine's ID is in the title bar (ID). The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
 				>
 					<State
 						label="The hovercards that stay, by what opens them"
 						note="The segments' and the alert flag's hovercards are as they are today; the digest's name's is new, and is reviewed at DI."
-						recommendation="Approve the rule as these hovercards show it: the name first where the thing has one, then the kind, with the ID at its right; a cryptic ID never leads."
+						recommendation="Approve the rule as these hovercards show it: the name first, in capitals, where the thing has one, then the kind, with the ID or key at its right; a cryptic ID never leads."
 						wide
 					>
 						<div className="flex flex-wrap items-start gap-6">
@@ -234,7 +234,10 @@ export function ReviewPage() {
 									about={{
 										thing: "application",
 										of: "events",
-										application: { name: "payments", key: "p" },
+										application: {
+											name: "payments",
+											key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+										},
 										amount: 2140,
 										share: 0.1834,
 									}}
@@ -246,14 +249,12 @@ export function ReviewPage() {
 									icon="aggregate"
 									iconColor={kindColors.aggregate}
 									kind="aggregate"
-									identifier={
-										<span className="font-semibold text-fg">account</span>
-									}
+									name="account"
 									id={{
 										id: (
 											overview.handlers[0] as OverviewData["handlers"][number]
 										).key,
-										of: "aggregate",
+										what: "aggregate key",
 									}}
 								>
 									<p>
@@ -302,13 +303,11 @@ export function ReviewPage() {
 								icon="aggregate"
 								iconColor={kindColors.aggregate}
 								kind="aggregate"
-								identifier={
-									<span className="font-semibold text-fg">account</span>
-								}
+								name="account"
 								id={{
 									id: (overview.handlers[0] as OverviewData["handlers"][number])
 										.key,
-									of: "aggregate",
+									what: "aggregate key",
 								}}
 							>
 								<p>
@@ -326,14 +325,10 @@ export function ReviewPage() {
 								subsystem="cluster"
 								icon="application"
 								kind="Application"
-								identifier={
-									<span className="font-semibold text-fg">
-										{contactLostExample.application.name}
-									</span>
-								}
+								name={contactLostExample.application.name}
 								id={{
 									id: contactLostExample.application.key,
-									of: "application",
+									what: "application key",
 								}}
 							>
 								<p>
@@ -380,7 +375,10 @@ export function ReviewPage() {
 								about={{
 									thing: "application",
 									of: "events",
-									application: { name: "payments", key: "p" },
+									application: {
+										name: "payments",
+										key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+									},
 									amount: 2140,
 									share: 0.1834,
 								}}
@@ -409,7 +407,10 @@ export function ReviewPage() {
 								about={{
 									thing: "application",
 									of: "messages",
-									application: { name: "payments", key: "p" },
+									application: {
+										name: "payments",
+										key: "a41f9c3e-7b2d-4e6a-8c15-3d9e0b7f2a64",
+									},
 									amount: 31,
 									share: 0.124,
 								}}
@@ -606,7 +607,7 @@ export function ReviewPage() {
 									cluster{" "}
 									<Identifier
 										id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
-										of="cluster"
+										what="cluster ID"
 										named
 									/>
 								</>
@@ -625,7 +626,7 @@ export function ReviewPage() {
 									engine{" "}
 									<Identifier
 										id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
-										of="engine"
+										what="engine ID"
 										named
 									/>
 								</>
@@ -1218,7 +1219,7 @@ const flaggedCards = [
 				icon="aggregate"
 				iconColor={kindColors.aggregate}
 				kind="aggregate"
-				identifier={<span className="font-semibold text-fg">account</span>}
+				name="account"
 				status={partialStatus}
 			/>
 		),
@@ -1552,7 +1553,7 @@ function NodeCardWith({
 			subsystem="cluster"
 			icon="node"
 			kind="Node"
-			id={{ id: nodeId, of: "node" }}
+			id={{ id: nodeId, what: "node ID" }}
 			figure={
 				paragraphs && {
 					value: <Ramped value={3} format={formatCompact} />,

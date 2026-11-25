@@ -602,9 +602,8 @@ export function ContactLostCard({ app }: { app: SiteApplication }) {
 			subsystem="cluster"
 			icon="application"
 			kind="Application"
-			identifier={
-				<span className="font-semibold text-fg">{app.application.name}</span>
-			}
+			name={app.application.name}
+			id={{ id: app.application.key, what: "application key" }}
 			status={{ icon: "alert", text: contactLostText }}
 		/>
 	);
@@ -777,9 +776,8 @@ export function ApplicationCard({ app }: { app: SiteApplication }) {
 			subsystem="cluster"
 			icon="application"
 			kind="Application"
-			identifier={
-				<span className="font-semibold text-fg">{app.application.name}</span>
-			}
+			name={app.application.name}
+			id={{ id: app.application.key, what: "application key" }}
 			status={
 				out
 					? {

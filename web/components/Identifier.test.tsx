@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 test("an identifier shows the first eight characters, in the color of the text", () => {
-	const { container } = render(<Identifier id={id} of="queue" />);
+	const { container } = render(<Identifier id={id} what="queue ID" />);
 
 	const code = container.querySelector("code");
 	expect(code?.textContent).toBe("8b0081fd");
@@ -30,7 +30,7 @@ test("an identifier shows the first eight characters, in the color of the text",
 });
 
 test("the identifier of a thing that has a name is in the color of muted text", () => {
-	const { container } = render(<Identifier id={id} of="queue" named />);
+	const { container } = render(<Identifier id={id} what="queue ID" named />);
 
 	expect(container.querySelector("code")?.className).toContain("text-muted");
 });
@@ -39,7 +39,7 @@ test("the button copies the whole ID, and says that it has", async () => {
 	const writeText = vi.fn().mockResolvedValue(undefined);
 	vi.stubGlobal("navigator", { clipboard: { writeText } });
 
-	render(<Identifier id={id} of="queue" />);
+	render(<Identifier id={id} what="queue ID" />);
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: "Copy queue ID" }));
 	});
@@ -60,7 +60,7 @@ test("the button says nothing if the page can't write to the clipboard", async (
 		clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
 	});
 
-	render(<Identifier id={id} of="queue" />);
+	render(<Identifier id={id} what="queue ID" />);
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: "Copy queue ID" }));
 	});
