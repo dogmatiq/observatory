@@ -549,11 +549,25 @@ export function ReviewPage() {
 					>
 						<State
 							label="The queues tile"
-							recommendation="Approve. It has the cluster view's annotations and paragraphs, said of the applications together, with no box."
+							recommendation="Approve. It has the cluster view's annotations and paragraphs, said of the applications together, with no box. The bar's annotation compares the applications' ready messages, as the events tile's compares how fast they record new events."
 							wide
 						>
 							<Explained spec={siteQueuesExplainer} />
 						</State>
+						<Choices
+							of="A"
+							title="the bar's annotation"
+							framed={false}
+							choices={siteQueuesBar.slice(1).map(([label, text]) => [
+								label,
+								<p
+									key={label}
+									className="w-fit max-w-md rounded-card bg-panel px-4 py-3 font-hand text-[15px] leading-[16px] tracking-[-0.03em] text-fg-soft [box-shadow:var(--shadow-raised)]"
+								>
+									{text}
+								</p>,
+							])}
+						/>
 					</Part>
 					<Part
 						step={3}
@@ -2016,6 +2030,22 @@ const siteEventsBar = [
 	["The fastest applications", "which applications record new events fastest"],
 ] as const;
 
+/**
+ * The wordings of the annotation of the bar of the site's queues tile, which SW
+ * 2A chooses between, the recommended one first. The bar divides the ready
+ * messages among the applications, as the headline is their number.
+ */
+const siteQueuesBar = [
+	[
+		"Compared with the others",
+		"how many ready messages each application has, compared with the others",
+	],
+	[
+		"As before: spread across the applications",
+		"how the ready messages are spread across the applications",
+	],
+] as const;
+
 const siteEventsExplainer: ExplainerSpec = {
 	label: "site's events tile",
 	icon: "svg.size-5",
@@ -2132,8 +2162,8 @@ const siteQueuesExplainer: ExplainerSpec = {
 		},
 		{
 			at: "div.h-2",
-			text: "how the ready messages are spread across the applications",
-			compare: "how the messages are spread across the queues",
+			text: siteQueuesBar[0][1],
+			compare: "how the ready messages are spread across the queues",
 			side: "left",
 			dy: 6,
 		},
