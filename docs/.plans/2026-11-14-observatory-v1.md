@@ -1079,7 +1079,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   every part of the view. `/review` draws every card that way, as the views will be once they have explainers.
   Proposed since, on ID 2: the title bar says where the page is as a trail, the site, the application and the cluster or
   the engine, each a link to its own page, by name; the cluster or engine is named by the name of the engine's software
-  that its nodes give, and has no name, so shows its shortened ID, while its nodes give different ones (decided); pointing at the
+  that its nodes give, with its shortened ID after the name in the trail, and has no name, so shows the word cluster or
+  engine and its shortened ID, while its nodes give different ones (decided); in the hovercard, each version is a tag
+  after the name; pointing at the
   trail shows a hovercard of every key and ID, each copyable, so that the keys have a place to be copied from without
   showing beside a name. Decided: once an application's views have links, the links take the title bar and
   the trail moves to a row under it. Done: the title bar's tooltip no longer gives the application's key. In one row with the trail the
