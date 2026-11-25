@@ -27,11 +27,6 @@ import { noNodesText } from "./ClusterCards.tsx";
 import { engineOutText } from "./EngineCard.tsx";
 import { Explained, type ExplainerSpec } from "./Explainer.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
-import {
-	HandlerKindCard,
-	handlerKindAbout,
-	handlerKindReminders,
-} from "./HandlerKindCard.tsx";
 import { Icon } from "./Icon.tsx";
 import { Identifier } from "./Identifier.tsx";
 import { InfoCard } from "./InfoCard.tsx";
@@ -41,7 +36,6 @@ import {
 	EngineTile,
 	EventsTile,
 	engineAbout,
-	eventsAbout,
 	QueuesTile,
 	Totals,
 } from "./Overview.tsx";
@@ -218,209 +212,21 @@ export function ReviewPage() {
 			</Tile>
 
 			<Tile
-				code="SW"
-				title="Site view: the explainers"
-				note="The words of the explainer of each of the site view's tiles: its annotations, its title and the text under the card. How an explainer looks and works is settled, by the cluster view's explainers; only these words are new, because they speak of all the applications at the site together. Point at a tile and press its &quot;?&quot; to read them."
-			>
-				<Part
-					step={1}
-					title="The events tile"
-					deciding="The words of the events tile's explainer: its five annotations, its title, and the paragraph about event streams under the card."
-					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself, which are SH 1; the alert flag of a status, which is FL."
-					note="It is the cluster view's events card for all the applications at the site together. Its bar is of the applications, and has no advice, because applications record events at whatever rate their work needs."
-				>
-					<State
-						label="The events tile"
-						recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines."
-						wide
-					>
-						<Explained spec={siteEventsExplainer} />
-					</State>
-				</Part>
-				<Part
-					step={2}
-					title="The queues tile"
-					deciding="The words of the queues tile's explainer: its six annotations, its title, and the two paragraphs under the card."
-					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); counting the messages that are due, which is in the plan, and whose words the explainer already has."
-					note="It is the cluster view's queues card for all the applications at the site together. Its bar is of the applications, and has no advice, for the same reason as the events tile's."
-				>
-					<State
-						label="The queues tile"
-						recommendation="Approve. It has the cluster view's annotations and paragraphs, said of the applications together, with no box."
-						wide
-					>
-						<Explained spec={siteQueuesExplainer} />
-					</State>
-				</Part>
-				<Part
-					step={3}
-					title="The applications tile"
-					deciding="The words of the applications tile's explainer: its three annotations, its title, and the paragraph about the heartbeat chart under the card."
-					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); the chart itself (SC 1)."
-					note="Its headline is the applications in contact, with those out of contact set apart in red, and its chart is the heartbeat chart, with a share for each application in contact."
-				>
-					<State
-						label="The applications tile, while two applications are out of contact"
-						recommendation="Approve. It explains the heartbeat chart as the cluster view's explainer does, with an application's share in place of a node's."
-						wide
-					>
-						<Explained spec={siteApplicationsExplainer} />
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="FL"
-				title="Statuses as alert flags"
-				note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose hovercard says the status."
-			>
-				<Part
-					step={1}
-					title="An alert flag while a status applies"
-					deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
-					notDeciding="The words of each status, which are settled; the kinds of hovercard, which follow; the compact digest's alert flag, which it already has and whose hovercard is SH 2."
-					note="On a vital card, which has no label that shows, the flag goes to the left of its icon. On a digest it goes after the name, as the compact digest's does. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
-				>
-					{flaggedCards.map((f) => (
-						<State
-							key={f.label}
-							label={f.label}
-							note={f.note}
-							recommendation={f.recommendation}
-						>
-							<Flagged {...f} />
-						</State>
-					))}
-				</Part>
-			</Tile>
-
-			<Tile
-				code="ID"
-				title="The cluster's and the engine's IDs"
-				note="The ID of the cluster, and of the engine that doesn't cluster, is in the hovercard of the vital card's icon today, under the words that the explainer's title replaces. The explainer shows made-up figures, so it can't show a real ID."
-			>
-				<Part
-					step={1}
-					title="A hovercard on the icon with only the ID"
-					deciding="That the cluster's and the engine's icons keep a hovercard with only the kind and the ID, which can be copied, and lose the paragraph that the explainer's title replaces."
-					notDeciding="How an ID is shortened and copied, which is settled; IDs elsewhere, such as a stream's on its bar."
-					note="The hovercard of the icon keeps the kind and the shortened ID, which can be copied, and loses its paragraph. The other way is to show the ID in the view itself, such as beside the application's name in the title bar, which this review doesn't draw."
-				>
-					<State
-						label="The cluster card's icon"
-						recommendation="Approve. An ID is for drilling down, which is what hovercards are for now, and the explainer's &quot;?&quot; at the bottom right leaves the icon free."
-						precedents={[
-							{
-								where: "On the cluster view, the cluster tile's icon",
-								status: "settled",
-								words: clusterAbout(atSite),
-							},
-						]}
-					>
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="cluster"
-								kind="Cluster"
-								identifier={
-									<Identifier
-										id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
-										of="cluster"
-									/>
-								}
-							/>
-						</Panel>
-					</State>
-					<State
-						label="The engine card's icon"
-						recommendation="Approve, as for the cluster."
-						precedents={[
-							{
-								where: "On the cluster view, the engine tile's icon",
-								status: "settled",
-								words: engineAbout(atSite),
-							},
-						]}
-					>
-						<Panel>
-							<InfoCard
-								subsystem="cluster"
-								icon="engine"
-								kind="Engine"
-								identifier={
-									<Identifier
-										id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
-										of="engine"
-									/>
-								}
-							/>
-						</Panel>
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
 				code="IC"
 				title="Which thing a hovercard is about"
-				note="A rule for every hovercard that opens from the page, on every view: where a hovercard says which thing it is about. It comes before the site view's headline hovercards, because the hovercard of a compact digest's alert icon follows it."
+				note="A rule for every hovercard that stays once the explainers are built, on every view: where a hovercard says which thing it is about. It comes first, because the hovercards of the bars' segments, of the alert flags and of the IDs follow it."
 			>
 				<Part
 					step={1}
 					title="The thing's name or ID, under its kind"
-					deciding="Where every hovercard says which thing it is about: the thing's name in bold, or its ID if it has only an ID, under its kind."
-					notDeciding="The other words of any hovercard, which keep their own reviews; how an ID is shortened and copied, which is settled. The handler's hovercard shown here goes when the explainers are built, so this part is reworked before it is decided."
-					note="Today a hovercard says which thing it is about in one of three ways: an ID under its kind, copyable, on the hovercards of a cluster, an engine, a stream, a queue and a node; a name under its kind, in bold, on the site view's application hovercards; or the name inside a sentence, on a handler's hovercard. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;. The rule makes that concrete: a hovercard about one thing shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. Sentences may still say where the thing is, such as which application it is in, because that is not its identity."
+					deciding="Where every hovercard that stays says which thing it is about: the thing's name in bold, or its ID if it has only an ID, under its kind."
+					notDeciding="The other words of each of these hovercards, which are decided with their cards (SB, SH 2, ID and the bars of EV, QU and CL); how an ID is shortened and copied, which is settled."
+					note="The hovercards that stay are those of a bar's segments, which drill down to one stream, queue, node or application; those of the alert flags, which say a status about one thing; and those of the cluster's and the engine's IDs. Each is about one thing, and shows, under its kind, the thing's name in bold if it has one, or its ID, shortened and copyable, if all it has is an ID. The design doc already says that &quot;figures and identity have their own places, and are never inside a sentence&quot;."
 				>
 					<State
-						label="A handler's hovercard, under the rule"
-						note="The kind is AGGREGATE, as now, and its name, account, is beneath it, where the other hovercards name their thing. The sentence says &quot;this aggregate&quot; and where it is. This is the only hovercard that the rule changes."
-						recommendation="Approve. The handler is named where every other hovercard names its thing, so a reader always finds it in the same place, and a handler named &quot;aggregate&quot; still reads clearly."
-						precedents={[
-							{
-								where:
-									"On the cluster view, the hovercard of a handler digest's kind icon",
-								status: "settled",
-								words: handlerKindAbout(atSite, "account", "aggregate"),
-							},
-						]}
-					>
-						<Panel>
-							<InfoCard
-								subsystem={handlerSubsystem("aggregate")}
-								icon="aggregate"
-								iconColor={kindColors.aggregate}
-								kind="aggregate"
-								identifier={
-									<span className="font-semibold text-fg">account</span>
-								}
-							>
-								<p>
-									This section shows information about this aggregate in the{" "}
-									<ApplicationName application={atSite} />.
-								</p>
-								<p>{handlerKindReminders.aggregate}</p>
-							</InfoCard>
-						</Panel>
-					</State>
-					<Choices
-						of="A"
-						title="where a handler's hovercard names the handler"
-						choices={[
-							[
-								"As it is now, with the name in the sentence",
-								<HandlerKindCard
-									key="now"
-									application={atSite}
-									name="account"
-									kind="aggregate"
-								/>,
-							],
-						]}
-					/>
-					<State
-						label="The hovercards that already follow the rule"
-						note="Shown so that the rule can be seen whole; none of them changes. The hovercards of a section about many things, such as the events tile's icon, name no one thing, so they have nothing under their kind."
-						recommendation="Approve the rule as these hovercards show it: a name in bold where the thing has one, an ID where it has only an ID, and nothing where the hovercard is about many things."
+						label="The hovercards that stay, which already follow the rule"
+						note="None of them changes."
+						recommendation="Approve the rule as these hovercards show it: a name in bold where the thing has one, and an ID where it has only an ID."
 						wide
 					>
 						<div className="flex flex-wrap items-start gap-6">
@@ -435,7 +241,7 @@ export function ReviewPage() {
 									}}
 								/>
 							</Captioned>
-							<Captioned caption="Has a name: a compact digest's alert icon">
+							<Captioned caption="Has a name: a compact digest's alert flag">
 								<ContactLostCard app={contactLostExample} />
 							</Captioned>
 							<Captioned caption="Has only an ID: the cluster tile's icon">
@@ -449,9 +255,7 @@ export function ReviewPage() {
 											of="cluster"
 										/>
 									}
-								>
-									{clusterAbout(atSite)}
-								</InfoCard>
+								/>
 							</Captioned>
 							<Captioned caption="Has only an ID: a stream on a bar">
 								<SegmentCard
@@ -464,74 +268,7 @@ export function ReviewPage() {
 									}}
 								/>
 							</Captioned>
-							<Captioned caption="About many things: the events tile's icon">
-								<InfoCard subsystem="streams" icon="event" kind="Events">
-									{eventsAbout(atSite)}
-								</InfoCard>
-							</Captioned>
 						</div>
-					</State>
-				</Part>
-			</Tile>
-
-			<Tile
-				code="SH"
-				title="Site view: the headlines' words"
-				note="What each tile's headline and detail line say, and then what the hovercard of each headline says."
-			>
-				<Part
-					step={1}
-					title="The headlines and detail lines"
-					deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
-					notDeciding="The tiles' explainers (SW); the hovercard of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
-					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
-				>
-					<State
-						label="Two applications out of contact, three with failing messages"
-						recommendation="Approve, with these words. The events and queues tiles' detail lines have the shape of the cluster view's, quoted below, and the applications tile's is its noun alone, because its headline says the rest."
-						precedents={[
-							{
-								where: "On the cluster view, the detail lines",
-								status: "settled",
-								words: (
-									<>
-										<p>events per minute, 844 events in 1 stream</p>
-										<p>messages in 2 queues, 370/min</p>
-									</>
-								),
-							},
-						]}
-						wide
-					>
-						<SiteDemo data={siteOf(someOut, euWest)} only="totals" />
-					</State>
-				</Part>
-
-				<Part
-					step={2}
-					title="The hovercard of a compact digest's alert flag"
-					deciding="The words of the hovercard of a compact digest's alert flag: the application's name, and the status that says what losing contact means."
-					notDeciding={
-						"The words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
-					}
-					note="The hovercard of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
-				>
-					<State
-						label="The hovercard of a compact digest's alert icon"
-						note="It names the application, and its status says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
-						recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
-						precedents={[
-							{
-								where:
-									"On the cluster view, the status of the engine card while the engine is out of contact, for its words",
-								status: { underReview: "FL 1" },
-								words: <p>{engineOutText}</p>,
-							},
-						]}
-					>
-						<Panel>
-							<ContactLostCard app={contactLostExample} />
-						</Panel>
 					</State>
 				</Part>
 			</Tile>
@@ -629,6 +366,210 @@ export function ReviewPage() {
 								only="applications"
 							/>
 						</div>
+					</State>
+				</Part>
+			</Tile>
+
+			<Tile
+				code="SW"
+				title="Site view: the explainers"
+				note="The words of the explainer of each of the site view's tiles: its annotations, its title and the text under the card. How an explainer looks and works is settled, by the cluster view's explainers; only these words are new, because they speak of all the applications at the site together. Point at a tile and press its &quot;?&quot; to read them."
+			>
+				<Part
+					step={1}
+					title="The events tile"
+					deciding="The words of the events tile's explainer: its five annotations, its title, and the paragraph about event streams under the card."
+					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself, which are SH 1; the alert flag of a status, which is FL."
+					note="It is the cluster view's events card for all the applications at the site together. Its bar is of the applications, and has no advice, because applications record events at whatever rate their work needs."
+				>
+					<State
+						label="The events tile"
+						recommendation="Approve. It has the cluster view's annotations, said of the applications together, and the paragraph about event streams; it has no box, because the applications run different engines."
+						wide
+					>
+						<Explained spec={siteEventsExplainer} />
+					</State>
+				</Part>
+				<Part
+					step={2}
+					title="The queues tile"
+					deciding="The words of the queues tile's explainer: its six annotations, its title, and the two paragraphs under the card."
+					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); counting the messages that are due, which is in the plan, and whose words the explainer already has."
+					note="It is the cluster view's queues card for all the applications at the site together. Its bar is of the applications, and has no advice, for the same reason as the events tile's."
+				>
+					<State
+						label="The queues tile"
+						recommendation="Approve. It has the cluster view's annotations and paragraphs, said of the applications together, with no box."
+						wide
+					>
+						<Explained spec={siteQueuesExplainer} />
+					</State>
+				</Part>
+				<Part
+					step={3}
+					title="The applications tile"
+					deciding="The words of the applications tile's explainer: its three annotations, its title, and the paragraph about the heartbeat chart under the card."
+					notDeciding="How an explainer looks and works, which is settled; the words on the tile itself (SH 1); the chart itself (SC 1)."
+					note="Its headline is the applications in contact, with those out of contact set apart in red, and its chart is the heartbeat chart, with a share for each application in contact."
+				>
+					<State
+						label="The applications tile, while two applications are out of contact"
+						recommendation="Approve. It explains the heartbeat chart as the cluster view's explainer does, with an application's share in place of a node's."
+						wide
+					>
+						<Explained spec={siteApplicationsExplainer} />
+					</State>
+				</Part>
+			</Tile>
+
+			<Tile
+				code="FL"
+				title="Statuses as alert flags"
+				note="Explainers take over explaining from the hovercards, so the statuses that those hovercards carry need a place of their own. A flag is an icon beside a card's label that is shown only while something is true of what the card is about. A status would be an alert flag, whose hovercard says the status."
+			>
+				<Part
+					step={1}
+					title="An alert flag while a status applies"
+					deciding="That a status is shown as an alert flag while it applies; where the flag goes on each kind of card; and its color, grey for a status that qualifies the figures and red for one that says something is wrong."
+					notDeciding="The words of each status, which are settled; the kinds of hovercard, which follow; the compact digest's alert flag, which it already has and whose hovercard is SH 2."
+					note="On a vital card, which has no label that shows, the flag goes to the left of its icon. On a digest it goes after the name, as the compact digest's does. It is grey for a status that qualifies the figures, and red for one that says something is wrong, matching the red of the card. Point at a flag for its status."
+				>
+					{flaggedCards.map((f) => (
+						<State
+							key={f.label}
+							label={f.label}
+							note={f.note}
+							recommendation={f.recommendation}
+						>
+							<Flagged {...f} />
+						</State>
+					))}
+				</Part>
+			</Tile>
+
+			<Tile
+				code="SH"
+				title="Site view: the headlines' words"
+				note="What each tile's headline and detail line say, and then what the hovercard of each headline says."
+			>
+				<Part
+					step={1}
+					title="The headlines and detail lines"
+					deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
+					notDeciding="The tiles' explainers (SW); the hovercard of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
+					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications in contact, with the number out of contact set apart in red, and its detail line is the word &quot;applications&quot;."
+				>
+					<State
+						label="Two applications out of contact, three with failing messages"
+						recommendation="Approve, with these words. The events and queues tiles' detail lines have the shape of the cluster view's, quoted below, and the applications tile's is its noun alone, because its headline says the rest."
+						precedents={[
+							{
+								where: "On the cluster view, the detail lines",
+								status: "settled",
+								words: (
+									<>
+										<p>events per minute, 844 events in 1 stream</p>
+										<p>messages in 2 queues, 370/min</p>
+									</>
+								),
+							},
+						]}
+						wide
+					>
+						<SiteDemo data={siteOf(someOut, euWest)} only="totals" />
+					</State>
+				</Part>
+
+				<Part
+					step={2}
+					title="The hovercard of a compact digest's alert flag"
+					deciding="The words of the hovercard of a compact digest's alert flag: the application's name, and the status that says what losing contact means."
+					notDeciding={
+						"The words on the tiles themselves (SH 1); the explainers of the tiles (SW); the alert flags of the other cards (FL); the hovercards of the bars' segments (SB)."
+					}
+					note="The hovercard of the alert flag of a compact digest whose application is out of contact. The hovercards that explained the headlines are replaced by the tiles' explainers (SW)."
+				>
+					<State
+						label="The hovercard of a compact digest's alert icon"
+						note="It names the application, and its status says what losing contact means for the reader, in the words of the engine card's status, with the application as their subject."
+						recommendation="Approve, with this wording. It is the engine hovercard's status with the application as its subject, and &quot;it&quot; in place of saying &quot;the application&quot; twice in one sentence."
+						precedents={[
+							{
+								where:
+									"On the cluster view, the status of the engine card while the engine is out of contact, for its words",
+								status: { underReview: "FL 1" },
+								words: <p>{engineOutText}</p>,
+							},
+						]}
+					>
+						<Panel>
+							<ContactLostCard app={contactLostExample} />
+						</Panel>
+					</State>
+				</Part>
+			</Tile>
+
+			<Tile
+				code="ID"
+				title="The cluster's and the engine's IDs"
+				note="The ID of the cluster, and of the engine that doesn't cluster, is in the hovercard of the vital card's icon today, under the words that the explainer's title replaces. The explainer shows made-up figures, so it can't show a real ID."
+			>
+				<Part
+					step={1}
+					title="A hovercard on the icon with only the ID"
+					deciding="That the cluster's and the engine's icons keep a hovercard with only the kind and the ID, which can be copied, and lose the paragraph that the explainer's title replaces."
+					notDeciding="How an ID is shortened and copied, which is settled; IDs elsewhere, such as a stream's on its bar."
+					note="The hovercard of the icon keeps the kind and the shortened ID, which can be copied, and loses its paragraph. The other way is to show the ID in the view itself, such as beside the application's name in the title bar, which this review doesn't draw."
+				>
+					<State
+						label="The cluster card's icon"
+						recommendation="Approve. An ID is for drilling down, which is what hovercards are for now, and the explainer's &quot;?&quot; at the bottom right leaves the icon free."
+						precedents={[
+							{
+								where: "On the cluster view, the cluster tile's icon",
+								status: "settled",
+								words: clusterAbout(atSite),
+							},
+						]}
+					>
+						<Panel>
+							<InfoCard
+								subsystem="cluster"
+								icon="cluster"
+								kind="Cluster"
+								identifier={
+									<Identifier
+										id="5f1e2a7c-8d3b-4c6e-9a0f-2b7d4e1c3a58"
+										of="cluster"
+									/>
+								}
+							/>
+						</Panel>
+					</State>
+					<State
+						label="The engine card's icon"
+						recommendation="Approve, as for the cluster."
+						precedents={[
+							{
+								where: "On the cluster view, the engine tile's icon",
+								status: "settled",
+								words: engineAbout(atSite),
+							},
+						]}
+					>
+						<Panel>
+							<InfoCard
+								subsystem="cluster"
+								icon="engine"
+								kind="Engine"
+								identifier={
+									<Identifier
+										id="2c9e4b17-6a3d-4f08-b5e1-9d7a0c3f6e24"
+										of="engine"
+									/>
+								}
+							/>
+						</Panel>
 					</State>
 				</Part>
 			</Tile>
