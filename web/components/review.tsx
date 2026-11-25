@@ -415,6 +415,21 @@ export function Part(props: PartProps) {
 	const tile = useContext(TileCode);
 	const { ids } = useContext(Accepted);
 	const settled = partSettled(tile, props, ids);
+	const part = `${tile} ${step ?? 0}`;
+
+	// The ID of the alternative that is used in place of each state, by the
+	// state's letter, for the states that one has replaced.
+	const replacedBy = new Map<string, string>();
+	for (const c of Children.toArray(children)) {
+		if (isValidElement<ChoicesProps>(c) && c.type === Choices) {
+			c.props.choices.forEach((_, i) => {
+				const id = `${part}${c.props.of}${i + 1}`;
+				if (ids.has(id)) {
+					replacedBy.set(c.props.of, id);
+				}
+			});
+		}
+	}
 
 	return (
 		<Collapsible
@@ -456,9 +471,11 @@ export function Part(props: PartProps) {
 			{children && (
 				<div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] items-start gap-x-6 gap-y-2">
 					{Children.toArray(children).map((child, i) =>
-						isValidElement<{ id?: string }>(child) && child.type === State
+						isValidElement<{ id?: string; replacedBy?: string }>(child) &&
+						child.type === State
 							? cloneElement(child, {
-									id: `${tile} ${step ?? 0}${String.fromCharCode(65 + i)}`,
+									id: `${part}${String.fromCharCode(65 + i)}`,
+									replacedBy: replacedBy.get(String.fromCharCode(65 + i)),
 								})
 							: isValidElement<{ part?: string }>(child) &&
 									child.type === Choices
@@ -492,6 +509,12 @@ type StateProps = {
 	/** The ID of the state on the page, which its part gives it. */
 	id?: string;
 
+	/**
+	 * The ID of the alternative that is used in place of the state, if one has
+	 * been accepted, which its part gives it. The state is then settled.
+	 */
+	replacedBy?: string;
+
 	label: string;
 	note?: string;
 
@@ -514,6 +537,7 @@ type StateProps = {
 
 export function State({
 	id,
+	replacedBy,
 	label,
 	note,
 	wide = false,
@@ -526,7 +550,8 @@ export function State({
 
 	// A state with a recommendation is under review, unless it says otherwise, or
 	// its recommendation is accepted.
-	const accepted = id !== undefined && ids.has(id);
+	const accepted =
+		(id !== undefined && ids.has(id)) || replacedBy !== undefined;
 	const status =
 		accepted || (decided ?? (recommendation === undefined ? undefined : false));
 
@@ -564,7 +589,14 @@ export function State({
 					{status !== undefined && <Decision decided={status} />}
 				</span>
 				{note && <span className="block text-xs text-muted">{note}</span>}
-				{recommendation && (
+				{replacedBy && (
+					<span className="block text-xs text-muted">
+						Replaced by {replacedBy}.
+					</span>
+				)}
+				{/* A state that an alternative has replaced has nothing left to
+				accept. */}
+				{recommendation && replacedBy === undefined && (
 					<Recommendation id={id ?? label} className="mt-1.5">
 						{recommendation}
 					</Recommendation>

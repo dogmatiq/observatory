@@ -976,7 +976,6 @@ export function ReviewPage() {
 						title="The bar"
 						deciding="What a segment of the cluster tile's bar shows when it is pointed at: its node, its workloads and its share of them; and what it says about a node that doesn't report its workloads."
 						notDeciding="How the bar is drawn, which is settled; where the hovercard puts the node's ID, which is IC; the words about the bar, which are in the explainer (CL 6)."
-						decided={false}
 						note="Each segment is a node, and has the hovercard of that node. The hovercard drills down: its figures are the node's workloads and its share of them. A node that owns none has no share. What the bar shows, and that workloads vary in size, are in the tile's explainer."
 					>
 						{(
