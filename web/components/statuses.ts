@@ -55,7 +55,7 @@ export const someApplicationsReport: Status = {
  * figure is the last rate that there was, for a minute at most.
  */
 export const rateLost: Status = {
-	text: "No new samples are arriving, so this average is out of date.",
+	text: "New samples aren't arriving, so this average is out of date.",
 	tone: "qualifies",
 };
 

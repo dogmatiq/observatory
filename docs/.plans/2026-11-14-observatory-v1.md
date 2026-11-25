@@ -720,7 +720,7 @@ with nothing left is not shown. A slot has one candidate for now. Letting a slot
   - The card of a rate says what it is and that it is averaged over the last minute in every state, and under that a
     status that says what is happening with the samples and what follows: "There aren't enough samples yet, so the average
     can't be calculated." when there is none yet, which does not say how long that takes, because nodes can be flaky, and
-    "No new samples are arriving, so this average is out of date." when it is lost.
+    "New samples aren't arriving, so this average is out of date." when it is lost.
 - A part that begins or ends while a page is open grows in or shrinks away, with some animation, and not necessarily the
   same one for every part. Stats on a card appear and go without one so far.
 - The page adapts to what the engine says that it supports, in three cases. What the engine declares that it doesn't
