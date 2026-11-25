@@ -1050,8 +1050,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   waiting count's annotation is "the number of messages ready to be delivered now"; the queues card's and the compact
   digest's first paragraph is "Commands and deadlines wait on queues until they are delivered. A command is ready to
   be delivered as soon as it is queued, and a deadline once its scheduled time arrives."; and their advice is "Fewer ready messages is
-  better. If the number of ready messages keeps rising, messages are becoming ready faster than they are being
-  handled."
+  better. If the number keeps rising, messages are becoming ready faster than they are being handled."
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
   engine's event stream model from the server for this, as the events card has it.
