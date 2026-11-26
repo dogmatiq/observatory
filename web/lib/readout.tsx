@@ -16,7 +16,8 @@ export interface Readout {
 	/** The unit of the figure, if it is a number. */
 	unit?: string;
 
-	age: string;
+	/** How long ago the figure was, if it isn't itself a time. */
+	age?: string;
 }
 
 /**

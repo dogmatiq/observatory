@@ -5,9 +5,9 @@ import { heartbeatAge } from "./heartbeat-age.ts";
 const node = { heartbeats: [4000, 1000] };
 
 test("the age of the latest heartbeat is just now, then in seconds ago", () => {
-	expect(heartbeatAge(node, 0)).toBe("heartbeat just now");
-	expect(heartbeatAge(node, 1000)).toBe("heartbeat 2 s ago");
-	expect(heartbeatAge(node, 20_000)).toBe("heartbeat 21 s ago");
+	expect(heartbeatAge(node, 0)).toBe("just now");
+	expect(heartbeatAge(node, 1000)).toBe("2 s ago");
+	expect(heartbeatAge(node, 20_000)).toBe("21 s ago");
 });
 
 test("a node with no heartbeats has no age", () => {

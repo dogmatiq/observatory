@@ -15,7 +15,9 @@ afterEach(cleanup);
 const animating = (container: HTMLElement) =>
 	container.querySelector(".inline-grid");
 
-const failing = () => screen.queryByText(/^\+/);
+// While the count glitches, its text is drawn more than once, and the first is
+// the one that takes up the room.
+const failing = () => screen.queryAllByText(/^\+/)[0];
 
 /**
  * Ends the animation of an element. React listens for the prefixed event where
@@ -58,6 +60,16 @@ test("a count that begins grows from nothing", () => {
 
 	endAnimation(animating(container));
 	expect(animating(container)?.className).not.toContain("failing-in");
+});
+
+test("a count that begins glitches as it grows, and then is still", () => {
+	const { container, rerender } = render(<Failing count={0} size="stat" />);
+
+	rerender(<Failing count={2} size="stat" />);
+	expect(container.querySelector(".glitch")).not.toBeNull();
+
+	endAnimation(animating(container));
+	expect(container.querySelector(".glitch")).toBeNull();
 });
 
 /** Lets the given time pass. */

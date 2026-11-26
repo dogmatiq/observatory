@@ -10,6 +10,7 @@ import {
 import { heartbeatAge } from "../lib/heartbeat-age.ts";
 import { levelOf } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
+import type { Readout } from "../lib/readout.tsx";
 import {
 	nodeSegments,
 	queueSegments,
@@ -511,7 +512,13 @@ export function ClusterTile({
 	// The levels drain between updates, so they are worked out again with each
 	// frame from the time that has passed.
 	const elapsed = useElapsed();
-	const sections = data.nodes.map((n) => sectionOf(n, "node", elapsed));
+	const sections = data.nodes.map((n) =>
+		sectionOf(n, elapsed, (id, age) => ({
+			kind: "node",
+			figure: shortId(id),
+			age: `heartbeat ${age}`,
+		})),
+	);
 
 	return (
 		<MetricTile
@@ -587,10 +594,18 @@ export function EngineTile({
 	const { node } = data;
 
 	// The level drains between updates, so it is worked out again with each frame
-	// from the time that has passed.
+	// from the time that has passed. The engine runs as one process, so its
+	// readout needn't say which one: it says when its latest heartbeat arrived.
 	const elapsed = useElapsed();
 	const sections =
-		node === undefined ? [] : [sectionOf(node, "engine", elapsed)];
+		node === undefined
+			? []
+			: [
+					sectionOf(node, elapsed, (_, age) => ({
+						kind: "heartbeat",
+						figure: age,
+					})),
+				];
 
 	return (
 		<MetricTile
@@ -612,16 +627,18 @@ export function EngineTile({
 /**
  * sectionOf returns the section of the heartbeat chart of a node, `elapsed`
  * milliseconds after its data arrived: the level of its heartbeat, and what the
- * tile says about it while its share is pointed at, which names it as a `kind`,
- * such as "node", and its short ID, and says when its latest heartbeat arrived.
+ * tile says about it while its share is pointed at, which `readout` gives from
+ * the node's ID and when its latest heartbeat arrived, such as "4 s ago".
  */
-function sectionOf(node: LiveNode, kind: string, elapsed: number): Section {
+function sectionOf(
+	node: LiveNode,
+	elapsed: number,
+	readout: (id: string, age: string) => Readout,
+): Section {
 	const age = heartbeatAge(node, elapsed);
 	return {
 		id: node.id,
 		level: levelOf(node, elapsed),
-		...(age !== undefined && {
-			readout: { kind, figure: shortId(node.id), age },
-		}),
+		...(age !== undefined && { readout: readout(node.id, age) }),
 	};
 }

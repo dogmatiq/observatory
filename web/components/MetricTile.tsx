@@ -5,6 +5,7 @@ import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
 import { type Readout, ReadoutContext } from "../lib/readout.tsx";
 import { AlertFlag } from "./AlertFlag.tsx";
+import { Glitch } from "./Glitch.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
@@ -144,7 +145,9 @@ export function MetricTile({
 										</span>
 									)}
 								</span>
-								<span className="text-muted">{shownReadout.age}</span>
+								{shownReadout.age !== undefined && (
+									<span className="text-muted">{shownReadout.age}</span>
+								)}
 							</>
 						)}
 					</span>
@@ -244,7 +247,8 @@ export function NoSignal({ count }: { count: number }) {
  * It is spoken in full, because "+1" says little to a screen reader.
  *
  * When there are none it is not shown. When there begin to be some it grows from
- * nothing, larger than it will stay for a moment. When there stop being any it
+ * nothing, larger than it will stay for a moment, and glitches as it grows, so
+ * that the moment is noticed, while the growing keeps the eye on the number. When there stop being any it
  * ramps down to "+0", stays at that for [holdTime], and then shrinks away, so
  * that it doesn't make the page jump. If there are some again while it stays, it
  * stays, so that a count that goes up and down doesn't come and go. It does
@@ -326,7 +330,17 @@ function SetApart({
 			>
 				<span className={cn("block", size === "headline" ? "pl-1.5" : "pl-1")}>
 					<span aria-hidden="true">
-						+<Ramped value={count} format={formatCompact} />
+						{phase === "in" && !prefersReducedMotion() ? (
+							<Glitch
+								text={`+${formatCompact(count)}`}
+								distrust={1}
+								burst={500}
+							/>
+						) : (
+							<>
+								+<Ramped value={count} format={formatCompact} />
+							</>
+						)}
 					</span>
 					{count > 0 && (
 						<span className="sr-only">{setApart[kind].spoken(count)}</span>

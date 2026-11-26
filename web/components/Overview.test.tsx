@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { application, overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
 import { stubBrowser } from "../test-support.ts";
-import { ClusterTile, Overview } from "./Overview.tsx";
+import { ClusterTile, EngineTile, Overview } from "./Overview.tsx";
 import {
 	noSignalFromEngine,
 	noSignalFromNodes,
@@ -626,4 +626,26 @@ test("a tap on the heartbeat chart of a tile that is a link doesn't follow the l
 	fireEvent.pointerDown(chart, { clientX: 25, pointerType: "touch" });
 
 	expect(fireEvent.click(chart)).toBe(false);
+});
+
+test("pointing at the engine tile's heartbeat chart says when its latest heartbeat arrived, without naming the engine", () => {
+	render(
+		<EngineTile
+			data={{
+				node: { id: "3f8e2a10-0000-4000-8000-000000000000", heartbeats: [500] },
+			}}
+			href={undefined}
+		/>,
+	);
+	const chart = document.body.querySelector("canvas")
+		?.nextElementSibling as Element;
+	vi.spyOn(chart, "getBoundingClientRect").mockReturnValue({
+		left: 0,
+		width: 100,
+	} as DOMRect);
+
+	fireEvent.pointerMove(chart, { clientX: 50, pointerType: "mouse" });
+
+	expect(document.body.textContent).toContain("heartbeat just now");
+	expect(document.body.textContent).not.toContain("3f8e2a10");
 });
