@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -236,15 +237,54 @@ func handlerKey(i int) *uuidpb.UUID {
 // watchRequest is a request for the stream of a cluster, which a test ends by
 // cancelling it.
 type watchRequest struct {
-	Response *httptest.ResponseRecorder
+	Response *streamRecorder
 	Cancel   context.CancelFunc
 	Done     chan struct{}
+}
+
+// streamRecorder is an [httptest.ResponseRecorder] whose body a test can read
+// while the handler is still writing to it, as it does for as long as a stream
+// is open.
+type streamRecorder struct {
+	*httptest.ResponseRecorder
+	m sync.Mutex
+}
+
+func (r *streamRecorder) WriteHeader(code int) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	r.ResponseRecorder.WriteHeader(code)
+}
+
+func (r *streamRecorder) Write(b []byte) (int, error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	return r.ResponseRecorder.Write(b)
+}
+
+func (r *streamRecorder) WriteString(s string) (int, error) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	return r.ResponseRecorder.WriteString(s)
+}
+
+func (r *streamRecorder) Flush() {
+	r.m.Lock()
+	defer r.m.Unlock()
+	r.ResponseRecorder.Flush()
+}
+
+// body returns what the handler has written so far.
+func (r *streamRecorder) body() string {
+	r.m.Lock()
+	defer r.m.Unlock()
+	return r.ResponseRecorder.Body.String()
 }
 
 // startWatch makes the request of the handler in the background.
 func startWatch(ctx context.Context, h http.Handler, id string) *watchRequest {
 	ctx, cancel := context.WithCancel(ctx)
-	w := &watchRequest{httptest.NewRecorder(), cancel, make(chan struct{})}
+	w := &watchRequest{&streamRecorder{ResponseRecorder: httptest.NewRecorder()}, cancel, make(chan struct{})}
 
 	go func() {
 		defer close(w.Done)
@@ -266,7 +306,7 @@ func (w *watchRequest) events(t testing.TB) []event {
 	t.Helper()
 
 	var out []event
-	for block := range strings.SplitSeq(strings.TrimSpace(w.Response.Body.String()), "\n\n") {
+	for block := range strings.SplitSeq(strings.TrimSpace(w.Response.body()), "\n\n") {
 		if block == "" {
 			continue
 		}
