@@ -220,7 +220,7 @@ test("a cluster's page keeps its data, and says so, while updates have stopped",
 	await waitFor(() => expect(FakeEventSource.live).toHaveLength(1));
 	connect();
 	await screen.findByRole("region", { name: "Totals" });
-	expect(screen.queryByRole("status")).toBeNull();
+	expect(screen.getByRole("status").textContent).toBe("");
 
 	act(() => FakeEventSource.live[0]?.fail());
 
@@ -231,7 +231,7 @@ test("a cluster's page keeps its data, and says so, while updates have stopped",
 
 	connect();
 
-	expect(screen.queryByRole("status")).toBeNull();
+	expect(screen.getByRole("status").textContent).toBe("");
 });
 
 test("a cluster's page shows each change that the stream sends", async () => {

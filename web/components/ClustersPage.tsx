@@ -19,14 +19,14 @@ import { Popover } from "./Popover.tsx";
  */
 export function ClustersPage({
 	clusters,
-	notice,
+	stopped,
 }: {
 	/** The clusters, or undefined while they are not known yet. */
 	clusters: ClusterSummary[] | undefined;
-	notice?: string;
+	stopped?: string;
 }) {
 	return (
-		<Page notice={notice}>
+		<Page stopped={stopped}>
 			<h2 className="mb-4 text-lg font-semibold">Clusters</h2>
 			{clusters === undefined ? (
 				<p className="text-muted">Loading…</p>

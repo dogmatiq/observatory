@@ -2,14 +2,21 @@ import { createContext, useContext } from "react";
 
 /**
  * Readout is what a chart says about the place on it that is pointed at, or
- * anchored: the value there, in the unit that the chart is in, and how long ago.
- * A chart of things rather than of a number, such as the heartbeat chart, gives
- * the thing that is pointed at as the figure, after the kind of thing that it
- * is, and says how long ago something happened to it.
+ * anchored. Its figure is the measurement there, which is shown in the color of
+ * the chart, and the rest is shown in the muted color: the unit of the figure,
+ * and how long ago the measurement was, for a chart of a number; or the thing
+ * that the measurement is of, and a label that says what is measured, for a
+ * chart of things, such as "node 3f8e2a10" over "heartbeat 3 s ago".
  */
 export interface Readout {
-	/** The kind of thing that the figure names, such as "node", if it names one. */
-	kind?: string;
+	/**
+	 * The thing that the measurement is of, such as "node 3f8e2a10", for a chart
+	 * of more than one thing. It is shown above the figure.
+	 */
+	subject?: string;
+
+	/** What the figure measures, such as "heartbeat", shown before it. */
+	label?: string;
 
 	figure: string;
 

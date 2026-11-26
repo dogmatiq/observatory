@@ -514,9 +514,9 @@ export function ClusterTile({
 	const elapsed = useElapsed();
 	const sections = data.nodes.map((n) =>
 		sectionOf(n, elapsed, (id, age) => ({
-			kind: "node",
-			figure: shortId(id),
-			age: `heartbeat ${age}`,
+			subject: `node ${shortId(id)}`,
+			label: "heartbeat",
+			figure: age,
 		})),
 	);
 
@@ -602,7 +602,7 @@ export function EngineTile({
 			? []
 			: [
 					sectionOf(node, elapsed, (_, age) => ({
-						kind: "heartbeat",
+						label: "heartbeat",
 						figure: age,
 					})),
 				];

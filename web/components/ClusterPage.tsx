@@ -18,7 +18,7 @@ export function ClusterPage({
 	onClusterPage,
 	nav,
 	versions,
-	notice,
+	stopped,
 	data,
 	links,
 	down,
@@ -41,7 +41,7 @@ export function ClusterPage({
 
 	nav?: NavItem[][];
 	versions?: Version[];
-	notice?: string;
+	stopped?: string;
 	data: OverviewData;
 	links?: OverviewLinks;
 
@@ -61,7 +61,7 @@ export function ClusterPage({
 			}
 			nav={nav}
 			versions={versions}
-			notice={notice}
+			stopped={stopped}
 		>
 			<ErrorBoundary>
 				<Overview

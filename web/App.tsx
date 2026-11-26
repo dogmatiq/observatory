@@ -31,10 +31,10 @@ import { useWatched } from "./lib/watch.ts";
 import type { Installation, Site } from "./model.ts";
 
 /**
- * The line above a page that has stopped being updated, because the
- * Observatory can't be reached.
+ * What a page that has stopped being updated says, because the Observatory
+ * can't be reached, as the tooltip of the alert flag in its title bar.
  */
-const staleNotice =
+const updatesStopped =
 	"Updates have stopped, because the Observatory can't be reached. This is the last data that it sent.";
 
 /**
@@ -131,7 +131,7 @@ function Clusters() {
 	return (
 		<ClustersPage
 			clusters={polled.status === "loading" ? undefined : clusters}
-			notice={polled.status === "stale" ? staleNotice : undefined}
+			stopped={polled.status === "stale" ? updatesStopped : undefined}
 		/>
 	);
 }
@@ -160,7 +160,7 @@ function Found<T>({
 }: {
 	polled: Polled<T[]>;
 	missing: { title: string; text: string };
-	children: (found: T[], notice: string | undefined) => ReactNode;
+	children: (found: T[], stopped: string | undefined) => ReactNode;
 }) {
 	switch (polled.status) {
 		case "loading":
@@ -181,7 +181,7 @@ function Found<T>({
 			}
 			return children(
 				polled.data,
-				polled.status === "stale" ? staleNotice : undefined,
+				polled.status === "stale" ? updatesStopped : undefined,
 			);
 	}
 }
@@ -201,8 +201,8 @@ function SiteByKey({ siteKey }: { siteKey: string }) {
 				text: "The Observatory knows no application at a site with this key. This page shows the site as soon as a node at it connects.",
 			}}
 		>
-			{(installations, notice) => (
-				<SiteApplications installations={installations} notice={notice} />
+			{(installations, stopped) => (
+				<SiteApplications installations={installations} stopped={stopped} />
 			)}
 		</Found>
 	);
@@ -214,10 +214,10 @@ function SiteByKey({ siteKey }: { siteKey: string }) {
  */
 function SiteApplications({
 	installations,
-	notice,
+	stopped,
 }: {
 	installations: Installation[];
-	notice?: string;
+	stopped?: string;
 }) {
 	const site = installations[0]?.site;
 
@@ -232,7 +232,7 @@ function SiteApplications({
 				href: applicationAtSitePath(i.site?.key, i.application.key),
 				label: i.application.name,
 			}))}
-			notice={notice}
+			stopped={stopped}
 		/>
 	);
 }
@@ -252,8 +252,8 @@ function ApplicationByKey({ applicationKey }: { applicationKey: string }) {
 				text: "The Observatory knows no application with this key. This page shows the application as soon as a node of it connects.",
 			}}
 		>
-			{(installations, notice) => (
-				<ApplicationSites installations={installations} notice={notice} />
+			{(installations, stopped) => (
+				<ApplicationSites installations={installations} stopped={stopped} />
 			)}
 		</Found>
 	);
@@ -266,10 +266,10 @@ function ApplicationByKey({ applicationKey }: { applicationKey: string }) {
  */
 function ApplicationSites({
 	installations,
-	notice,
+	stopped,
 }: {
 	installations: Installation[];
-	notice?: string;
+	stopped?: string;
 }) {
 	const [only, ...others] = installations;
 	if (only !== undefined && others.length === 0) {
@@ -288,7 +288,7 @@ function ApplicationSites({
 				href: applicationAtSitePath(i.site?.key, i.application.key),
 				label: i.site?.name ?? "No site",
 			}))}
-			notice={notice}
+			stopped={stopped}
 		/>
 	);
 }
@@ -323,7 +323,7 @@ function ApplicationAtSite({
 				text: "The Observatory knows no cluster that runs this application at this site. This page shows the application as soon as a node of it connects.",
 			}}
 		>
-			{(clusters, notice) => {
+			{(clusters, stopped) => {
 				const [only, ...others] = clusters;
 				if (only !== undefined && others.length === 0) {
 					return <Cluster id={only.id} />;
@@ -338,7 +338,7 @@ function ApplicationAtSite({
 							label: c.id,
 							detail: c.reporting ? undefined : "no signal",
 						}))}
-						notice={notice}
+						stopped={stopped}
 					/>
 				);
 			}}
@@ -427,18 +427,18 @@ function Named({ name }: { name: string }) {
 				text: `The Observatory knows no site or application named “${name}”. This page shows it as soon as a node of it connects.`,
 			}}
 		>
-			{(candidates, notice) => {
+			{(candidates, stopped) => {
 				const [only, ...others] = candidates;
 				if (only !== undefined && others.length === 0) {
 					return only.kind === "site" ? (
 						<SiteApplications
 							installations={only.installations}
-							notice={notice}
+							stopped={stopped}
 						/>
 					) : (
 						<ApplicationSites
 							installations={only.installations}
-							notice={notice}
+							stopped={stopped}
 						/>
 					);
 				}
@@ -459,7 +459,7 @@ function Named({ name }: { name: string }) {
 										detail: `application ${shortId(c.application.key)}`,
 									},
 						)}
-						notice={notice}
+						stopped={stopped}
 					/>
 				);
 			}}
@@ -493,7 +493,7 @@ function NamedApplicationAtSite({
 				text: `The Observatory knows no application named “${applicationName}” at a site named “${siteName}”. This page shows the application as soon as a node of it connects.`,
 			}}
 		>
-			{(installations, notice) => {
+			{(installations, stopped) => {
 				const [only, ...others] = installations;
 				if (only !== undefined && others.length === 0) {
 					return (
@@ -512,7 +512,7 @@ function NamedApplicationAtSite({
 							label: atSite(i.application.name, i.site),
 							detail: `application ${shortId(i.application.key)}, site ${shortId(i.site?.key ?? "")}`,
 						}))}
-						notice={notice}
+						stopped={stopped}
 					/>
 				);
 			}}
@@ -569,7 +569,7 @@ function Cluster({
 						onClusterPage={onClusterPage}
 						data={watched.data.overview}
 						down={watched.data.down}
-						notice={watched.status === "stale" ? staleNotice : undefined}
+						stopped={watched.status === "stale" ? updatesStopped : undefined}
 					/>
 				</LiveData>
 			);

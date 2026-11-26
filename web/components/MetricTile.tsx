@@ -131,10 +131,13 @@ export function MetricTile({
 					>
 						{shownReadout && (
 							<>
+								{shownReadout.subject !== undefined && (
+									<span className="text-muted">{shownReadout.subject}</span>
+								)}
 								<span className="font-semibold text-(--subsystem)">
-									{shownReadout.kind !== undefined && (
+									{shownReadout.label !== undefined && (
 										<span className="font-normal text-muted">
-											{shownReadout.kind}{" "}
+											{shownReadout.label}{" "}
 										</span>
 									)}
 									{shownReadout.figure}

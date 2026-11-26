@@ -273,7 +273,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 	const readout = sections.find((s) => s.id === pointed)?.readout;
 	const readoutKey =
 		readout &&
-		`${readout.kind}|${readout.figure}|${readout.unit}|${readout.age}`;
+		`${readout.subject}|${readout.label}|${readout.figure}|${readout.unit}|${readout.age}`;
 	// biome-ignore lint/correctness/useExhaustiveDependencies: the key is the readout.
 	useEffect(() => {
 		setReadout?.(readout);
