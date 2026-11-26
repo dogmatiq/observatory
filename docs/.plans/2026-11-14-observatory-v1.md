@@ -955,11 +955,12 @@ Tick each item when it is done, and write the pull request or commit that did it
   explainer's arrows show it. Decided: an explainer's copy of a card shows what its numbers mean, not how sure they are,
   so its numbers are never blurred and its flag shows only a status that says something is wrong; the cluster copy's
   member with no signal shows the red "+1" and nothing else (done, 4e79399). Decided: every status that comes with
-  blurred numbers ends with "The more uncertain the numbers, the more they blur.", and an application's compact digest
+  blurred numbers ends with "Numbers blur as they become less reliable.", and an application's compact digest
   on the site view flags that only some of its nodes report its figures, as a cluster's cards do (done, 403bc4b). While
   no node of a cluster is sending a signal, the handler digests' blurred figures have no flag of their own, because the
-  cluster tile's red flag says it for the page. Every explainer gets a footnote about blurred numbers, whose wording is
-  being chosen on a temporary page.
+  cluster tile's red flag says it for the page. Every explainer ends with a footnote: "Numbers blur as they become less
+  reliable. A warning icon nearby explains why." (done, e83f0b3). A number isn't certain or uncertain, a reader is, and a
+  warning icon doesn't say anything, so the words are "reliable" and "explains".
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with the events in the event streams of all the applications together, and the number of
   those streams, which is how widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
