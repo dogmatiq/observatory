@@ -40,6 +40,7 @@ import {
 	noSignalFromApplications,
 	rateStatuses,
 	type Status,
+	someApplicationNodesReport,
 	someApplicationsReport,
 } from "./statuses.ts";
 import { subsystemColors } from "./subsystems.ts";
@@ -448,14 +449,16 @@ function CompactDigest({
 	const nameId = useId();
 
 	// With no signal, the figures are the last ones, so the flag says only that.
-	// Otherwise it says whether the rate of events can be given, if the engine
+	// Otherwise it says whether only some of the application's nodes report its
+	// figures, and whether the rate of events can be given, if the engine
 	// reports one.
 	const { state } = useRate(app.events?.perMinute);
 	const statuses: Status[] = out
 		? [{ text: noSignalText, tone: "bad" }]
-		: app.events
-			? rateStatuses(state)
-			: [];
+		: [
+				...(app.coverage === undefined ? [] : [someApplicationNodesReport]),
+				...(app.events ? rateStatuses(state) : []),
+			];
 
 	return (
 		<article

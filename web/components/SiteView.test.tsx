@@ -10,7 +10,10 @@ import { formatCompact } from "../lib/format.ts";
 import { applicationAtSitePath } from "../lib/route.ts";
 import { stubBrowser, tipOf } from "../test-support.ts";
 import { noSignalText, SiteBreakdown, SiteOverview } from "./SiteView.tsx";
-import { noSignalFromApplications } from "./statuses.ts";
+import {
+	noSignalFromApplications,
+	someApplicationNodesReport,
+} from "./statuses.ts";
 
 beforeEach(stubBrowser);
 afterEach(() => {
@@ -161,4 +164,20 @@ test("a compact digest has no flag while its rate is known and its application s
 
 	const digest = screen.getByRole("article", { name: app.application.name });
 	expect(within(digest).queryByText(/samples|signal/)).toBeNull();
+});
+
+test("a compact digest whose figures only some of its application's nodes report says so by its flag", async () => {
+	const app = siteApplications[0] as (typeof siteApplications)[number];
+	render(
+		<SiteBreakdown
+			data={siteOf([{ ...app, coverage: 0.5 }], euWest)}
+			breakdown="compact-digests"
+		/>,
+	);
+
+	const digest = screen.getByRole("article", { name: app.application.name });
+	const flag = within(digest).getByText(someApplicationNodesReport.text)
+		.parentElement as HTMLElement;
+
+	expect(await tipOf(flag)).toContain(someApplicationNodesReport.text);
 });

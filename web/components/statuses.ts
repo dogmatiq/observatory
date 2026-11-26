@@ -20,6 +20,12 @@ export interface Status {
 }
 
 /**
+ * What each status that comes with blurred numbers ends with: what the blur
+ * means.
+ */
+const blurred = "The more uncertain the numbers, the more they blur.";
+
+/**
  * The status of a card while only some of the cluster's nodes report what it
  * shows, so that its numbers are the sums of those nodes, blurred by how few
  * they are. Every number that a card shows is a sum or the greatest of the nodes'
@@ -27,7 +33,17 @@ export interface Status {
  * never higher.
  */
 export const someNodesReport: Status = {
-	text: "Only some of the cluster's nodes report the metrics shown in this section, so the numbers may appear lower than they really are.",
+	text: `Only some of the cluster's nodes report the metrics shown in this section, so the numbers may appear lower than they really are. ${blurred}`,
+	tone: "qualifies",
+};
+
+/**
+ * The status of an application's compact digest on the site view while only
+ * some of the application's nodes report what it shows, as [someNodesReport] is
+ * a cluster's.
+ */
+export const someApplicationNodesReport: Status = {
+	text: `Only some of the application's nodes report the metrics shown in this section, so the numbers may appear lower than they really are. ${blurred}`,
 	tone: "qualifies",
 };
 
@@ -36,7 +52,7 @@ export const someNodesReport: Status = {
  * workloads, so that the number of workloads counts only those nodes'.
  */
 export const someNodesReportWorkloads: Status = {
-	text: "Only some of the cluster's nodes report their workloads, so the total counts only the workloads of those nodes.",
+	text: `Only some of the cluster's nodes report their workloads, so the total counts only the workloads of those nodes. ${blurred}`,
 	tone: "qualifies",
 };
 
@@ -46,7 +62,7 @@ export const someNodesReportWorkloads: Status = {
  * signal. Its numbers can then only appear lower than they really are.
  */
 export const someApplicationsReport: Status = {
-	text: "Only some of the applications fully report the metrics shown in this section, so the numbers may appear lower than they really are.",
+	text: `Only some of the applications fully report the metrics shown in this section, so the numbers may appear lower than they really are. ${blurred}`,
 	tone: "qualifies",
 };
 
@@ -55,7 +71,7 @@ export const someApplicationsReport: Status = {
  * figure is the last rate that there was, for a minute at most.
  */
 export const rateLost: Status = {
-	text: "New samples aren't arriving, so this average is out of date.",
+	text: `New samples aren't arriving, so this average is out of date. ${blurred}`,
 	tone: "qualifies",
 };
 
@@ -64,7 +80,7 @@ export const rateLost: Status = {
  * enough samples to average.
  */
 export const rateUnavailable: Status = {
-	text: "There aren't enough samples yet, so the average can't be calculated.",
+	text: `There aren't enough samples yet, so the average can't be calculated. ${blurred}`,
 	tone: "qualifies",
 };
 
