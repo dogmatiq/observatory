@@ -60,6 +60,15 @@ export interface Section {
 	late?: number;
 
 	/**
+	 * How far through the glitch of a missed heartbeat the section is, from 0
+	 * when the glitch starts to 1 when it ends, as {@link missedGlitchOf} gives
+	 * it. It is absent while the section isn't glitching.
+	 *
+	 * [missedGlitchOf]: ../lib/lateness.ts
+	 */
+	glitch?: number;
+
+	/**
 	 * What the tile says about the node while its share is pointed at. A chart
 	 * whose sections have none can't be pointed at.
 	 */
@@ -74,6 +83,7 @@ interface Share {
 	id: string;
 	level: number;
 	late?: number;
+	glitch?: number;
 
 	/** How much of its full share the node has, from 0 to 1. */
 	size: number;
@@ -96,9 +106,10 @@ interface Share {
  *
  * With no node live the line is flat, at the height of a full heartbeat, in gray.
  *
- * While a node's next heartbeat is late, its section glitches, as a figure does,
- * turned on its side: the left and the right half of the section slip up and
- * down on their own, with a red and a cyan shadow, by more the later it is.
+ * Each time that a node misses a heartbeat, its section glitches once, as a
+ * figure does, turned on its side: the left and the right half of the section
+ * slip up and down on their own, with a red and a cyan shadow, by more the later
+ * the heartbeat is.
  *
  * If the sections have readouts, pointing at a node's share widens its line and
  * strengthens its shade, and gives the tile the section's readout to show. On a
@@ -180,7 +191,6 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 				undefined,
 				undefined,
 				{
-					now,
 					widened: (id) => widenedAt(widening.current.get(id), now),
 					still: prefersReducedMotion(),
 				},
@@ -308,6 +318,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 			id: s.id,
 			level: s.level,
 			late: s.late,
+			glitch: s.glitch,
 			// A node that is new has no share yet, and the first sections that the
 			// chart is given have all of theirs.
 			size: known.get(s.id)?.size ?? (shares.current.length === 0 ? 1 : 0),
@@ -1132,25 +1143,24 @@ function shareAt(
 
 /**
  * Moving is what the chart draws over the line of the heartbeats, which moves
- * with time and not only with the levels: the glitch of a node whose next
- * heartbeat is late, and the widening of the line of a share that is pointed at.
- * `now` is the time, `widened` says how far the line of a node's share has
+ * with time and not only with the levels: the glitch of a node that has missed
+ * a heartbeat, and the widening of the line of a share that is pointed at.
+ * `widened` says how far the line of a node's share has
  * widened, and `still` is true for a viewer who asks for less motion, for whom a
- * late node's section doesn't slip, and has only its shadows.
+ * glitching section doesn't slip, and has only its shadows.
  */
 interface Moving {
-	now: number;
 	widened: (id: string) => number;
 	still: boolean;
 }
 
 /**
- * The keyframes of the glitch of a figure, from index.css, which a late node's
- * section follows: for each, the share of the way through the cycle at which it
- * starts, and how far it slips, in pixels, when the distrust is 1.
+ * The keyframes of the glitch of a figure, from index.css, which a glitching
+ * section follows, once, over its glitch: for each, the share of the way through
+ * the glitch at which it starts, and how far it slips, in pixels, when the
+ * distrust is 1.
  */
 const glitchLeft = {
-	cycle: 2300,
 	frames: [
 		[0, 1],
 		[0.1, 8],
@@ -1162,7 +1172,6 @@ const glitchLeft = {
 	],
 } as const;
 const glitchRight = {
-	cycle: 1700,
 	frames: [
 		[0, -1],
 		[0.16, -9],
@@ -1179,18 +1188,14 @@ const glitchRed = "rgba(255, 45, 85, 0.85)";
 const glitchCyan = "rgba(0, 210, 200, 0.85)";
 
 /**
- * slipAt returns how far the keyframes of a glitch slip at `now`, in pixels when
- * the distrust is 1. Like the glitch of a figure, it jumps from one keyframe to
- * the next, and doesn't move between them.
+ * slipAt returns how far the keyframes of a glitch slip at `t`, the share of the
+ * way through the glitch, in pixels when the distrust is 1. Like the glitch of a
+ * figure, it jumps from one keyframe to the next, and doesn't move between them.
  */
 function slipAt(
-	keyframes: {
-		cycle: number;
-		frames: readonly (readonly [number, number])[];
-	},
-	now: number,
+	keyframes: { frames: readonly (readonly [number, number])[] },
+	t: number,
 ): number {
-	const t = (now % keyframes.cycle) / keyframes.cycle;
 	let slip = 0;
 	for (const [at, px] of keyframes.frames) {
 		if (t >= at) {
@@ -1210,7 +1215,7 @@ function taper(x: number, x0: number, x1: number, edge: number): number {
 }
 
 /**
- * drawMoving draws the glitch of each node whose next heartbeat is late, and
+ * drawMoving draws the glitch of each node that has just missed a heartbeat, and
  * then the widening of the line of each share that is pointed at, along the line
  * as the glitches left it.
  */
@@ -1254,7 +1259,7 @@ function drawMoving(
 	});
 
 	for (const { share, x0, x1 } of places) {
-		if (share.late !== undefined && share.target > 0 && x1 > x0) {
+		if (share.glitch !== undefined && share.target > 0 && x1 > x0) {
 			drawLate(g, line, x0, x1, height, ratio, share, moving, color(1), soft);
 		}
 	}
@@ -1268,13 +1273,13 @@ function drawMoving(
 }
 
 /**
- * drawLate draws the section of a node whose next heartbeat is late, from `x0`
- * to `x1`, as a figure's glitch turned on its side, and moves the points of
+ * drawLate draws the section of a node that has just missed a heartbeat, from
+ * `x0` to `x1`, as a figure's glitch turned on its side, and moves the points of
  * `line` in the section to where it drew them.
  *
  * The left and the right half of the section slip up and down on their own, on
- * the keyframes of a figure's glitch, with a red and a cyan shadow above and
- * below the line, by more as the heartbeat gets later. The slip and the shadows
+ * the keyframes of a figure's glitch, once over the glitch, with a red and a
+ * cyan shadow above and below the line, by more as the heartbeat gets later. The slip and the shadows
  * taper to nothing at the section's ends, so that it stays joined to the line
  * beside it.
  */
@@ -1296,13 +1301,9 @@ function drawLate(
 	const distrust = 0.35 + 0.65 * (share.late ?? 0);
 	const scale = 0.9 * distrust * ratio;
 
-	// Each node slips at its own moments, so that two late nodes don't slip in
-	// step.
-	const offset = [...share.id].reduce((sum, c) => sum + c.charCodeAt(0), 0);
-	const left = moving.still ? 0 : slipAt(glitchLeft, moving.now + offset * 37);
-	const right = moving.still
-		? 0
-		: slipAt(glitchRight, moving.now + offset * 53);
+	const t = share.glitch ?? 0;
+	const left = moving.still ? 0 : slipAt(glitchLeft, t);
+	const right = moving.still ? 0 : slipAt(glitchRight, t);
 	const middle = (x0 + x1) / 2;
 
 	const weight = (x: number) => taper(x, x0, x1, 0.15);

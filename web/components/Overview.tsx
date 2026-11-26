@@ -7,7 +7,7 @@ import {
 	shortId,
 	shortPer,
 } from "../lib/format.ts";
-import { heartbeatAge, latenessOf } from "../lib/lateness.ts";
+import { heartbeatAge, latenessOf, missedGlitchOf } from "../lib/lateness.ts";
 import { levelOf } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
 import {
@@ -612,7 +612,8 @@ export function EngineTile({
 /**
  * sectionOf returns the section of the heartbeat chart of a node, `elapsed`
  * milliseconds after its data arrived: the level of its heartbeat, how late its
- * next heartbeat is, and what the tile says about it while its share is pointed
+ * next heartbeat is, how far through the glitch of a missed heartbeat it is, and
+ * what the tile says about it while its share is pointed
  * at, which names it as a `kind`, such as "node", and its short ID, and says when
  * its latest heartbeat arrived.
  */
@@ -622,6 +623,7 @@ function sectionOf(node: LiveNode, kind: string, elapsed: number): Section {
 		id: node.id,
 		level: levelOf(node, elapsed),
 		late: latenessOf(node, elapsed),
+		glitch: missedGlitchOf(node, elapsed),
 		...(age !== undefined && {
 			readout: { kind, figure: shortId(node.id), age },
 		}),

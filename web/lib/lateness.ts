@@ -42,6 +42,47 @@ export function latenessOf(
 }
 
 /**
+ * The longest that the glitch of a missed heartbeat lasts, in milliseconds.
+ */
+export const missedGlitchTime = 500;
+
+/**
+ * missedGlitchOf returns how far through its glitch a node's section is, at
+ * `elapsed` milliseconds after the data arrived, from 0 when the glitch starts to
+ * just below 1 when it ends, or undefined while the section isn't glitching.
+ *
+ * The section glitches once each time that the node misses a heartbeat, which is
+ * each time that the interval that its engine gives passes with no new
+ * heartbeat, until the latest heartbeat expires. Each glitch lasts
+ * {@link missedGlitchTime}, or half the interval if that is shorter, so that two
+ * glitches never run together. A node that has no heartbeats, or doesn't give
+ * both an interval and a deadline, never glitches.
+ */
+export function missedGlitchOf(
+	{ heartbeats, deadline, interval }: Beats,
+	elapsed: number,
+): number | undefined {
+	const ago = heartbeats.at(-1);
+	if (
+		ago === undefined ||
+		deadline === undefined ||
+		interval === undefined ||
+		interval <= 0
+	) {
+		return undefined;
+	}
+
+	const since = ago + elapsed;
+	if (since < interval || since >= ago + deadline) {
+		return undefined;
+	}
+
+	const length = Math.min(missedGlitchTime, interval / 2);
+	const sinceMissed = (since - interval) % interval;
+	return sinceMissed < length ? sinceMissed / length : undefined;
+}
+
+/**
  * heartbeatAge says when a node's latest heartbeat arrived, at `elapsed`
  * milliseconds after the data arrived: "heartbeat just now" within 1.5 seconds,
  * "heartbeat 4 s ago" after that, or "heartbeat 3 s late" once the next is late,

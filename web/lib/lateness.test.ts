@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { heartbeatAge, latenessOf } from "./lateness.ts";
+import { heartbeatAge, latenessOf, missedGlitchOf } from "./lateness.ts";
 
 // A node whose latest heartbeat arrived 1 s before the data, which its engine
 // sends every 3 s, and which expires 15 s after it arrived.
@@ -37,4 +37,34 @@ test("the age of a late heartbeat says how late it is, by at least a second", ()
 
 test("a node with no heartbeats has no age", () => {
 	expect(heartbeatAge({ heartbeats: [] }, 0)).toBeUndefined();
+});
+
+test("a section glitches once for each heartbeat that its node misses", () => {
+	// The heartbeats that it misses are due 3, 6, 9 and 12 s after the latest one
+	// arrived, which is 2, 5, 8 and 11 s after the data arrived.
+	expect(missedGlitchOf(node, 1999)).toBeUndefined();
+	for (const due of [2000, 5000, 8000, 11_000]) {
+		expect(missedGlitchOf(node, due)).toBe(0);
+		expect(missedGlitchOf(node, due + 250)).toBeCloseTo(0.5);
+		expect(missedGlitchOf(node, due + 500)).toBeUndefined();
+	}
+});
+
+test("a section doesn't glitch once the latest heartbeat has expired", () => {
+	expect(missedGlitchOf(node, 14_000)).toBeUndefined();
+});
+
+test("a missed heartbeat's glitch lasts at most half the interval", () => {
+	const fast = { heartbeats: [0], deadline: 5000, interval: 600 };
+	expect(missedGlitchOf(fast, 600 + 299)).toBeCloseTo(299 / 300);
+	expect(missedGlitchOf(fast, 600 + 300)).toBeUndefined();
+});
+
+test("a node that doesn't give an interval or a deadline never glitches", () => {
+	expect(
+		missedGlitchOf({ ...node, interval: undefined }, 2000),
+	).toBeUndefined();
+	expect(
+		missedGlitchOf({ ...node, deadline: undefined }, 2000),
+	).toBeUndefined();
 });
