@@ -98,6 +98,44 @@
 // A rate is in times per second, whatever it counts, and is rounded to three
 // significant figures, so that a rate whose value only wavers is not sent
 // again. The stream is not cached.
+//
+// # The stream of a site
+//
+// GET /-/api/sites/{key}/watch serves a stream of the same events about a
+// document of the site, with the totals of the applications at the site and
+// each application, as [observe.SiteView] counts them. Its heartbeat events are
+// those of the nodes of every cluster at the site. The document has these
+// fields:
+//
+//   - "site": {"name", "key"}. It is absent for the applications at no site.
+//   - "events": {"rate", "streams", "coverage"}, which is absent if no
+//     application's engine supports the events tile. "rate" is the events that
+//     the applications record, as "rates.events" is for a cluster, and is
+//     absent if no engine supports the metrics that it is derived from.
+//     "streams" is {"count", "events"}: how many event streams the
+//     applications have, and how many events they hold together. It is absent
+//     if no engine supports the length of event streams. "coverage" is the
+//     share of the nodes at the site that report the tile's metrics, and is
+//     absent if every node does.
+//   - "queues": {"messages", "queues", "failing", "throughput", "coverage"},
+//     which is absent if no application's engine supports the queues tile.
+//     "messages" is the messages in the applications' queues that are ready to
+//     be delivered now, and "failing" the messages whose delivery is failing.
+//     "queues" is how many queues there are, and is absent if no engine
+//     supports the number of messages in queues. "throughput" is as
+//     "rates.throughput" is for a cluster, without "of". "coverage" is as it
+//     is for "events".
+//   - "applications": each application at the site, keyed by its key, each
+//     {"name", "nodes", "coverage", "events", "queues"}. "nodes" is the nodes
+//     of every cluster that runs the application at the site, keyed by ID, each
+//     {"noSignal"} as it is for a cluster. "coverage" is the lowest share of the
+//     application's nodes that report the metrics of its figures, and is absent
+//     if every node does. "events" is {"rate", "streams"} and "queues" is
+//     {"messages", "failing", "queues"}, as they are for the site, and each is
+//     absent if the application's engine doesn't support them.
+//
+// The time series are "events" and "throughput", the sums of those of every
+// cluster at the site.
 package server
 
 import (
@@ -133,6 +171,13 @@ const noSite = "00000000-0000-0000-0000-000000000000"
 //     date, as a stream of server-sent events that only say what changed. See
 //     the package documentation. It fails with the status 404 if the Observatory doesn't know the
 //     cluster.
+//   - GET /-/api/sites/{key} gives the site view of one site, as an
+//     [observe.SiteView]. It fails with the status 404 if the Observatory has
+//     never had a node at the site.
+//   - GET /-/api/sites/{key}/watch keeps what a page draws of the site up to
+//     date, as a stream of server-sent events. See the package documentation.
+//     It fails with the status 404 if the Observatory has never had a node at
+//     the site.
 //   - GET /-/api/installations lists the installations that the Observatory
 //     knows, as an array of [observe.Installation], in the order that
 //     [observe.Observer.Installations] gives. Each query parameter leaves out the
@@ -180,6 +225,19 @@ func New(o *observe.Observer, r *observe.Recorder) http.Handler {
 
 	mux.HandleFunc("GET /-/api/clusters/{id}/watch", func(w http.ResponseWriter, req *http.Request) {
 		serveStream(w, req, o, r)
+	})
+
+	mux.HandleFunc("GET /-/api/sites/{key}", func(w http.ResponseWriter, req *http.Request) {
+		view, _, ok := siteViewOf(o, r, time.Now(), req.PathValue("key"))
+		if !ok {
+			http.NotFound(w, req)
+			return
+		}
+		respond(w, view)
+	})
+
+	mux.HandleFunc("GET /-/api/sites/{key}/watch", func(w http.ResponseWriter, req *http.Request) {
+		serveSiteStream(w, req, o, r)
 	})
 
 	mux.HandleFunc("GET /-/api/installations", func(w http.ResponseWriter, req *http.Request) {

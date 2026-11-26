@@ -133,23 +133,37 @@ func (s *stream) burst(now time.Time, view observe.ClusterView, series observe.S
 		return err
 	}
 
-	// A node's heartbeats are sent oldest first. The Observer keeps only the
-	// expiry of a node's latest heartbeat, so each is sent with that one.
-	for _, n := range membersOf(view.Overview) {
+	if err := s.heartbeats(membersOf(view.Overview)); err != nil {
+		return err
+	}
+
+	return s.write("synced", struct{}{})
+}
+
+// heartbeats sends the recent heartbeats of each of the nodes. A node's
+// heartbeats are sent oldest first. The Observer keeps only the expiry of a
+// node's latest heartbeat, so each is sent with that one.
+func (s *stream) heartbeats(nodes []observe.Member) error {
+	for _, n := range nodes {
 		for _, ms := range n.Heartbeats {
 			if err := s.write("heartbeat", heartbeat{n.ID, ms, n.Expiry}); err != nil {
 				return err
 			}
 		}
 	}
-
-	return s.write("synced", struct{}{})
+	return nil
 }
 
 // update sends what has changed since the page was last sent something, which
 // is everything the first time.
 func (s *stream) update(now time.Time, view observe.ClusterView, series observe.Series) error {
-	document, err := decoded(documentOf(view))
+	return s.send(now, documentOf(view), chartsOf(view, series))
+}
+
+// send sends what has changed in a document and its time series since the page
+// was last sent them, which is everything the first time.
+func (s *stream) send(now time.Time, doc map[string]any, charts map[string][]observe.TrailPoint) error {
+	document, err := decoded(doc)
 	if err != nil {
 		return err
 	}
@@ -160,8 +174,6 @@ func (s *stream) update(now time.Time, view observe.ClusterView, series observe.
 		}
 	}
 	s.document = document
-
-	charts := chartsOf(view, series)
 
 	for _, name := range slices.Sorted(maps.Keys(charts)) {
 		if err := s.points(now, name, charts[name]); err != nil {
@@ -364,19 +376,6 @@ func documentOf(view observe.ClusterView) map[string]any {
 
 	rates := map[string]any{}
 
-	// A rate that the nodes support is present, and has a "rate" once it is
-	// known. Until then it says whether it is waiting for a node's count to be
-	// measured for long enough.
-	rateOf := func(r *observe.Rate) map[string]any {
-		if r.PerSecond == nil {
-			if r.Measuring {
-				return map[string]any{"measuring": true}
-			}
-			return map[string]any{}
-		}
-		return map[string]any{"rate": significant(*r.PerSecond)}
-	}
-
 	// The coverage of the tiles that only some of the nodes report the metrics
 	// of, such as while a deploy is under way.
 	coverage := map[string]any{}
@@ -397,7 +396,7 @@ func documentOf(view observe.ClusterView) map[string]any {
 		}
 
 		if e.Rate != nil {
-			rates["events"] = rateOf(e.Rate)
+			rates["events"] = rateDocument(e.Rate)
 		}
 	}
 
@@ -418,7 +417,7 @@ func documentOf(view observe.ClusterView) map[string]any {
 		doc["failing"] = q.Failing
 
 		if q.Throughput != nil {
-			throughput := rateOf(q.Throughput)
+			throughput := rateDocument(q.Throughput)
 			throughput["of"] = q.Counted
 			rates["throughput"] = throughput
 		}
@@ -487,4 +486,17 @@ func documentOf(view observe.ClusterView) map[string]any {
 	doc["handlers"] = handlers
 
 	return doc
+}
+
+// rateDocument returns the part of a document that is a rate that the nodes
+// support: it has a "rate" once it is known. Until then it says whether it is
+// waiting for a node's count to be measured for long enough.
+func rateDocument(r *observe.Rate) map[string]any {
+	if r.PerSecond == nil {
+		if r.Measuring {
+			return map[string]any{"measuring": true}
+		}
+		return map[string]any{}
+	}
+	return map[string]any{"rate": significant(*r.PerSecond)}
 }

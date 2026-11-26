@@ -234,8 +234,7 @@ func handlerKey(i int) *uuidpb.UUID {
 	return uuidpb.MustParse("0b6f0b7c-1a6c-4c2c-8d5c-4f3d3a1f1" + string(rune('0'+i)) + "00")
 }
 
-// watchRequest is a request for the stream of a cluster, which a test ends by
-// cancelling it.
+// watchRequest is a request for a stream, which a test ends by cancelling it.
 type watchRequest struct {
 	Response *streamRecorder
 	Cancel   context.CancelFunc
@@ -281,14 +280,21 @@ func (r *streamRecorder) body() string {
 	return r.ResponseRecorder.Body.String()
 }
 
-// startWatch makes the request of the handler in the background.
+// startWatch requests the stream of the cluster with the given ID of the handler,
+// in the background.
 func startWatch(ctx context.Context, h http.Handler, id string) *watchRequest {
+	return startStream(ctx, h, "/-/api/clusters/"+id+"/watch")
+}
+
+// startStream requests the stream at the given path of the handler, in the
+// background.
+func startStream(ctx context.Context, h http.Handler, path string) *watchRequest {
 	ctx, cancel := context.WithCancel(ctx)
 	w := &watchRequest{&streamRecorder{ResponseRecorder: httptest.NewRecorder()}, cancel, make(chan struct{})}
 
 	go func() {
 		defer close(w.Done)
-		req := httptest.NewRequest(http.MethodGet, "/-/api/clusters/"+id+"/watch", nil)
+		req := httptest.NewRequest(http.MethodGet, path, nil)
 		h.ServeHTTP(w.Response, req.WithContext(ctx))
 	}()
 
