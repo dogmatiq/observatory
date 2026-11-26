@@ -131,10 +131,18 @@ export function MetricTile({
 						{shownReadout && (
 							<>
 								<span className="font-semibold text-(--subsystem)">
-									{shownReadout.figure}{" "}
-									<span className="font-normal text-muted">
-										{shownReadout.unit}
-									</span>
+									{shownReadout.kind !== undefined && (
+										<span className="font-normal text-muted">
+											{shownReadout.kind}{" "}
+										</span>
+									)}
+									{shownReadout.figure}
+									{shownReadout.unit !== undefined && (
+										<span className="font-normal text-muted">
+											{" "}
+											{shownReadout.unit}
+										</span>
+									)}
 								</span>
 								<span className="text-muted">{shownReadout.age}</span>
 							</>

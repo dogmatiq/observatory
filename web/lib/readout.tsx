@@ -3,10 +3,19 @@ import { createContext, useContext } from "react";
 /**
  * Readout is what a chart says about the place on it that is pointed at, or
  * anchored: the value there, in the unit that the chart is in, and how long ago.
+ * A chart of things rather than of a number, such as the heartbeat chart, gives
+ * the thing that is pointed at as the figure, after the kind of thing that it
+ * is, and says how long ago something happened to it.
  */
 export interface Readout {
+	/** The kind of thing that the figure names, such as "node", if it names one. */
+	kind?: string;
+
 	figure: string;
-	unit: string;
+
+	/** The unit of the figure, if it is a number. */
+	unit?: string;
+
 	age: string;
 }
 

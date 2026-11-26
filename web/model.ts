@@ -273,6 +273,13 @@ export interface LiveNode {
 	 * to tell when its heartbeats expire.
 	 */
 	deadline?: number;
+
+	/**
+	 * How long the node's engine aims to wait between two of its heartbeats, in
+	 * milliseconds. A heartbeat is late once this long has passed since the one
+	 * before it arrived. Absent if the engine doesn't say.
+	 */
+	interval?: number;
 }
 
 /**

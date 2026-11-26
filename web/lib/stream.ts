@@ -692,9 +692,11 @@ export function selectCluster(
 					const beats = snapshot.beats.get(id) ?? [];
 					const last = beats.at(-1);
 					const expiry = snapshot.expiries.get(id);
+					const interval = maybeNumber(n.interval, "interval");
 					return {
 						id,
 						workloads: maybeNumber(n.workloads, "workloads"),
+						...(interval !== undefined && { interval }),
 						heartbeats: beats.map((t) => Math.max(0, ref - t)),
 						// The deadline of the latest heartbeat, as a time after the
 						// moment that the page reads the snapshot.

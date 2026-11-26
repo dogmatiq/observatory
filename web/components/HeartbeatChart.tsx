@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	type Flatline,
 	type Frame,
@@ -10,6 +10,7 @@ import {
 } from "../lib/flatline.ts";
 import { heartbeatLine, levelY } from "../lib/heartbeat.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
+import { type Readout, useSetReadout } from "../lib/readout.tsx";
 
 /**
  * How long a node's share of the chart takes to grow from nothing when it joins,
@@ -25,13 +26,44 @@ const shareTime = 500;
 const leaveTime = 700;
 
 /**
+ * How long a node's line takes to widen when its share is pointed at, and to
+ * narrow again when it isn't, in milliseconds.
+ */
+const widenTime = 220;
+
+/** How wide the line is, in CSS pixels, and how wide it gets when pointed at. */
+const lineWidth = 1.5;
+const widenedWidth = 4;
+
+/**
+ * How far past each edge of a share its line tapers back to its usual width, and
+ * its stronger shade fades out, as a share of the share's width.
+ */
+const widenReach = 0.2;
+
+/**
  * Section is a node's share of the chart.
  */
-interface Section {
+export interface Section {
 	id: string;
 
 	/** The level of the node's heartbeat, from 0 when it is empty to 1 when full. */
 	level: number;
+
+	/**
+	 * How late the node's next heartbeat is, from just above 0 when it is first
+	 * late to 1 when the latest expires, as {@link latenessOf} gives it. It is
+	 * absent while the next heartbeat isn't late.
+	 *
+	 * [latenessOf]: ../lib/lateness.ts
+	 */
+	late?: number;
+
+	/**
+	 * What the tile says about the node while its share is pointed at. A chart
+	 * whose sections have none can't be pointed at.
+	 */
+	readout?: Readout;
 }
 
 /**
@@ -41,6 +73,7 @@ interface Section {
 interface Share {
 	id: string;
 	level: number;
+	late?: number;
 
 	/** How much of its full share the node has, from 0 to 1. */
 	size: number;
@@ -63,6 +96,15 @@ interface Share {
  *
  * With no node live the line is flat, at the height of a full heartbeat, in gray.
  *
+ * While a node's next heartbeat is late, its section glitches, as a figure does,
+ * turned on its side: the left and the right half of the section slip up and
+ * down on their own, with a red and a cyan shadow, by more the later it is.
+ *
+ * If the sections have readouts, pointing at a node's share widens its line and
+ * strengthens its shade, and gives the tile the section's readout to show. On a
+ * screen that is touched, a tap on a share does the same, and a tap on it again,
+ * or anywhere else, ends it.
+ *
  * It is positioned along the bottom edge of the nearest ancestor that is
  * positioned, and takes its colors from the `--subsystem` and `--subsystem-soft`
  * custom properties that it inherits. It is decoration, so it is hidden from
@@ -70,6 +112,18 @@ interface Share {
  */
 export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 	const canvas = useRef<HTMLCanvasElement>(null);
+	const area = useRef<HTMLDivElement>(null);
+
+	// The node whose share is pointed at, and how far the line of each share has
+	// widened, which moves on with time towards 1 for the share that is pointed
+	// at and towards 0 for the others.
+	const [pointed, setPointed] = useState<string>();
+	const pointedRef = useRef(pointed);
+	const widening = useRef(new Map<string, Widening>());
+	const widenFrame = useRef<number>(0);
+
+	// A share that is pointed at was tapped, rather than pointed at by a mouse.
+	const tapped = useRef(false);
 
 	// The levels change with every frame, so the observers below read the latest
 	// shares, and are not made again each time.
@@ -123,9 +177,97 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 				element,
 				shares.current,
 				line === undefined ? undefined : frameAt(line, now),
+				undefined,
+				undefined,
+				{
+					now,
+					widened: (id) => widenedAt(widening.current.get(id), now),
+					still: prefersReducedMotion(),
+				},
 			);
 		}
 	}, []);
+
+	// Pointing at a share, or at none, widens its line and narrows the line of the
+	// share that was pointed at before, each from where it was.
+	const point = useCallback(
+		(id: string | undefined) => {
+			const before = pointedRef.current;
+			if (id === before) {
+				return;
+			}
+
+			const now = performance.now();
+			const instant = prefersReducedMotion();
+			for (const [key, to] of [
+				[before, 0],
+				[id, 1],
+			] as const) {
+				if (key !== undefined) {
+					const from = instant ? to : widenedAt(widening.current.get(key), now);
+					widening.current.set(key, { from, to, at: now });
+				}
+			}
+			pointedRef.current = id;
+			setPointed(id);
+
+			// The line widens and narrows on its own clock, so that it moves smoothly
+			// however often the chart is given new levels.
+			if (widenFrame.current === 0) {
+				const step = () => {
+					draw();
+					const moving = [...widening.current.values()].some(
+						(w) => performance.now() - w.at < widenTime,
+					);
+					widenFrame.current = moving ? requestAnimationFrame(step) : 0;
+				};
+				widenFrame.current = requestAnimationFrame(step);
+			}
+		},
+		[draw],
+	);
+
+	// The tile shows what the section that is pointed at says about its node.
+	const setReadout = useSetReadout();
+	const readout = sections.find((s) => s.id === pointed)?.readout;
+	const readoutKey =
+		readout &&
+		`${readout.kind}|${readout.figure}|${readout.unit}|${readout.age}`;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: the key is the readout.
+	useEffect(() => {
+		setReadout?.(readout);
+	}, [readoutKey, setReadout]);
+	useEffect(() => () => setReadout?.(undefined), [setReadout]);
+
+	// A node that leaves while its share is pointed at is pointed at no more.
+	const pointable = sections.some((s) => s.readout !== undefined);
+	const gone =
+		pointed !== undefined &&
+		(!pointable || !sections.some((s) => s.id === pointed));
+	useEffect(() => {
+		if (gone) {
+			point(undefined);
+		}
+	}, [gone, point]);
+
+	// A tap anywhere but the chart ends what a tap on it began.
+	useEffect(() => {
+		if (pointed === undefined) {
+			return;
+		}
+
+		const onPointerDown = (event: globalThis.PointerEvent) => {
+			if (
+				event.pointerType === "touch" &&
+				!area.current?.contains(event.target as Node)
+			) {
+				tapped.current = false;
+				point(undefined);
+			}
+		};
+		document.addEventListener("pointerdown", onPointerDown);
+		return () => document.removeEventListener("pointerdown", onPointerDown);
+	}, [pointed, point]);
 
 	useEffect(() => {
 		const known = new Map(shares.current.map((s) => [s.id, s]));
@@ -165,6 +307,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 		const next: Share[] = sections.map((s) => ({
 			id: s.id,
 			level: s.level,
+			late: s.late,
 			// A node that is new has no share yet, and the first sections that the
 			// chart is given have all of theirs.
 			size: known.get(s.id)?.size ?? (shares.current.length === 0 ? 1 : 0),
@@ -271,6 +414,8 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 			sighted.current = undefined;
 			cancelAnimationFrame(leaveFrame.current);
 			leaving.current = undefined;
+			cancelAnimationFrame(widenFrame.current);
+			widenFrame.current = 0;
 		},
 		[],
 	);
@@ -313,6 +458,44 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 				className="absolute inset-x-0 bottom-0 h-12 w-full text-(--subsystem)"
 				aria-hidden="true"
 			/>
+			{pointable && (
+				// The shares are named beside the tile's icon as they are pointed at,
+				// and each node is listed in words elsewhere, so this is only for the
+				// pointer.
+				<div
+					ref={area}
+					aria-hidden="true"
+					className="absolute inset-x-0 bottom-0 h-12"
+					onPointerMove={(event) => {
+						if (event.pointerType === "touch") {
+							return;
+						}
+						point(shareAt(shares.current, event));
+					}}
+					onPointerLeave={(event) => {
+						// A finger leaves the chart as it lifts, which doesn't end what
+						// the tap began.
+						if (event.pointerType !== "touch") {
+							point(undefined);
+						}
+					}}
+					onPointerDown={(event) => {
+						tapped.current = event.pointerType === "touch";
+						if (!tapped.current) {
+							return;
+						}
+						const id = shareAt(shares.current, event);
+						point(id === pointedRef.current ? undefined : id);
+					}}
+					onClick={(event) => {
+						// A tap on the chart of a tile that is a link points at a share,
+						// and doesn't follow the link.
+						if (tapped.current) {
+							event.preventDefault();
+						}
+					}}
+				/>
+			)}
 		</>
 	);
 }
@@ -331,6 +514,7 @@ function drawHeartbeats(
 	flat?: Frame,
 	reveal?: number,
 	growth?: { from: number; size: number },
+	moving?: Moving,
 ) {
 	const ratio = window.devicePixelRatio || 1;
 	const width = Math.round(canvas.clientWidth * ratio);
@@ -398,6 +582,9 @@ function drawHeartbeats(
 
 	if (reveal === undefined || reveal >= 1) {
 		drawLine(g, style, shares, width, height, ratio, 0, 1);
+		if (moving !== undefined) {
+			drawMoving(g, style, shares, width, height, ratio, moving);
+		}
 		return;
 	}
 
@@ -898,4 +1085,354 @@ function drawFlat(
 		g.lineTo(x + length, y);
 		stroke(muted, 0.6 * strength);
 	}
+}
+
+/**
+ * Widening is how the line of a share is widening or narrowing: from how wide,
+ * to how wide, and since when, where 0 is its usual width and 1 is its width
+ * when it is pointed at.
+ */
+interface Widening {
+	from: number;
+	to: number;
+	at: number;
+}
+
+/** widenedAt returns how far a share's line has widened at `now`, from 0 to 1. */
+function widenedAt(w: Widening | undefined, now: number): number {
+	if (w === undefined) {
+		return 0;
+	}
+	return w.from + (w.to - w.from) * smooth((now - w.at) / widenTime);
+}
+
+/**
+ * shareAt returns the ID of the node whose share is under the pointer of
+ * `event`, if any. A node that has left, whose share is shrinking away, can't be
+ * pointed at.
+ */
+function shareAt(
+	shares: readonly Share[],
+	event: { clientX: number; currentTarget: Element },
+): string | undefined {
+	const box = event.currentTarget.getBoundingClientRect();
+	const u = (event.clientX - box.left) / box.width;
+	const sizes = shares.map((s) => smooth(s.size));
+	const total = sizes.reduce((sum, w) => sum + w, 0);
+
+	let before = 0;
+	for (const [i, s] of shares.entries()) {
+		before += sizes[i] as number;
+		if (u * total <= before) {
+			return s.target > 0 ? s.id : undefined;
+		}
+	}
+	return undefined;
+}
+
+/**
+ * Moving is what the chart draws over the line of the heartbeats, which moves
+ * with time and not only with the levels: the glitch of a node whose next
+ * heartbeat is late, and the widening of the line of a share that is pointed at.
+ * `now` is the time, `widened` says how far the line of a node's share has
+ * widened, and `still` is true for a viewer who asks for less motion, for whom a
+ * late node's section doesn't slip, and has only its shadows.
+ */
+interface Moving {
+	now: number;
+	widened: (id: string) => number;
+	still: boolean;
+}
+
+/**
+ * The keyframes of the glitch of a figure, from index.css, which a late node's
+ * section follows: for each, the share of the way through the cycle at which it
+ * starts, and how far it slips, in pixels, when the distrust is 1.
+ */
+const glitchLeft = {
+	cycle: 2300,
+	frames: [
+		[0, 1],
+		[0.1, 8],
+		[0.22, -3],
+		[0.28, 1],
+		[0.55, -10],
+		[0.68, 4],
+		[0.74, 1],
+	],
+} as const;
+const glitchRight = {
+	cycle: 1700,
+	frames: [
+		[0, -1],
+		[0.16, -9],
+		[0.3, 3],
+		[0.36, -1],
+		[0.62, 11],
+		[0.78, -4],
+		[0.84, -1],
+	],
+} as const;
+
+/** The red and the cyan of the shadows of the glitch of a figure, in index.css. */
+const glitchRed = "rgba(255, 45, 85, 0.85)";
+const glitchCyan = "rgba(0, 210, 200, 0.85)";
+
+/**
+ * slipAt returns how far the keyframes of a glitch slip at `now`, in pixels when
+ * the distrust is 1. Like the glitch of a figure, it jumps from one keyframe to
+ * the next, and doesn't move between them.
+ */
+function slipAt(
+	keyframes: {
+		cycle: number;
+		frames: readonly (readonly [number, number])[];
+	},
+	now: number,
+): number {
+	const t = (now % keyframes.cycle) / keyframes.cycle;
+	let slip = 0;
+	for (const [at, px] of keyframes.frames) {
+		if (t >= at) {
+			slip = px;
+		}
+	}
+	return slip;
+}
+
+/**
+ * taper returns how much of an effect on a section shows at `x`, from 0 at the
+ * section's ends, `x0` and `x1`, rising over the outer `edge` of it on each side,
+ * to 1 between, so that the section stays joined to the line beside it.
+ */
+function taper(x: number, x0: number, x1: number, edge: number): number {
+	return smooth(Math.min(x - x0, x1 - x) / ((x1 - x0) * edge));
+}
+
+/**
+ * drawMoving draws the glitch of each node whose next heartbeat is late, and
+ * then the widening of the line of each share that is pointed at, along the line
+ * as the glitches left it.
+ */
+function drawMoving(
+	g: CanvasRenderingContext2D,
+	style: CSSStyleDeclaration,
+	shares: readonly Share[],
+	width: number,
+	height: number,
+	ratio: number,
+	moving: Moving,
+) {
+	const sizes = shares.map((s) => smooth(s.size));
+	const total = sizes.reduce((sum, w) => sum + w, 0);
+	if (total <= 0) {
+		return;
+	}
+
+	// The same line that drawLine drew.
+	const line: [number, number][] = heartbeatLine(
+		shares.map((s) => s.level),
+		width,
+		height,
+		ratio,
+		sizes,
+	).map(([x, y]) => [x, y]);
+	if (line.length === 0) {
+		return;
+	}
+
+	const [r, gr, b] = rgbOf(g, style.color);
+	const color = (a: number) => `rgba(${r}, ${gr}, ${b}, ${a})`;
+	const soft = style.getPropertyValue("--subsystem-soft").trim();
+
+	// Where each share is, across the chart, in canvas pixels.
+	let before = 0;
+	const places = shares.map((s, i) => {
+		const x0 = (before / total) * width;
+		before += sizes[i] as number;
+		return { share: s, x0, x1: (before / total) * width };
+	});
+
+	for (const { share, x0, x1 } of places) {
+		if (share.late !== undefined && share.target > 0 && x1 > x0) {
+			drawLate(g, line, x0, x1, height, ratio, share, moving, color(1), soft);
+		}
+	}
+
+	for (const { share, x0, x1 } of places) {
+		const widened = moving.widened(share.id);
+		if (widened > 0 && x1 > x0) {
+			drawWidened(g, line, x0, x1, width, height, ratio, widened, color);
+		}
+	}
+}
+
+/**
+ * drawLate draws the section of a node whose next heartbeat is late, from `x0`
+ * to `x1`, as a figure's glitch turned on its side, and moves the points of
+ * `line` in the section to where it drew them.
+ *
+ * The left and the right half of the section slip up and down on their own, on
+ * the keyframes of a figure's glitch, with a red and a cyan shadow above and
+ * below the line, by more as the heartbeat gets later. The slip and the shadows
+ * taper to nothing at the section's ends, so that it stays joined to the line
+ * beside it.
+ */
+function drawLate(
+	g: CanvasRenderingContext2D,
+	line: [number, number][],
+	x0: number,
+	x1: number,
+	height: number,
+	ratio: number,
+	share: Share,
+	moving: Moving,
+	stroke: string,
+	fill: string,
+) {
+	// The distrust is there as soon as the heartbeat is late, and is at its most
+	// as the latest heartbeat expires. A figure's glitch slips by more pixels than
+	// this, because it is bigger.
+	const distrust = 0.35 + 0.65 * (share.late ?? 0);
+	const scale = 0.9 * distrust * ratio;
+
+	// Each node slips at its own moments, so that two late nodes don't slip in
+	// step.
+	const offset = [...share.id].reduce((sum, c) => sum + c.charCodeAt(0), 0);
+	const left = moving.still ? 0 : slipAt(glitchLeft, moving.now + offset * 37);
+	const right = moving.still
+		? 0
+		: slipAt(glitchRight, moving.now + offset * 53);
+	const middle = (x0 + x1) / 2;
+
+	const weight = (x: number) => taper(x, x0, x1, 0.15);
+	for (const point of line) {
+		const x = point[0];
+		if (x >= x0 && x <= x1) {
+			point[1] += (x < middle ? left : right) * scale * weight(x);
+		}
+	}
+
+	const inSection = line.filter(
+		([x]) => x >= x0 - 2 * ratio && x <= x1 + 2 * ratio,
+	);
+	const trace = (shadow: number) => {
+		g.beginPath();
+		for (const [i, [x, y]] of inSection.entries()) {
+			const at = y + shadow * weight(x);
+			if (i === 0) {
+				g.moveTo(x, at);
+			} else {
+				g.lineTo(x, at);
+			}
+		}
+	};
+
+	g.save();
+	g.beginPath();
+	g.rect(x0, 0, x1 - x0, height);
+	g.clip();
+	g.clearRect(x0, 0, x1 - x0, height);
+
+	trace(0);
+	g.lineTo(inSection.at(-1)?.[0] ?? x1, height);
+	g.lineTo(inSection[0]?.[0] ?? x0, height);
+	g.closePath();
+	g.fillStyle = fill;
+	g.fill();
+
+	g.lineWidth = lineWidth * ratio;
+	const fringe = 2 * distrust * ratio;
+	for (const [shadow, color] of [
+		[-fringe, glitchRed],
+		[fringe, glitchCyan],
+		[0, stroke],
+	] as const) {
+		trace(shadow);
+		g.strokeStyle = color;
+		g.stroke();
+	}
+	g.restore();
+}
+
+/**
+ * drawWidened draws the line of a share that is pointed at wider, by `widened`,
+ * from 0 to 1, and its shade stronger, by as much. The line is drawn as a band
+ * along `line` whose width changes along its length: it is widest in the share,
+ * from `x0` to `x1`, and tapers back to the usual width just past its edges, so
+ * that the share has no border.
+ */
+function drawWidened(
+	g: CanvasRenderingContext2D,
+	line: readonly (readonly [number, number])[],
+	x0: number,
+	x1: number,
+	width: number,
+	height: number,
+	ratio: number,
+	widened: number,
+	color: (alpha: number) => string,
+) {
+	const reach = (x1 - x0) * widenReach;
+	const from = x0 - reach;
+	const to = x1 + reach;
+	const amount = (x: number) =>
+		widened * smooth(Math.min(x - from, to - x) / (2 * reach));
+
+	// The shade, under the whole line, fading out at the same edges.
+	const shade = g.createLinearGradient(from, 0, to, 0);
+	const edge = (2 * reach) / (to - from);
+	shade.addColorStop(0, color(0));
+	shade.addColorStop(edge, color(0.14 * widened));
+	shade.addColorStop(1 - edge, color(0.14 * widened));
+	shade.addColorStop(1, color(0));
+	g.beginPath();
+	g.moveTo(0, height);
+	for (const [x, y] of line) {
+		g.lineTo(x, y);
+	}
+	g.lineTo(width, height);
+	g.closePath();
+	g.fillStyle = shade;
+	g.fill();
+
+	// The band: each point of the line offset to each side, square to the line,
+	// by half the width there.
+	const upper: [number, number][] = [];
+	const lower: [number, number][] = [];
+	for (const [i, [x, y]] of line.entries()) {
+		if (x < from - 2 * ratio || x > to + 2 * ratio) {
+			continue;
+		}
+		const [px, py] = line[Math.max(0, i - 1)] as readonly [number, number];
+		const [nx, ny] = line[Math.min(line.length - 1, i + 1)] as readonly [
+			number,
+			number,
+		];
+		const length = Math.hypot(nx - px, ny - py) || 1;
+		const half =
+			((lineWidth + (widenedWidth - lineWidth) * amount(x)) / 2) * ratio;
+		const ox = (-(ny - py) / length) * half;
+		const oy = ((nx - px) / length) * half;
+		upper.push([x + ox, y + oy]);
+		lower.push([x - ox, y - oy]);
+	}
+	if (upper.length === 0) {
+		return;
+	}
+
+	g.beginPath();
+	for (const [i, [x, y]] of upper.entries()) {
+		if (i === 0) {
+			g.moveTo(x, y);
+		} else {
+			g.lineTo(x, y);
+		}
+	}
+	for (const [x, y] of lower.reverse()) {
+		g.lineTo(x, y);
+	}
+	g.closePath();
+	g.fillStyle = color(1);
+	g.fill();
 }

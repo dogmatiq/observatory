@@ -1,6 +1,13 @@
 import { type ReactNode, useMemo } from "react";
 import { Covered, Distrusted, useCurrent } from "../lib/distrust.tsx";
-import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
+import {
+	formatCompact,
+	inUnit,
+	nounFor,
+	shortId,
+	shortPer,
+} from "../lib/format.ts";
+import { heartbeatAge, latenessOf } from "../lib/lateness.ts";
 import { levelOf } from "../lib/levels.ts";
 import { useElapsed } from "../lib/live.tsx";
 import {
@@ -8,7 +15,7 @@ import {
 	queueSegments,
 	streamSegments,
 } from "../lib/segments.ts";
-import type { Application, Counted, OverviewData } from "../model.ts";
+import type { Application, Counted, LiveNode, OverviewData } from "../model.ts";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Explained, type ExplainerSpec } from "./Explainer.tsx";
 import {
@@ -21,7 +28,7 @@ import {
 } from "./explainers.tsx";
 import { Figure } from "./Figure.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
-import { HeartbeatChart } from "./HeartbeatChart.tsx";
+import { HeartbeatChart, type Section } from "./HeartbeatChart.tsx";
 import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
@@ -504,10 +511,7 @@ export function ClusterTile({
 	// The levels drain between updates, so they are worked out again with each
 	// frame from the time that has passed.
 	const elapsed = useElapsed();
-	const sections = data.nodes.map((n) => ({
-		id: n.id,
-		level: levelOf(n, elapsed),
-	}));
+	const sections = data.nodes.map((n) => sectionOf(n, "node", elapsed));
 
 	return (
 		<MetricTile
@@ -586,14 +590,7 @@ export function EngineTile({
 	// from the time that has passed.
 	const elapsed = useElapsed();
 	const sections =
-		node === undefined
-			? []
-			: [
-					{
-						id: node.id,
-						level: levelOf(node, elapsed),
-					},
-				];
+		node === undefined ? [] : [sectionOf(node, "engine", elapsed)];
 
 	return (
 		<MetricTile
@@ -610,4 +607,23 @@ export function EngineTile({
 			chart={<HeartbeatChart sections={sections} />}
 		/>
 	);
+}
+
+/**
+ * sectionOf returns the section of the heartbeat chart of a node, `elapsed`
+ * milliseconds after its data arrived: the level of its heartbeat, how late its
+ * next heartbeat is, and what the tile says about it while its share is pointed
+ * at, which names it as a `kind`, such as "node", and its short ID, and says when
+ * its latest heartbeat arrived.
+ */
+function sectionOf(node: LiveNode, kind: string, elapsed: number): Section {
+	const age = heartbeatAge(node, elapsed);
+	return {
+		id: node.id,
+		level: levelOf(node, elapsed),
+		late: latenessOf(node, elapsed),
+		...(age !== undefined && {
+			readout: { kind, figure: shortId(node.id), age },
+		}),
+	};
 }

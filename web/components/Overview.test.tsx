@@ -10,7 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { application, overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
 import { stubBrowser } from "../test-support.ts";
-import { Overview } from "./Overview.tsx";
+import { ClusterTile, Overview } from "./Overview.tsx";
 import {
 	noSignalFromEngine,
 	noSignalFromNodes,
@@ -574,4 +574,57 @@ test("a cluster that is down keeps its tiles and its cards, with their numbers a
 			.getByRole("region", { name: "Handlers" })
 			.querySelector(".distrust-blur"),
 	).not.toBeNull();
+});
+
+/** The cluster tile of two nodes, whose latest heartbeats arrived just now. */
+function pointableClusterTile(href?: string) {
+	render(
+		<ClusterTile
+			data={{
+				nodes: [
+					{ id: "1a2b3c4d-0000-4000-8000-000000000000", heartbeats: [500] },
+					{
+						id: "3f8e2a10-0000-4000-8000-000000000000",
+						heartbeats: [500],
+						deadline: 14_500,
+						interval: 3000,
+					},
+				],
+			}}
+			href={href}
+		/>,
+	);
+
+	const tile = document.body;
+	const chart = tile.querySelector("canvas")?.nextElementSibling as Element;
+	vi.spyOn(chart, "getBoundingClientRect").mockReturnValue({
+		left: 0,
+		width: 100,
+	} as DOMRect);
+	return { tile, chart };
+}
+
+test("pointing at a node's share of the heartbeat chart names the node beside the tile's icon, and says when its latest heartbeat arrived", () => {
+	const { tile, chart } = pointableClusterTile();
+
+	fireEvent.pointerMove(chart, { clientX: 75, pointerType: "mouse" });
+
+	expect(tile.textContent).toContain("node 3f8e2a10");
+	expect(tile.textContent).toContain("heartbeat just now");
+});
+
+test("on a screen that is touched, a tap on a node's share of the heartbeat chart names the node", () => {
+	const { tile, chart } = pointableClusterTile();
+
+	fireEvent.pointerDown(chart, { clientX: 25, pointerType: "touch" });
+
+	expect(tile.textContent).toContain("node 1a2b3c4d");
+});
+
+test("a tap on the heartbeat chart of a tile that is a link doesn't follow the link", () => {
+	const { chart } = pointableClusterTile("/somewhere");
+
+	fireEvent.pointerDown(chart, { clientX: 25, pointerType: "touch" });
+
+	expect(fireEvent.click(chart)).toBe(false);
 });
