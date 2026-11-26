@@ -644,11 +644,12 @@ parts. An item that says "Done" is built.
   that is read from `WatchClusterMetrics` doesn't have the problem, because one node describes the whole cluster. The workloads follow the same rule: a node that doesn't report
   its workloads, while others do, is a faint square, with a card that says so as a status, and the number of workloads
   counts the nodes that report them, blurred by their coverage. Done.
-- A lost rate, undecided. A node joins or reconnects often in some clusters, and the rate pauses for a few seconds each
-  time, because it is the sum over the nodes and a node's rate needs a few seconds of readings. The suggestion is to sum
-  the nodes that have enough readings, so that the rate never pauses for a joined node, and dips by that node's share
-  until it counts, and to say so in the card's status, so that "lost" means that no node has enough readings, which is
-  at the start and not often after. A node that leaves stops counting at once either way.
+- Decided: a rate that isn't known only because a node's count is still being measured, as for a few seconds after
+  the node joins the cluster or reconnects, stays on the page as the last rate that was known, with no blur, no flag
+  and no glitch, and moves to the new rate once the node has been measured. The server says so with the rate, as
+  {"measuring": true} in place of its number. A rate that isn't known for any other reason is lost as before. Summing
+  only the nodes that have been measured, so that the rate dips by the new node's share, was tried on a temporary page
+  and not chosen, because the last total is closer to the truth. Done (c1fc7d9, c2fb5d1).
 - Places for the `Glitch`: somewhere that needs attention, kept for the exceptional so that it keeps its meaning. A
   glitch marks an event, the moment that something happens, as a short burst, and never a lasting state. In use: a lost
   figure just before its zero, an alert flag appearing, and a node's section of the heartbeat chart when the node goes.
@@ -1176,9 +1177,6 @@ Tick each item when it is done, and write the pull request or commit that did it
   report say nothing about versions, because a status has one fixed text for each cause. The server still compares the
   nodes' versions of the engine and of the application, and sends whether they are the same, for wherever the views
   come to show versions, which is the footer's open question below.
-- A node that joins, or comes back, makes the cluster-wide rate of anything that nodes count unknown for five seconds,
-  because a rate that any contributor can't give yet is none, so a `?` shows for that long. The demo does this now, because
-  its nodes go down and come back. It belongs to the rule for what an unknown figure does, which is parked.
 - Which node owns the workload of which handler. A workload is `{key, description}` and `ClusterWorkloads` is the set that a node
   owns, so the Observatory can say how many workloads a node owns and not what they are for. A bar of the nodes that run
   an integration or a projection needs the spec to link a workload to a handler, or to the queue or event stream that it
