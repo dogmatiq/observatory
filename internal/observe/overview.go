@@ -732,20 +732,15 @@ func count(c **uint64, v uint64) {
 // never failed, given how many a node reports as due, and as pending and
 // failing, if it reports them.
 //
-// It emulates dogmatiq/protobuf#53, which asks for the due metrics to leave out
-// the messages whose most recent delivery attempt failed, so that the due and
-// failing counts never share a message. Today a failing message whose next
-// attempt is due is counted as due and as failing. A message that is ready and
-// has never failed is due, and is pending and not failing, so their number is
-// at most the smaller of the due messages and the pending ones less the
-// failing ones. For commands that is exact, because a command is ready as soon
-// as it is queued, so a pending command that isn't failing is ready; for
-// deadlines it is the closest bound there is, because a deadline whose time
-// hasn't come is pending and not due. Without the pending or the failing count,
-// it is the due count, as the spec will make it.
-//
-// Once dogmatiq/protobuf#53 is done, the due metrics are the ready counts and
-// this goes.
+// The due metrics count a failing message whose next attempt is due as well as
+// the failing metrics do, so the due count alone isn't the ready count that
+// dogmatiq/protobuf#53 asks the spec for. A message that is ready and has never
+// failed is due, and is pending and not failing, so their number is at most the
+// smaller of the due messages and the pending ones less the failing ones. For
+// commands that is exact, because a command is ready as soon as it is queued;
+// for deadlines it is an upper bound, because a deadline whose time hasn't come
+// is pending and not due. Without the pending or the failing count, it is the
+// due count.
 func readyOf(due uint64, pending, failing *uint64) uint64 {
 	if pending == nil || failing == nil {
 		return due
@@ -946,10 +941,8 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		}
 	}
 
-	// The tile counts the messages that are ready beside those that are failing,
-	// and the page adds the two. The ready ones leave out the failing ones, as
-	// dogmatiq/protobuf#53 asks the due metrics to do, which [readyOf] emulates
-	// until it is done.
+	// The tile counts the messages that are ready, which [readyOf] gives without
+	// the failing ones, beside those that are failing, and the page adds the two.
 	due := supported[metric(new(metricsgrpc.QueueCommandsDue))] ||
 		supported[metric(new(metricsgrpc.QueueDeadlinesDue))]
 	removed := supported[metric(new(metricsgrpc.QueueCommandsRemoved))] ||
