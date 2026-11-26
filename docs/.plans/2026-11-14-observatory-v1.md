@@ -938,17 +938,20 @@ Tick each item when it is done, and write the pull request or commit that did it
   heading "Clusters" of the root list, whose entries are now applications at sites, are placeholders until then, and
   are settled as those pages are designed on `/-/review`. Every page that waits
   for something to become known asks again every second.
-- Decided, to build next: a member of a cluster with no signal counts toward a figure's coverage as a node that
-  doesn't report, on every view, so the cluster view's figures blur while some nodes have no signal, as the site
-  view's do, rather than shrinking with no sign. Today `Coverage` counts only the nodes that are reporting. Its new
-  state is reviewed under the cluster tile.
-- Decided, to build with the item above: the cluster tile's headline sets apart the members with no signal as a
-  red "+N", as in "4 +1", as the site view's applications tile does, without the red accent, which stays for when no nodes
-  are sending a signal, because the other nodes still work. The members are those of the membership rule, from the
-  nodes' sets of live nodes, so a node that leaves cleanly isn't counted. An engine that doesn't report its live nodes
-  has no "+N". The headline's card gets the worked example of a number set apart. The cluster explainer then gets an
-  annotation of its own for the "+N", along the lines of "the number of nodes with no signal", placed by the rules for a
-  figure beside the headline, and a mockup variant, whose wording is reviewed then.
+- Decided: a member of a cluster with no signal counts toward a figure's coverage as a node that doesn't report, on
+  every view, so the cluster view's figures blur while some nodes have no signal, as the site view's do, rather than
+  shrinking with no sign. Done (9902d1d): `Coverage` counts the members that aren't reporting with the nodes that it
+  reads, and the state document marks each such member with "noSignal". Its new state is under the cluster tile on
+  `/-/review` (CL 7).
+- Decided: the cluster tile's headline sets apart the members with no signal as a red "+N", as in "4 +1", as the site
+  view's applications tile does, without the red accent, which stays for when no nodes are sending a signal, because
+  the other nodes still work. The members are those of the membership rule, from the nodes' sets of live nodes, so a
+  node that leaves cleanly isn't counted. An engine that doesn't report its live nodes has no "+N". The headline's card
+  gets the worked example of a number set apart. Done (c89822f): the bar and the heartbeat chart are of the nodes
+  sending a signal, and a member with no signal counts as a node that doesn't report its workloads, so the number of
+  workloads blurs and the tile's flag says that only some nodes report them. The cluster explainer's annotation of the
+  "+N" is "the number of nodes with no signal", placed above the card; its wording is compared with others on a
+  temporary page, for the user to choose.
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with the events in the event streams of all the applications together, and the number of
   those streams, which is how widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
