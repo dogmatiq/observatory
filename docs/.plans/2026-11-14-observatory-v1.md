@@ -1096,8 +1096,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   element opens its hovercard or tooltip, and a tap on it again, or anywhere but the panel, closes it. Done.
   Decided since, in place of the bars' drill-down hovercards, their copyable IDs (IC 1A) and the drill-down cards on a
   handler digest's bars (IC 1B, IC 1C): pointing at a segment of any bar shows what the segment is of in the card's
-  readout, beside its icon, where the charts' readouts are. The thing is in the muted color, by its name or the first
-  part of its ID, over its amount and its share of the bar in the bar's color, as "queue 113cbdc3" over "12 messages,
+  readout, beside its icon, where the charts' readouts are. The thing is in the muted color, by its name before its
+  kind, as "payments application", or by its kind and the first part of its ID, as "queue 113cbdc3" (421dd64), over its amount and its share of the bar in the bar's color, as "queue 113cbdc3" over "12 messages,
   63%". A bar that has no shares, and a segment that merges the rest, give the amount only. A readout is at most two
   lines, so that it moves nothing under the pointer. Nothing opens, and an ID can't be copied from a bar any more; the
   trail in the title bar is where keys and IDs are copied. A handler's digest gets a readout beside its kind icon,
