@@ -920,6 +920,11 @@ export function Explainer({
 								</p>
 							),
 						)}
+						{/* Every explainer says what a blurred number means, because the copy of
+						the card never shows one. */}
+						<p className="mt-2 border-t border-line pt-3 text-xs text-faint">
+							{blurFootnote}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -1683,3 +1688,7 @@ export function Explained({
 		</>
 	);
 }
+
+/** The footnote under every explainer, which says what a blurred number means. */
+export const blurFootnote =
+	"Numbers blur as they become less reliable. A warning icon nearby explains why.";

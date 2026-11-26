@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { application, overview } from "../fixtures/overview.ts";
 import type { OverviewData } from "../model.ts";
 import { stubBrowser } from "../test-support.ts";
+import { blurFootnote } from "./Explainer.tsx";
 import { ClusterTile, EngineTile, Overview } from "./Overview.tsx";
 import {
 	noSignalFromEngine,
@@ -557,6 +558,16 @@ test("every tile and digest has a button that explains it", () => {
 	]) {
 		expect(screen.getByRole("button", { name })).toBeDefined();
 	}
+});
+
+test("every explainer ends by saying what a blurred number means", () => {
+	render(<Overview application={application} data={overview} />);
+
+	fireEvent.click(
+		screen.getByRole("button", { name: "Explain the events tile" }),
+	);
+
+	expect(screen.getByRole("dialog").textContent).toContain(blurFootnote);
 });
 
 test("a rate of less than one event per minute is a whole number per hour", () => {

@@ -23,7 +23,7 @@ export interface Status {
  * What each status that comes with blurred numbers ends with: what the blur
  * means.
  */
-const blurred = "The more uncertain the numbers, the more they blur.";
+const blurred = "Numbers blur as they become less reliable.";
 
 /**
  * The status of a card while only some of the cluster's nodes report what it
