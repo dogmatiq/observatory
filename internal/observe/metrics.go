@@ -958,11 +958,10 @@ func Supported(now time.Time, nodes []Node) map[string]bool {
 // nodes' calls to WatchNodeMetrics, at the time now, by its full name, if it is
 // less than whole. A metric's coverage is the share of the nodes that it could
 // be read from that list it, from 0 to 1: the nodes that Combine reads, and the
-// members of the cluster that aren't reporting, which report nothing. Combine
-// leaves out the nodes that don't list a metric, and the members that aren't
-// reporting, so its sums of it are too small by an amount that isn't known.
-// Nodes of one cluster that support different metrics may be partway through a
-// deploy, but nothing here relies on that. See [Members].
+// members of the cluster that aren't reporting, which don't report any metric.
+// Combine leaves out the nodes that don't list a metric, and the members that
+// aren't reporting, so its sums of it are too small by an amount that isn't
+// known. See [Members].
 //
 // A metric that every one of those nodes lists isn't listed, because its
 // coverage is whole. Nor is a metric that Combine reads from a call to

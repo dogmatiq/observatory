@@ -859,6 +859,14 @@ export function ReviewPage() {
 					note="The headline is the number of nodes sending a signal, with the members with no signal set apart after it in red, as the site view's applications tile does, without the red accent, which stays for when there is no signal from any node, because the other nodes still work. A member with no signal counts as a node that doesn't report its workloads, so the number of workloads is blurred, and the flag says that only some of the nodes report them. The bar and the heartbeat chart are of the nodes sending a signal. Point at the tile and press its &quot;?&quot; for its explainer, whose copy of the card is the worked example of a number set apart."
 				>
 					<State
+						label="Before: one member with no signal is left out, with no sign"
+						wide
+					>
+						<div className="w-[360px]">
+							<ClusterTile data={overview.cluster} href={undefined} />
+						</div>
+					</State>
+					<State
 						label="One member with no signal"
 						recommendation="Approve. The tile counts the nodes that work, and says how many are missing, without calling the whole cluster broken."
 						wide
