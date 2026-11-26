@@ -1056,28 +1056,29 @@ Tick each item when it is done, and write the pull request or commit that did it
   it; an application sends one, for brevity, though its engine does; a status reads "There is no signal from the
   engine, so it's unknown whether the application is working". The wordings were chosen row by row on a temporary
   page, and the design doc's glossary has the term. Done.
-  Approved (CL 5, SC 1): a section of the heartbeat chart falls to empty at the deadline of its latest heartbeat, which
-  is the time by which the node says that it sends the next, or three of the intervals that its engine gives, as the
-  server works out to tell whether the node is sending a signal. An application's section on the site view follows the
-  latest deadline of its nodes, and a heartbeat raises it only if it moves that deadline later. Done for the cluster and
-  engine tiles (c354465, 258341f): the stream sends each heartbeat's expiry with it, the page drains each node's section
-  to its deadline, and a node that gives no way to tell when its heartbeats expire stays full while it is connected; the
-  fallback to the usual intervals is gone. The site view's applications tile follows once its server side is built.
+  Approved (CL 5, SC 1), replacing the rule that a section is empty when its node stops sending a signal: a section of
+  the heartbeat chart falls from full to a third at the deadline of its latest heartbeat, which is the time by which the
+  node says that it sends the next, or three of the intervals that its engine gives, as the server works out to tell
+  whether the node is sending a signal. The page relies only on that deadline, and adds no tolerance of its own. When a
+  node stops sending a signal, its section glitches once and then lingers for five seconds in the gray of the flat line,
+  falling to empty, before its share shrinks away. An application's section on the site view follows the latest
+  deadline of its nodes, and a heartbeat raises it only if it moves that deadline later. Done for the cluster and engine
+  tiles (c354465, 258341f, cda0004, 926c390): the stream sends each heartbeat's expiry with it, and a node that gives no way to tell
+  when its heartbeats expire stays full while it is connected. The site view's applications tile follows once its server
+  side is built.
   Decided: the demo engine keeps its 15-second expiry, though its chart barely moves between heartbeats, because
   runkit's own heartbeats, every second with a 5-second expiry, drain a section by about as much. Of the ideas to give
   the chart character from real data, tried on a temporary page, neither a blip when a heartbeat arrives (too much with
   frequent heartbeats and many nodes) nor a mark where the next is due is built.
-  Decided: a node's section glitches once each time that it misses a heartbeat, which is each time that the interval
-  that its engine gives passes with no new heartbeat, until the heartbeat expires, because a glitch marks an event and
-  never lasts. Each glitch is half a second, or half the interval if that is shorter, so that two never run together.
-  It is the figures' glitch turned on its side for a line: the left and the right half of the section slip up and down,
-  once through the figures' keyframes, with their red and cyan shadows, by more as the heartbeat gets later, and the
-  ends of the section stay joined to the line. Done for the cluster and engine tiles (d11d974, df9ce8d, and the glitch
-  once for each missed heartbeat in 9f999dc): the stream sends each node's interval in the state document, and for a
-  viewer who asks for less motion the section doesn't slip, and has only its shadows.
+  Decided: the glitch of the heartbeat chart marks the moment that a node stops sending a signal, once, for half a
+  second, because a glitch marks an event and never lasts. It replaces a glitch for each missed heartbeat, which counted
+  from the interval that the spec only calls an aim, so the page doesn't use the interval. It is the figures' glitch
+  turned on its side for a line: the left and the right half of the section slip up and down, once through the figures'
+  keyframes, with their red and cyan shadows, and the ends of the section stay joined to the line. For a viewer who asks
+  for less motion the section doesn't slip, and has only its shadows. Done (926c390).
   Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
   sparklines' readouts are shown: "node 3f8e2a10", with "node" muted and the short ID in the cluster's color, over
-  "heartbeat 4 s ago", "heartbeat just now" under 1.5 seconds, or "heartbeat 3 s late" once the heartbeat is late. The
+  "heartbeat 4 s ago", or "heartbeat just now" under 1.5 seconds. The
   share's line itself widens, from 1.5 to 4 pixels, over about 220 milliseconds, and narrows again when the pointer
   leaves. It is widest in the share and tapers back to 1.5 pixels just past its edges, so that it has no border, and it
   follows the line where a glitch has moved it. The share's shade is stronger by as much. Done for the cluster and
