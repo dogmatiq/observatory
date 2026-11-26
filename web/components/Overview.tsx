@@ -375,9 +375,9 @@ export const countedWords: Record<
 };
 
 /**
- * QueuesTile is the queues tile, whose headline is the messages that wait in the
- * queues, or the rate at which they get through the queues, if no node reports how
- * many wait, which is the messages that handlers have handled, or those that are
+ * QueuesTile is the queues tile, whose headline is the messages in the queues
+ * that are ready to be delivered now, or the rate at which messages get through
+ * the queues, if no node reports how many are ready, which is the messages that handlers have handled, or those that are
  * removed, or only some kinds of the first. See [countedWords].
  */
 export function QueuesTile({
@@ -393,7 +393,7 @@ export function QueuesTile({
 	// The headline is the messages that are ready to be delivered now, and then
 	// those that are failing, as in "24 +1". A failing message may or may not be
 	// ready, as it waits for its next attempt, so the failing ones are counted
-	// beside the ready ones, not taken out of them. If no node supports the
+	// beside the ready ones. If no node supports the
 	// messages in queues that are ready, it is the messages that are removed per
 	// minute.
 	const failing = useCurrent(data.failing);
