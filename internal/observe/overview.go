@@ -823,25 +823,25 @@ func figuresOf(samples []ClusterSample) figures {
 		case *metricsgrpc.QueueDeadlinesRemoved:
 			f.removed.add(s)
 
+		// A handler's counts are added up over the subjects of its samples, of
+		// which each has one value here, so that a handler's count is its total
+		// even if a metric has more than one subject for a handler, such as one
+		// for each message type (dogmatiq/protobuf#50).
 		case *metricsgrpc.HandlerCommandsPending:
-			handler(m.GetHandlerKey()).commandsPending = &v
+			count(&handler(m.GetHandlerKey()).commandsPending, v)
 		case *metricsgrpc.HandlerDeadlinesDue:
-			handler(m.GetHandlerKey()).deadlines.due = &v
+			count(&handler(m.GetHandlerKey()).deadlines.due, v)
 		case *metricsgrpc.HandlerDeadlinesPending:
-			handler(m.GetHandlerKey()).deadlines.pending = &v
+			count(&handler(m.GetHandlerKey()).deadlines.pending, v)
 		case *metricsgrpc.HandlerEventStreamLag:
 			// The events that the handler has yet to reach are its lag on each
 			// stream, added up.
-			h := handler(m.GetHandlerKey())
-			if h.eventsPending == nil {
-				h.eventsPending = new(uint64)
-			}
-			*h.eventsPending += v
+			count(&handler(m.GetHandlerKey()).eventsPending, v)
 		case *metricsgrpc.HandlerCommandsFailing:
 			handler(m.GetHandlerKey()).failing += v
 		case *metricsgrpc.HandlerDeadlinesFailing:
 			handler(m.GetHandlerKey()).failing += v
-			handler(m.GetHandlerKey()).deadlines.failing = &v
+			count(&handler(m.GetHandlerKey()).deadlines.failing, v)
 		case *metricsgrpc.HandlerCommandsHandled:
 			handler(m.GetHandlerKey()).commandsHandled.add(s)
 			f.handled.add(s)
