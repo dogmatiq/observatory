@@ -769,7 +769,7 @@ but isn't shown, and decide towards the end which of them to show and where.
 | Process instances ended per minute | `ProcessInstancesEnded` | As above. |
 | Events recorded or handled per minute as a figure | `HandlerEventsRecorded`, `HandlerEventsHandled` | The cards draw only their chart, as the prototype did. |
 | Messages that are due, by handler, for commands | `HandlerCommandsDue` | An aggregate's and an integration's digests count every command that waits. The queues tiles and a process's digest count the messages that are due. |
-| Messages that are waiting but not yet due, by queue and for a process | `QueueCommandsPending`, `QueueDeadlinesPending`, `HandlerDeadlinesPending` | The queues tiles and a process's digest count the messages that are due instead. |
+| Messages that are waiting but not yet due, by queue and for a process | `QueueCommandsPending`, `QueueDeadlinesPending`, `HandlerDeadlinesPending`; to become the scheduled deadlines of dogmatiq/protobuf#53 | The queues tiles and a process's digest count the messages that are due instead. |
 | Instances that a node holds in memory | `AggregateInstancesInMemory`, `ProcessInstancesInMemory` | The Observatory doesn't read them yet, and runkit doesn't support them. |
 | Which queue or handler has the failing messages | `QueueCommandsFailing`, `QueueDeadlinesFailing`, and the handler counterparts | The tile and the card show only the total. |
 | The Issues that the health rules find | `Health.Assess` | No view shows them, and nothing calls `Assess` yet. |
@@ -1188,8 +1188,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   message whose most recent delivery attempt failed, for the whole of its failure streak, and the ready count leaves
   those out, so that the two never share a message. The spec doesn't say that yet: it defines a failing message as one
   whose most recent delivery attempt failed and a due one as one ready to be delivered now, so a failing message whose
-  next attempt has come due is both, and the sum counts it twice. Filed as dogmatiq/protobuf#53, which asks for each due
-  metric to leave out failing messages. The Observatory relies on that future behaviour, and says so where it adds the
+  next attempt has come due is both, and the sum counts it twice. Filed as dogmatiq/protobuf#53, which asks for the messages
+  that wait to be reported as counts that never overlap: scheduled (deadlines only), ready and failing, with the
+  pending metrics removed, since they are the sum of the others. The Observatory relies on that future behaviour, and says so where it adds the
   two counts: in `internal/observe/overview.go`, `web/components/Overview.tsx` and `web/components/HandlerDigest.tsx`.
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
