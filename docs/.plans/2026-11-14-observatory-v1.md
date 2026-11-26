@@ -1184,9 +1184,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   user to choose on a temporary page: a process's digest counts its deadlines that are due too, with the note "the
   number of deadlines ready to be delivered now", as the queues' note says "ready to be delivered now"; and, since the spec doesn't say whether a failing message is due, the
   failing "+N" of a count of due messages is beside it, not taken out of it. Decided: a "+N" is always read as a figure
-  to be added to the number to its left, to reach the total, on every card. Still open: the spec defines a failing
-  message as one whose most recent delivery attempt failed, and a due one as one ready to be delivered now, so a failing
-  message whose next attempt has come due is both, and the sum counts it twice.
+  to be added to the number to its left, to reach the total, on every card. Decided: the orange "+N" counts every
+  message whose most recent delivery attempt failed, for the whole of its failure streak, and the ready count leaves
+  those out, so that the two never share a message. The spec doesn't say that yet: it defines a failing message as one
+  whose most recent delivery attempt failed and a due one as one ready to be delivered now, so a failing message whose
+  next attempt has come due is both, and the sum counts it twice. Filed as dogmatiq/protobuf#53, which asks for each due
+  metric to leave out failing messages. The Observatory relies on that future behaviour, and says so where it adds the
+  two counts: in `internal/observe/overview.go`, `web/components/Overview.tsx` and `web/components/HandlerDigest.tsx`.
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
   engine's event stream model from the server for this, as the events card has it.
