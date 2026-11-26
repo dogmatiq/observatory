@@ -1082,10 +1082,12 @@ func TestStream(t *testing.T) {
 					t.Fatalf("unexpected patches: %v", got)
 				}
 
-				want := `{"nodes":{"` + other.AsString() + `":{}}}`
-				b, _ := json.Marshal(got[0])
+				// The new member has never connected, so there is no signal from it,
+				// and the patch also has the coverage that that lowers.
+				want := `{"` + other.AsString() + `":{"noSignal":true}}`
+				b, _ := json.Marshal(at(t, got[0], "nodes"))
 				if string(b) != want {
-					t.Fatalf("unexpected patch: got %s, want %s", b, want)
+					t.Fatalf("unexpected patch of the nodes: got %s, want %s", b, want)
 				}
 			})
 		})

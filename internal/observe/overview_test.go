@@ -564,7 +564,7 @@ func TestOverview(t *testing.T) {
 		})
 
 		t.Run("when the nodes heartbeat", func(t *testing.T) {
-			t.Run("it lists the members with the workloads and the heartbeats of those that are connected", func(t *testing.T) {
+			t.Run("it lists the members with the workloads and the heartbeats of those that are connected, and whether each is reporting", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
 					o, r := NewObserver(), NewRecorder()
@@ -608,6 +608,9 @@ func TestOverview(t *testing.T) {
 					absent := byID[gone.AsString()]
 					if absent.Workloads != nil || len(absent.Heartbeats) != 0 {
 						t.Fatalf("unexpected facts about a node that hasn't connected: %+v", absent)
+					}
+					if !seen.Reporting || absent.Reporting {
+						t.Fatalf("unexpected reporting: got %v and %v, want true and false", seen.Reporting, absent.Reporting)
 					}
 
 					cancel()

@@ -517,6 +517,12 @@ type Member struct {
 	// unless another arrives first. It is zero if the node's heartbeats give no
 	// way to calculate it, or if it isn't connected. See [Node.Reporting].
 	Expiry float64 `json:"expiry,omitempty"`
+
+	// Reporting is true if the node is reporting, which is when it is sending a
+	// signal. A member that the Observatory has never had a connection from, and
+	// knows of only from the other nodes' sets of live nodes, isn't reporting.
+	// See [Node.Reporting].
+	Reporting bool `json:"reporting"`
 }
 
 // Chart is the history of a number, to be drawn as a sparkline.
@@ -991,6 +997,7 @@ func memberOf(now time.Time, n Node) Member {
 	m := Member{
 		ID:         n.Preamble.GetId().AsString(),
 		Heartbeats: []float64{},
+		Reporting:  n.Reporting(now),
 	}
 
 	if n.Preamble.GetCluster().GetReportsWorkloads() && n.Workloads != nil {

@@ -354,6 +354,10 @@ func documentOf(view observe.ClusterView) map[string]any {
 		if n.Workloads != nil {
 			node["workloads"] = *n.Workloads
 		}
+		// A member that isn't reporting is one that there is no signal from.
+		if !n.Reporting {
+			node["noSignal"] = true
+		}
 		nodes[n.ID] = node
 	}
 	doc["nodes"] = nodes

@@ -955,18 +955,38 @@ func Supported(now time.Time, nodes []Node) map[string]bool {
 }
 
 // Coverage returns the coverage of each metric that [Combine] reads from the
-// nodes' calls to WatchNodeMetrics, and that only some of the nodes that it
-// reads list, at the time now, by its full name. A metric's coverage is the
-// share of those nodes that list it, from 0 to 1. Combine leaves out the nodes
-// that don't list such a metric, so its sums of it are too small by an amount
-// that isn't known. Nodes of one cluster that support different metrics may be
-// partway through a deploy, but nothing here relies on that.
+// nodes' calls to WatchNodeMetrics, at the time now, by its full name, if it is
+// less than whole. A metric's coverage is the share of the nodes that it could
+// be read from that list it, from 0 to 1: the nodes that Combine reads, and the
+// members of the cluster that aren't reporting, which report nothing. Combine
+// leaves out the nodes that don't list a metric, and the members that aren't
+// reporting, so its sums of it are too small by an amount that isn't known.
+// Nodes of one cluster that support different metrics may be partway through a
+// deploy, but nothing here relies on that. See [Members].
 //
 // A metric that every one of those nodes lists isn't listed, because its
 // coverage is whole. Nor is a metric that Combine reads from a call to
 // WatchClusterMetrics, because one node describes the whole cluster.
 func Coverage(now time.Time, nodes []Node) map[string]float64 {
 	r := readingOf(now, nodes)
+
+	reporting := map[string]bool{}
+	for _, n := range nodes {
+		if n.Reporting(now) {
+			reporting[n.Preamble.GetId().AsString()] = true
+		}
+	}
+
+	// The nodes that each metric could be read from.
+	from := map[string]bool{}
+	for _, n := range r.nodes {
+		from[n.Preamble.GetId().AsString()] = true
+	}
+	for _, id := range Members(now, nodes) {
+		if !reporting[id.AsString()] {
+			from[id.AsString()] = true
+		}
+	}
 
 	listing := map[string]int{}
 	for _, n := range r.nodes {
@@ -979,8 +999,8 @@ func Coverage(now time.Time, nodes []Node) map[string]float64 {
 
 	coverage := map[string]float64{}
 	for name, count := range listing {
-		if count < len(r.nodes) {
-			coverage[name] = float64(count) / float64(len(r.nodes))
+		if count < len(from) {
+			coverage[name] = float64(count) / float64(len(from))
 		}
 	}
 
