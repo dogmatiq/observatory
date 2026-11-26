@@ -206,9 +206,6 @@ func TestRun(t *testing.T) {
 							mailer = h.Summary.Failing
 						case "statement-schedule":
 							process = h.Summary.Failing
-							if h.Summary.QueuedMessages != nil && *h.Summary.QueuedMessages < process {
-								t.Fatalf("%d deadlines are pending, and %d are failing", *h.Summary.QueuedMessages, process)
-							}
 						}
 					}
 

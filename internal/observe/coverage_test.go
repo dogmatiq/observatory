@@ -27,15 +27,15 @@ func TestCoverage(t *testing.T) {
 			app := appOf("statements", uuidpb.Generate())
 			h := uuidpb.Generate()
 
-			pendingMetric := name(new(metricsgrpc.QueueCommandsPending))
+			dueMetric := name(new(metricsgrpc.QueueCommandsDue))
 			recordedMetric := name(new(metricsgrpc.HandlerEventsRecorded))
 
-			newer := startApp(t, ctx, o, c, app, pendingMetric, recordedMetric)
-			older := startApp(t, ctx, o, c, app, pendingMetric)
+			newer := startApp(t, ctx, o, c, app, dueMetric, recordedMetric)
+			older := startApp(t, ctx, o, c, app, dueMetric)
 
 			q := uuidpb.Generate()
-			newer.sample(t, 0, "q", 1, pending(q, 3))
-			older.sample(t, 0, "q", 1, pending(q, 4))
+			newer.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsDue_builder{QueueId: q, CurrentCount: 3}.Build())
+			older.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsDue_builder{QueueId: q, CurrentCount: 4}.Build())
 			newer.sample(t, 1, "h", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: h, CumulativeCount: 100}.Build())
 			r.Record(time.Now(), o.Nodes())
 

@@ -421,9 +421,9 @@ type QueuesTile struct {
 	// as it is for [EventsTile].
 	Coverage *float64 `json:"coverage,omitempty"`
 
-	// Queues is the number of messages that wait in each of the cluster's queues,
-	// commands and deadlines together. It is nil if no node supports the number
-	// of messages in queues.
+	// Queues is the number of messages in each of the cluster's queues that are
+	// ready to be delivered now, commands and deadlines together. It is nil if no
+	// node supports the number of messages in queues that are ready.
 	Queues []Spread `json:"queues"`
 
 	// OneQueue is true if every node of the cluster says that its engine
@@ -613,9 +613,9 @@ type HandlerSummary struct {
 	// handlers.
 	Instances *uint64 `json:"instances,omitempty"`
 
-	// QueuedMessages is the number of commands, for an aggregate or an
-	// integration, or deadlines, for a process, that wait to be delivered to the
-	// handler.
+	// QueuedMessages is the number of commands that wait to be delivered to the
+	// handler, for an aggregate or an integration, or the number of deadlines that
+	// are ready to be delivered to it now, for a process.
 	QueuedMessages *uint64 `json:"queuedMessages,omitempty"`
 
 	// UnhandledEvents is the number of events that a process or a projection has
@@ -688,9 +688,9 @@ func (r summedRate) rate() *float64 {
 
 // handlerFigures is what the samples say about one handler.
 type handlerFigures struct {
-	commandsPending, deadlinesPending, eventsPending *uint64
-	failing                                          uint64
-	eventsRecorded, eventsHandled, commandsHandled   summedRate
+	commandsPending, deadlinesDue, eventsPending   *uint64
+	failing                                        uint64
+	eventsRecorded, eventsHandled, commandsHandled summedRate
 
 	// bindings is the number of instances bound to each event stream, for an
 	// aggregate, or queue, for a process, by ID.
@@ -705,7 +705,7 @@ type handlerFigures struct {
 // [Overview] is made from.
 type figures struct {
 	streams        map[string]uint64
-	pendingInQueue map[string]uint64
+	dueInQueue     map[string]uint64
 	failing        uint64
 	eventsRecorded summedRate
 	removed        summedRate
@@ -716,9 +716,9 @@ type figures struct {
 // figuresOf sorts the combined samples of a cluster by what they measure.
 func figuresOf(samples []ClusterSample) figures {
 	f := figures{
-		streams:        map[string]uint64{},
-		pendingInQueue: map[string]uint64{},
-		handlers:       map[string]*handlerFigures{},
+		streams:    map[string]uint64{},
+		dueInQueue: map[string]uint64{},
+		handlers:   map[string]*handlerFigures{},
 	}
 
 	handler := func(key *uuidpb.UUID) *handlerFigures {
@@ -738,10 +738,10 @@ func figuresOf(samples []ClusterSample) figures {
 		case *metricsgrpc.EventStreamLength:
 			f.streams[m.GetEventStreamId().AsString()] = v
 
-		case *metricsgrpc.QueueCommandsPending:
-			f.pendingInQueue[m.GetQueueId().AsString()] += v
-		case *metricsgrpc.QueueDeadlinesPending:
-			f.pendingInQueue[m.GetQueueId().AsString()] += v
+		case *metricsgrpc.QueueCommandsDue:
+			f.dueInQueue[m.GetQueueId().AsString()] += v
+		case *metricsgrpc.QueueDeadlinesDue:
+			f.dueInQueue[m.GetQueueId().AsString()] += v
 		case *metricsgrpc.QueueCommandsFailing:
 			f.failing += v
 		case *metricsgrpc.QueueDeadlinesFailing:
@@ -753,8 +753,8 @@ func figuresOf(samples []ClusterSample) figures {
 
 		case *metricsgrpc.HandlerCommandsPending:
 			handler(m.GetHandlerKey()).commandsPending = &v
-		case *metricsgrpc.HandlerDeadlinesPending:
-			handler(m.GetHandlerKey()).deadlinesPending = &v
+		case *metricsgrpc.HandlerDeadlinesDue:
+			handler(m.GetHandlerKey()).deadlinesDue = &v
 		case *metricsgrpc.HandlerEventStreamLag:
 			// The events that the handler has yet to reach are its lag on each
 			// stream, added up.
@@ -855,17 +855,17 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		}
 	}
 
-	pending := supported[metric(new(metricsgrpc.QueueCommandsPending))] ||
-		supported[metric(new(metricsgrpc.QueueDeadlinesPending))]
+	due := supported[metric(new(metricsgrpc.QueueCommandsDue))] ||
+		supported[metric(new(metricsgrpc.QueueDeadlinesDue))]
 	removed := supported[metric(new(metricsgrpc.QueueCommandsRemoved))] ||
 		supported[metric(new(metricsgrpc.QueueDeadlinesRemoved))]
 	handledCommands := supported[metric(new(metricsgrpc.HandlerCommandsHandled))]
 	handledDeadlines := supported[metric(new(metricsgrpc.HandlerDeadlinesHandled))]
-	if pending || removed || handledCommands || handledDeadlines {
+	if due || removed || handledCommands || handledDeadlines {
 		o.Queues = &QueuesTile{Failing: f.failing}
 
-		if pending {
-			o.Queues.Queues = spreadOf(f.pendingInQueue)
+		if due {
+			o.Queues.Queues = spreadOf(f.dueInQueue)
 		}
 		o.Queues.OneQueue = everyNode(nodes, func(p *enginegrpc.WatchEngineResponse_Preamble) bool {
 			return p.GetQueueModel().HasSingleQueue()
@@ -889,8 +889,8 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 			o.Queues.Counted = "deadlines handled"
 		}
 		o.Queues.Coverage = coverageOf(
-			new(metricsgrpc.QueueCommandsPending),
-			new(metricsgrpc.QueueDeadlinesPending),
+			new(metricsgrpc.QueueCommandsDue),
+			new(metricsgrpc.QueueDeadlinesDue),
 			new(metricsgrpc.QueueCommandsRemoved),
 			new(metricsgrpc.QueueDeadlinesRemoved),
 			new(metricsgrpc.QueueCommandsFailing),
@@ -1091,7 +1091,7 @@ func handlerCards(
 			}
 
 		case configpb.HandlerType_HANDLER_TYPE_PROCESS:
-			s.QueuedMessages = figs.deadlinesPending
+			s.QueuedMessages = figs.deadlinesDue
 			s.UnhandledEvents = figs.eventsPending
 			recorded = &figs.eventsHandled
 			for name, use := range h.GetMessages() {

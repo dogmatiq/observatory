@@ -51,8 +51,9 @@
 //     supports the length of event streams.
 //   - "oneStream": true if every node says that its engine appends every event
 //     to one event stream, and absent otherwise.
-//   - "queues": each queue, {"messages"}. It is absent if no node supports the
-//     number of messages in queues.
+//   - "queues": each queue, {"messages"}, which is the messages in it that are
+//     ready to be delivered now. It is absent if no node supports the number of
+//     messages in queues that are ready.
 //   - "oneQueue": true if every node says that its engine delivers every
 //     message through one queue, and absent otherwise.
 //   - "failing": the number of messages whose delivery is failing, present with

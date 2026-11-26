@@ -717,14 +717,14 @@ func TestServerKeepsDown(t *testing.T) {
 
 func TestStream(t *testing.T) {
 	const (
-		queueIndex    = 0 // QueueCommandsPending
+		queueIndex    = 0 // QueueCommandsDue
 		recordedIndex = 1 // HandlerEventsRecorded
 		lengthIndex   = 2 // EventStreamLength
 		removedIndex  = 3 // QueueCommandsRemoved
 	)
 
 	supported := []proto.Message{
-		new(metricsgrpc.QueueCommandsPending),
+		new(metricsgrpc.QueueCommandsDue),
 		new(metricsgrpc.HandlerEventsRecorded),
 		new(metricsgrpc.EventStreamLength),
 		new(metricsgrpc.QueueCommandsRemoved),
@@ -893,7 +893,7 @@ func TestStream(t *testing.T) {
 
 				// The tiles need the metrics of what they show, and a handler has a
 				// chart when the node reports the events that it records.
-				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: uuidpb.Generate(), CurrentCount: 1}.Build())
+				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsDue_builder{QueueId: uuidpb.Generate(), CurrentCount: 1}.Build())
 				n.sample(t, removedIndex, "r", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: uuidpb.Generate(), CumulativeCount: 1}.Build())
 				n.sample(t, lengthIndex, "s", 1, metricsgrpc.EventStreamLength_builder{EventStreamId: uuidpb.Generate(), Watermark: 1}.Build())
 				n.sample(t, recordedIndex, "a", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), CumulativeCount: 1}.Build())
@@ -1097,11 +1097,11 @@ func TestStream(t *testing.T) {
 				queue := uuidpb.Generate()
 				// Each sample is taken in before the stream next looks, so that each
 				// makes a patch of its own.
-				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, CurrentCount: 7}.Build())
+				n.sample(t, queueIndex, "q", 1, metricsgrpc.QueueCommandsDue_builder{QueueId: queue, CurrentCount: 7}.Build())
 				synctest.Wait()
 				time.Sleep(time.Second)
 				synctest.Wait()
-				n.sample(t, queueIndex, "q", 2, metricsgrpc.QueueCommandsPending_builder{QueueId: queue, CurrentCount: 9}.Build())
+				n.sample(t, queueIndex, "q", 2, metricsgrpc.QueueCommandsDue_builder{QueueId: queue, CurrentCount: 9}.Build())
 				synctest.Wait()
 				time.Sleep(time.Second)
 				synctest.Wait()

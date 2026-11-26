@@ -131,10 +131,10 @@ type ingredient struct {
 // combinationClusters returns a cluster for each combination of what the nodes
 // report that the events tile is made from, which is the rate of events and the
 // length of the event streams, and for each combination of what the queues tile
-// is made from, which is the number of messages in the queues, the removal of
-// messages from them, the commands that handlers have handled and the deadlines
-// that they have handled. Each cluster has one node, which always reports
-// everything else.
+// is made from, which is the number of messages in the queues that are ready,
+// the removal of messages from them, the commands that handlers have handled and
+// the deadlines that they have handled. Each cluster has one node, which always
+// reports everything else.
 func combinationClusters() []*cluster {
 	out := combinationsOf("Events", []ingredient{
 		{"rate", []proto.Message{new(metricsgrpc.HandlerEventsRecorded)}},
@@ -143,8 +143,8 @@ func combinationClusters() []*cluster {
 
 	return append(out, combinationsOf("Queues", []ingredient{
 		{"sizes", []proto.Message{
-			new(metricsgrpc.QueueCommandsPending),
-			new(metricsgrpc.QueueDeadlinesPending),
+			new(metricsgrpc.QueueCommandsDue),
+			new(metricsgrpc.QueueDeadlinesDue),
 		}},
 		{"removals", []proto.Message{
 			new(metricsgrpc.QueueCommandsRemoved),
@@ -225,6 +225,13 @@ type cluster struct {
 	// fixed, if it is not nil, is what the nodes never support, in place of the
 	// profiles.
 	fixed []proto.Message
+}
+
+// deadlinesDue returns the number of the cluster's deadlines whose scheduled
+// time has arrived, which is a fifth of those that wait, as most are scheduled
+// ahead.
+func (c *cluster) deadlinesDue() int {
+	return c.state.deadlinesQueued / 5
 }
 
 // state is the part of the cluster's state that is a number at a moment, not a
@@ -436,12 +443,15 @@ var supported = []struct {
 	{new(metricsgrpc.EventStreamLength), true},
 	{new(metricsgrpc.QueueCommandsPending), true},
 	{new(metricsgrpc.QueueDeadlinesPending), true},
+	{new(metricsgrpc.QueueCommandsDue), true},
+	{new(metricsgrpc.QueueDeadlinesDue), true},
 	{new(metricsgrpc.QueueCommandsFailing), true},
 	{new(metricsgrpc.QueueDeadlinesFailing), true},
 	{new(metricsgrpc.QueueCommandsRemoved), false},
 	{new(metricsgrpc.QueueDeadlinesRemoved), false},
 	{new(metricsgrpc.HandlerCommandsPending), true},
 	{new(metricsgrpc.HandlerDeadlinesPending), true},
+	{new(metricsgrpc.HandlerDeadlinesDue), true},
 	{new(metricsgrpc.HandlerEventStreamLag), true},
 	{new(metricsgrpc.HandlerCommandsFailing), true},
 	{new(metricsgrpc.HandlerDeadlinesFailing), true},
@@ -469,6 +479,8 @@ var profiles = [][]proto.Message{
 		new(metricsgrpc.EventStreamLength),
 		new(metricsgrpc.QueueCommandsPending),
 		new(metricsgrpc.QueueDeadlinesPending),
+		new(metricsgrpc.QueueCommandsDue),
+		new(metricsgrpc.QueueDeadlinesDue),
 	},
 
 	// Only the totals, and none of the rates.
@@ -575,6 +587,10 @@ func (c *cluster) readings(node int) []reading {
 
 	add(metricsgrpc.QueueCommandsPending_builder{QueueId: c.commandsQ, CurrentCount: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.commandsQ)
 	add(metricsgrpc.QueueDeadlinesPending_builder{QueueId: c.deadlinesQ, CurrentCount: uint64(c.state.deadlinesQueued)}.Build(), c.deadlinesQ)
+	// A failing command waits for its next attempt, so it isn't ready, and most
+	// deadlines are scheduled ahead, so only some of them are ready.
+	add(metricsgrpc.QueueCommandsDue_builder{QueueId: c.commandsQ, CurrentCount: uint64(c.state.commandsQueued - min(c.state.commandsQueued, c.state.failing))}.Build(), c.commandsQ)
+	add(metricsgrpc.QueueDeadlinesDue_builder{QueueId: c.deadlinesQ, CurrentCount: uint64(c.deadlinesDue())}.Build(), c.deadlinesQ)
 	add(metricsgrpc.QueueCommandsFailing_builder{QueueId: c.commandsQ, CurrentCount: uint64(c.state.failing)}.Build(), c.commandsQ)
 	add(metricsgrpc.QueueDeadlinesFailing_builder{QueueId: c.deadlinesQ, CurrentCount: uint64(c.state.failingDeadlines)}.Build(), c.deadlinesQ)
 	add(metricsgrpc.QueueCommandsRemoved_builder{QueueId: c.commandsQ, CumulativeCount: part("removed.commands")}.Build(), c.commandsQ)
@@ -586,6 +602,7 @@ func (c *cluster) readings(node int) []reading {
 	add(metricsgrpc.HandlerCommandsPending_builder{HandlerKey: c.mailer, CurrentCount: uint64(max(c.state.commandsQueued, c.state.failing))}.Build(), c.mailer)
 	add(metricsgrpc.HandlerCommandsFailing_builder{HandlerKey: c.mailer, CurrentCount: uint64(c.state.failing)}.Build(), c.mailer)
 	add(metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: c.schedule, CurrentCount: uint64(c.state.deadlinesQueued)}.Build(), c.schedule)
+	add(metricsgrpc.HandlerDeadlinesDue_builder{HandlerKey: c.schedule, CurrentCount: uint64(c.deadlinesDue())}.Build(), c.schedule)
 	add(metricsgrpc.HandlerDeadlinesFailing_builder{HandlerKey: c.schedule, CurrentCount: uint64(c.state.failingDeadlines)}.Build(), c.schedule)
 	add(metricsgrpc.HandlerEventStreamLag_builder{HandlerKey: c.schedule, EventStreamId: c.streams[0], Gauge: uint64(c.state.eventsPending)}.Build(), c.schedule, c.streams[0])
 	add(metricsgrpc.HandlerEventStreamLag_builder{HandlerKey: c.balances, EventStreamId: c.streams[0], Gauge: uint64(c.state.eventsPending / 2)}.Build(), c.balances, c.streams[0])

@@ -385,7 +385,7 @@ func TestOverview(t *testing.T) {
 		})
 
 		t.Run("when the nodes support queues", func(t *testing.T) {
-			t.Run("it counts the commands and the deadlines of each queue together", func(t *testing.T) {
+			t.Run("it counts the commands and the deadlines of each queue that are ready together", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
 					o, r := NewObserver(), NewRecorder()
@@ -393,14 +393,14 @@ func TestOverview(t *testing.T) {
 					q1, q2 := uuidpb.Generate(), uuidpb.Generate()
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
-						name(new(metricsgrpc.QueueCommandsPending)),
-						name(new(metricsgrpc.QueueDeadlinesPending)),
+						name(new(metricsgrpc.QueueCommandsDue)),
+						name(new(metricsgrpc.QueueDeadlinesDue)),
 						name(new(metricsgrpc.QueueCommandsFailing)),
 						name(new(metricsgrpc.QueueDeadlinesFailing)),
 					)
-					n.sample(t, 0, "q1", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q1, CurrentCount: 3}.Build())
-					n.sample(t, 1, "q1", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q1, CurrentCount: 4}.Build())
-					n.sample(t, 1, "q2", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q2, CurrentCount: 5}.Build())
+					n.sample(t, 0, "q1", 1, metricsgrpc.QueueCommandsDue_builder{QueueId: q1, CurrentCount: 3}.Build())
+					n.sample(t, 1, "q1", 1, metricsgrpc.QueueDeadlinesDue_builder{QueueId: q1, CurrentCount: 4}.Build())
+					n.sample(t, 1, "q2", 1, metricsgrpc.QueueDeadlinesDue_builder{QueueId: q2, CurrentCount: 5}.Build())
 					n.sample(t, 2, "q1", 1, metricsgrpc.QueueCommandsFailing_builder{QueueId: q1, CurrentCount: 1}.Build())
 					n.sample(t, 3, "q2", 1, metricsgrpc.QueueDeadlinesFailing_builder{QueueId: q2, CurrentCount: 2}.Build())
 
@@ -424,7 +424,7 @@ func TestOverview(t *testing.T) {
 				})
 			})
 
-			t.Run("it adds the rates at which commands and deadlines are removed", func(t *testing.T) {
+			t.Run("it doesn't count the messages that are only waiting", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
 					o, r := NewObserver(), NewRecorder()
@@ -433,6 +433,31 @@ func TestOverview(t *testing.T) {
 
 					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
 						name(new(metricsgrpc.QueueCommandsPending)),
+						name(new(metricsgrpc.QueueDeadlinesPending)),
+						name(new(metricsgrpc.QueueCommandsRemoved)),
+					)
+					n.sample(t, 0, "q", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q, CurrentCount: 3}.Build())
+					n.sample(t, 1, "q", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q, CurrentCount: 4}.Build())
+					n.sample(t, 2, "q", 1, metricsgrpc.QueueCommandsRemoved_builder{QueueId: q, CumulativeCount: 0}.Build())
+
+					if q := viewOf(t, r, o, c).Overview.Queues; q == nil || q.Queues != nil {
+						t.Fatalf("unexpected queues: %v", q)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it adds the rates at which commands and deadlines are removed", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					q := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						name(new(metricsgrpc.QueueCommandsDue)),
 						name(new(metricsgrpc.QueueCommandsRemoved)),
 						name(new(metricsgrpc.QueueDeadlinesRemoved)),
 					)
@@ -722,7 +747,7 @@ func TestOverview(t *testing.T) {
 
 				return startEngine(t, ctx, o, b, appOf("statements", uuidpb.Generate()),
 					name(new(metricsgrpc.EventStreamLength)),
-					name(new(metricsgrpc.QueueCommandsPending)),
+					name(new(metricsgrpc.QueueCommandsDue)),
 				)
 			}
 
@@ -904,12 +929,12 @@ func TestOverview(t *testing.T) {
 								"example.Command": configpb.MessageUsage_builder{IsProduced: true}.Build(),
 							})),
 						name(new(metricsgrpc.ProcessInstanceQueueBindings)),
-						name(new(metricsgrpc.HandlerDeadlinesPending)),
+						name(new(metricsgrpc.HandlerDeadlinesDue)),
 					)
 					n.sample(t, 0, "q", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, QueueId: q, CurrentCount: 20}.Build())
 					// Instances that are in progress and bound to no queue have no queue ID.
 					n.sample(t, 0, "none", 1, metricsgrpc.ProcessInstanceQueueBindings_builder{HandlerKey: key, CurrentCount: 3}.Build())
-					n.sample(t, 1, "schedule", 1, metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: key, CurrentCount: 20}.Build())
+					n.sample(t, 1, "schedule", 1, metricsgrpc.HandlerDeadlinesDue_builder{HandlerKey: key, CurrentCount: 20}.Build())
 
 					// The events that the process has yet to reach are its lag on each
 					// stream, added up. The nodes' own lags can't be added up, so the
