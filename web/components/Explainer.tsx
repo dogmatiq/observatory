@@ -195,7 +195,11 @@ export interface Note {
 	 */
 	keepInk?: true;
 
-	/** How far the words are moved down from the arrow's end, in pixels. */
+	/**
+	 * How far the words are moved down, in pixels: from the arrow's end, for
+	 * words beside the card, or from where they would be, for words above it,
+	 * such as to keep them clear of other words above the card.
+	 */
 	dy?: number;
 
 	/**
@@ -551,7 +555,7 @@ export function Explainer({
 									x: note.wordsLeft
 										? spot.x - topAside
 										: spot.x + spot.w + topAside,
-									y: -topGap,
+									y: -topGap + (note.dy ?? 0),
 								}
 							: {
 									x: note.side === "left" ? -gap : el.offsetWidth + gap,
@@ -1454,7 +1458,7 @@ function Arrows({
 				0,
 				...drawn.map((d, i) =>
 					d.note.side === "top"
-						? topGap + (labels.current[i]?.offsetHeight ?? 0)
+						? topGap - (d.note.dy ?? 0) + (labels.current[i]?.offsetHeight ?? 0)
 						: 0,
 				),
 			),

@@ -850,6 +850,39 @@ export function ReviewPage() {
 						])}
 					/>
 				</Part>
+
+				<Part
+					step={7}
+					title="Nodes with no signal"
+					deciding="How the tile shows the members of the cluster that there is no signal from: the nodes that the other nodes count as live, but that the Observatory has no signal from."
+					notDeciding="The words of the explainer's annotation of the red count, which are compared on a page of their own."
+					note="The headline is the number of nodes sending a signal, with the members with no signal set apart after it in red, as the site view's applications tile does, without the red accent, which stays for when there is no signal from any node, because the other nodes still work. A member with no signal counts as a node that doesn't report its workloads, so the number of workloads is blurred, and the flag says that only some of the nodes report them. The bar and the heartbeat chart are of the nodes sending a signal. Point at the tile and press its &quot;?&quot; for its explainer, whose copy of the card is the worked example of a number set apart."
+				>
+					<State
+						label="One member with no signal"
+						recommendation="Approve. The tile counts the nodes that work, and says how many are missing, without calling the whole cluster broken."
+						wide
+					>
+						<Explained spec={cardExplainers(atSite).cluster}>
+							<div className="w-[360px]">
+								<ClusterTile
+									data={{
+										...overview.cluster,
+										nodes: [
+											...overview.cluster.nodes,
+											{
+												id: "fe2b19a7-0000-4000-8000-000000000000",
+												heartbeats: [],
+												noSignal: true,
+											},
+										],
+									}}
+									href={undefined}
+								/>
+							</div>
+						</Explained>
+					</State>
+				</Part>
 			</Tile>
 
 			<Tile

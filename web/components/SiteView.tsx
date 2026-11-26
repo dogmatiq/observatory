@@ -352,7 +352,7 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 						nothing to set them apart from, so the headline is the red zero
 						alone, as the cluster tile's is when there is no signal from any of
 						the nodes. */}
-					<NoSignal count={live.length === 0 ? 0 : out} />
+					<NoSignal count={live.length === 0 ? 0 : out} of="applications" />
 				</span>
 			}
 			detail={

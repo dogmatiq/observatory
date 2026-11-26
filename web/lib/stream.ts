@@ -705,6 +705,7 @@ export function selectCluster(
 						// moment that the page reads the snapshot.
 						...(last !== undefined &&
 							expiry !== undefined && { deadline: last + expiry - ref }),
+						...(n.noSignal === true && { noSignal: true as const }),
 					};
 				}),
 		) ?? [];

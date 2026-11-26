@@ -30,7 +30,7 @@ import {
 import { Figure } from "./Figure.tsx";
 import { HandlerDigest } from "./HandlerDigest.tsx";
 import { HeartbeatChart, type Section } from "./HeartbeatChart.tsx";
-import { Alarm, Failing, MetricTile, Noun } from "./MetricTile.tsx";
+import { Alarm, Failing, MetricTile, NoSignal, Noun } from "./MetricTile.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
 import { Sky } from "./Sky.tsx";
@@ -493,9 +493,15 @@ export function QueuesTile({
 
 /**
  * ClusterTile is the cluster tile, whose headline is the number of nodes that are
- * live, with the workloads that they own, and a bar of how those are shared. If
- * no node says that it reports its workloads, the tile leaves them out, and has
- * no bar.
+ * sending a signal, with the members of the cluster that there is no signal
+ * from set apart in red after it, and the workloads that the nodes own, and a bar
+ * of how those are shared. If no node says that it reports its workloads, the
+ * tile leaves them out, and has no bar.
+ *
+ * A member with no signal counts as a node that doesn't report its workloads, so
+ * the number of workloads, which is of the nodes that report them, is blurred by
+ * how few they are. The bar and the heartbeat chart are of the nodes sending a
+ * signal.
  */
 export function ClusterTile({
 	data,
@@ -505,17 +511,19 @@ export function ClusterTile({
 	href: string | undefined;
 }) {
 	const divided = data.reportsWorkloads === true;
+	const live = data.nodes.filter((n) => n.noSignal !== true);
+	const out = data.nodes.length - live.length;
 
-	// While a node doesn't report its workloads and others do, the number of
+	// While a member doesn't report its workloads and others do, the number of
 	// workloads is of the nodes that do, which covers only some of the cluster.
-	const reporting = data.nodes.filter((n) => n.workloads !== undefined).length;
+	const reporting = live.filter((n) => n.workloads !== undefined).length;
 	const coverage = data.nodes.length === 0 ? 1 : reporting / data.nodes.length;
-	const workloads = data.nodes.reduce((sum, n) => sum + (n.workloads ?? 0), 0);
+	const workloads = live.reduce((sum, n) => sum + (n.workloads ?? 0), 0);
 
 	// The levels drain between updates, so they are worked out again with each
 	// frame from the time that has passed.
 	const elapsed = useElapsed();
-	const sections = data.nodes.map((n) =>
+	const sections = live.map((n) =>
 		sectionOf(n, elapsed, (id, age) => ({
 			subject: `node ${shortId(id)}`,
 			label: "heartbeat",
@@ -530,22 +538,28 @@ export function ClusterTile({
 			icon="cluster"
 			href={href}
 			statuses={
-				data.nodes.length === 0
+				live.length === 0
 					? [noSignalFromNodes]
 					: divided && coverage < 1
 						? [someNodesReportWorkloads]
 						: []
 			}
-			accent={data.nodes.length === 0 ? "bad" : undefined}
+			// The red accent is for when no node is sending a signal. While some are,
+			// the cluster still works, and the red count says what is missing.
+			accent={live.length === 0 ? "bad" : undefined}
 			value={
 				<span>
-					{data.nodes.length === 0 ? (
+					{live.length === 0 ? (
 						<Alarm>
 							<Ramped value={0} format={String} />
 						</Alarm>
 					) : (
-						<Ramped value={data.nodes.length} format={String} />
+						<Ramped value={live.length} format={String} />
 					)}
+					{/* When there is no signal from any of the nodes, there is nothing to
+						set the members with no signal apart from, so the headline is the
+						red zero alone. */}
+					<NoSignal count={live.length === 0 ? 0 : out} of="nodes" />
 				</span>
 			}
 			detail={
@@ -572,8 +586,8 @@ export function ClusterTile({
 			// divide its work has none. A cluster with no live node has the empty
 			// track of a bar, because its engine can't be known.
 			bar={
-				divided || data.nodes.length === 0 ? (
-					<NodeBar segments={nodeSegments(data.nodes)} />
+				divided || live.length === 0 ? (
+					<NodeBar segments={nodeSegments(live)} />
 				) : undefined
 			}
 			chart={<HeartbeatChart sections={sections} />}

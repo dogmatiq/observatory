@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { useCurrent } from "../lib/distrust.tsx";
 import { countOf, formatCompact } from "../lib/format.ts";
@@ -184,10 +184,14 @@ const setApart = {
 		ink: "text-failing",
 		spoken: (n: number) => ` and ${countOf(n, "message", "messages")} failing`,
 	},
-	"no-signal": {
+	"no-signal-applications": {
 		ink: "text-bad",
 		spoken: (n: number) =>
 			` and ${countOf(n, "application", "applications")} with no signal`,
+	},
+	"no-signal-nodes": {
+		ink: "text-bad",
+		spoken: (n: number) => ` and ${countOf(n, "node", "nodes")} with no signal`,
 	},
 } as const;
 
@@ -207,12 +211,18 @@ export function Failing({
 }
 
 /**
- * NoSignal is the number of applications with no signal, which comes after the
- * number of those that are sending a signal, such as "94 +2", in red.
+ * NoSignal is the number of applications or nodes with no signal, which comes
+ * after the number of those that are sending a signal, such as "94 +2", in red.
  * See [SetApart].
  */
-export function NoSignal({ count }: { count: number }) {
-	return <SetApart kind="no-signal" count={count} size="headline" />;
+export function NoSignal({
+	count,
+	of,
+}: {
+	count: number;
+	of: "applications" | "nodes";
+}) {
+	return <SetApart kind={`no-signal-${of}`} count={count} size="headline" />;
 }
 
 /**

@@ -268,6 +268,24 @@ test("a node with no workloads in the document is one that doesn't report them",
 	});
 });
 
+test("a member that the document says there is no signal from has no signal", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			cluster: {},
+			nodes: { n: {}, m: { noSignal: true } },
+		}),
+		0,
+	]);
+
+	expect(selectCluster(s, 0)?.overview.cluster).toEqual({
+		nodes: [
+			{ id: "m", workloads: undefined, heartbeats: [], noSignal: true },
+			{ id: "n", workloads: undefined, heartbeats: [] },
+		],
+	});
+});
+
 test("a cluster whose document says that its nodes report their workloads says so", () => {
 	const s = applied([
 		changed({

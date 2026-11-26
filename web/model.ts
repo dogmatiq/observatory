@@ -273,6 +273,13 @@ export interface LiveNode {
 	 * to tell when its heartbeats expire.
 	 */
 	deadline?: number;
+
+	/**
+	 * True for a member of the cluster that there is no signal from: one that the
+	 * other nodes count as live, but that isn't reporting. Absent for a node that
+	 * is sending a signal.
+	 */
+	noSignal?: true;
 }
 
 /**

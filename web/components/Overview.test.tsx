@@ -16,6 +16,7 @@ import {
 	noSignalFromNodes,
 	rateLost,
 	rateUnavailable,
+	someNodesReportWorkloads,
 } from "./statuses.ts";
 
 beforeEach(stubBrowser);
@@ -132,6 +133,61 @@ test("a cluster with no live nodes has a red number, and the words after it stil
 	// The alert flag reads its status where it is, after the number.
 	expect(tile.textContent).toBe(`0${noSignalFromNodes.text}cluster nodes`);
 	expect(tile.querySelector(".text-bad")?.textContent).toBe("0");
+});
+
+/** A cluster of three nodes sending a signal and one member with no signal. */
+const oneSilent = {
+	reportsWorkloads: true,
+	nodes: [
+		{ id: "11111111-1", workloads: 2, heartbeats: [0] },
+		{ id: "22222222-2", workloads: 1, heartbeats: [0] },
+		{ id: "33333333-3", heartbeats: [], noSignal: true as const },
+		{ id: "44444444-4", workloads: 1, heartbeats: [0] },
+	],
+};
+
+test("a cluster sets apart the members that there is no signal from in red after the nodes sending a signal, without the red accent", () => {
+	render(
+		<Overview
+			application={application}
+			data={{ ...overview, cluster: oneSilent }}
+		/>,
+	);
+
+	const tile = screen.getByRole("article", { name: "Cluster" });
+	expect(tile.textContent).toMatch(/^3\+1 and 1 node with no signal/);
+	expect(tile.textContent).toMatch(/cluster nodes, 4 workloads$/);
+	expect(tile.className).not.toContain("color-bad");
+});
+
+test("a member with no signal counts as a node that doesn't report its workloads, so the number of workloads is blurred", () => {
+	render(
+		<Overview
+			application={application}
+			data={{ ...overview, cluster: oneSilent }}
+		/>,
+	);
+
+	const tile = screen.getByRole("article", { name: "Cluster" });
+	expect(tile.querySelector(".distrust-blur")).not.toBeNull();
+	expect(tile.textContent).toContain(someNodesReportWorkloads.text);
+});
+
+test("a cluster with no signal from any of its members has the red zero alone", () => {
+	render(
+		<Overview
+			application={application}
+			data={{
+				...overview,
+				cluster: {
+					nodes: [{ id: "33333333-3", heartbeats: [], noSignal: true }],
+				},
+			}}
+		/>,
+	);
+
+	const tile = screen.getByRole("article", { name: "Cluster" });
+	expect(tile.textContent).toBe(`0${noSignalFromNodes.text}cluster node`);
 });
 
 test("one node and one workload are in the singular", () => {

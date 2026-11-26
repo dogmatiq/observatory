@@ -271,14 +271,22 @@ export function cardExplainers(
 	/**
 	 * The data of the cluster vital card, whose last node has just sent a heartbeat,
 	 * so that the chart is high at its right end, where its arrow ends. The others
-	 * have the heartbeats of the page's fixture in the other order.
+	 * have the heartbeats of the page's fixture in the other order. It has a member
+	 * with no signal too, as the worked example of a number set apart.
 	 */
 	const clusterData = {
 		...overview.cluster,
-		nodes: overview.cluster.nodes.map((node, i, nodes) => ({
-			...node,
-			heartbeats: nodes[nodes.length - 1 - i]?.heartbeats ?? node.heartbeats,
-		})),
+		nodes: [
+			...overview.cluster.nodes.map((node, i, nodes) => ({
+				...node,
+				heartbeats: nodes[nodes.length - 1 - i]?.heartbeats ?? node.heartbeats,
+			})),
+			{
+				id: "fe2b19a7-0000-4000-8000-000000000000",
+				heartbeats: [],
+				noSignal: true as const,
+			},
+		],
 	};
 
 	/** The application of the compact digest: one whose messages are failing. */
@@ -526,10 +534,22 @@ export function cardExplainers(
 					at: ".text-4xl",
 					text: "the number of nodes sending a signal now",
 					side: "left",
-					atText: true,
-					with: [{ at: ":scope > article > span", atText: "cluster nodes" }],
+					atText: String(overview.cluster.nodes.length),
+					with: [
+						{ at: ":scope > article > span", atText: "cluster nodes" },
+						{ at: ".text-4xl .text-bad", atText: true, keepInk: true },
+					],
 					approach: "top-left",
 					dy: -40,
+				},
+				{
+					at: ".text-4xl .text-bad",
+					text: "the number of nodes with no signal",
+					side: "top",
+					atText: true,
+					keepInk: true,
+					// Above the annotation of the workloads, which is above the card too.
+					dy: -44,
 				},
 				{
 					at: ":scope > article > span",
