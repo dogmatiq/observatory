@@ -938,8 +938,8 @@ function streamsOf(v: unknown, what: string): Streams {
  * that deadline later, so that the application's section of the heartbeat chart
  * rises only when its deadline moves. Each heartbeat of a node is taken to give
  * a deadline as long after it arrived as the node's latest one gives. If a node
- * gives no way to calculate a deadline, the application has none, as such a
- * node is sending a signal for as long as it is connected.
+ * doesn't give any way to calculate a deadline, the application has none, as
+ * such a node is sending a signal for as long as it is connected.
  */
 function siteApplicationOf(
 	snapshot: Snapshot,

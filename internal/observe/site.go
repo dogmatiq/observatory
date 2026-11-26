@@ -320,7 +320,7 @@ func (t *tally) add(n int, share float64) {
 	t.nodes += n
 }
 
-// share returns the share of the nodes that report, or nil if every one does.
+// share returns the share of the nodes that report, or nil if all of them do.
 func (t tally) share() *float64 {
 	if t.nodes == 0 || t.reporting >= float64(t.nodes) {
 		return nil

@@ -134,7 +134,7 @@ func TestSiteViewOf(t *testing.T) {
 		}
 	})
 
-	t.Run("it gives no coverage when every node at the site reports the tile", func(t *testing.T) {
+	t.Run("it doesn't give a coverage when all nodes at the site report the tile", func(t *testing.T) {
 		view := SiteViewOf(nil, [][]ClusterView{
 			{cluster(statements, []string{"a"}, &EventsTile{}, nil)},
 			{cluster(billing, []string{"b", "c"}, &EventsTile{}, nil)},

@@ -1009,7 +1009,7 @@ test("selectSite gives the applications at no site no site", () => {
 	expect(selectSite(s, 0)).toEqual({ applications: [] });
 });
 
-test("selectSite gives no site view of a document with no applications", () => {
+test("selectSite doesn't give a site view of a document with no applications", () => {
 	const s = applied([changed({ site: { name: "eu-west", key: "s1" } }), 0]);
 
 	expect(selectSite(s, 0)).toBeUndefined();
@@ -1059,7 +1059,7 @@ test("an application's heartbeats leave out those of a node with no signal", () 
 	});
 });
 
-test("an application with a node that gives no way to tell when its heartbeats expire has no deadline", () => {
+test("an application with a node that doesn't give any way to tell when its heartbeats expire has no deadline", () => {
 	const s = applied(
 		[
 			changed({
