@@ -512,11 +512,6 @@ type Member struct {
 	// unless another arrives first. It is zero if the node's heartbeats give no
 	// way to calculate it, or if it isn't connected. See [Node.Reporting].
 	Expiry float64 `json:"expiry,omitempty"`
-
-	// Interval is how long the node's engine aims to wait between two of its
-	// heartbeats, in milliseconds, as its preamble says. It is zero if the
-	// preamble doesn't say, or if the node isn't connected.
-	Interval float64 `json:"interval,omitempty"`
 }
 
 // Chart is the history of a number, to be drawn as a sparkline.
@@ -993,9 +988,6 @@ func memberOf(now time.Time, n Node) Member {
 		}
 		if !n.Deadline.IsZero() {
 			m.Expiry = float64(n.Deadline.Sub(n.HeartbeatAt)) / float64(time.Millisecond)
-		}
-		if d := n.Preamble.GetHeartbeatInterval(); d != nil {
-			m.Interval = float64(d.AsDuration()) / float64(time.Millisecond)
 		}
 	}
 
