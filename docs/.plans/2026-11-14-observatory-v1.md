@@ -1061,7 +1061,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   node says that it sends the next, or three of the intervals that its engine gives, as the server works out to tell
   whether the node is sending a signal. The page relies only on that deadline, and adds no tolerance of its own. When a
   node stops sending a signal, its section glitches once and then lingers for five seconds in the gray of the flat line,
-  falling to empty, before its share shrinks away. An application's section on the site view follows the latest
+  with no shade under it, falling to empty, before its share shrinks away. An application's section on the site view follows the latest
   deadline of its nodes, and a heartbeat raises it only if it moves that deadline later. Done for the cluster and engine
   tiles (c354465, 258341f, cda0004, 926c390, 7b5301c): the stream sends each heartbeat's expiry with it, and a node that gives no way to tell
   when its heartbeats expire stays full while it is connected. The site view's applications tile follows once its server
