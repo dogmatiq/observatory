@@ -661,6 +661,9 @@ parts. An item that says "Done" is built.
 - Decided: the time in a heartbeat chart's readout is its measurement, so it has the tile's color, as a sparkline's
   value does, and the rest is muted: the cluster tile's says "node 3f8e2a10" over "heartbeat 4 s ago", and the engine
   tile's only "heartbeat 4 s ago", because its chart has one share (done, d30c232, e8dad8f).
+- To review later, with the other pages' messages, which haven't been reviewed yet: the five messages of a page whose
+  site, application or cluster no node has reported start "The Observatory knows no…", which makes the Observatory a
+  person and negates the noun. Decided that they change; their new words are shown side by side when they are reviewed.
 - The prepositions of the page (decided). The spec's own words are kept: events are "on" an event stream, messages are
   "in" a queue, instances are "bound to" an event stream or a queue, and workloads are "owned by" a node. A distribution
   is "across" the things that it is of, and "between" is not used, because it means two. Done (341d720): the events
