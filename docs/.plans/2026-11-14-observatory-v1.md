@@ -768,7 +768,8 @@ but isn't shown, and decide towards the end which of them to show and where.
 | Deadlines canceled per minute | `HandlerDeadlinesCanceled` | As above. |
 | Process instances ended per minute | `ProcessInstancesEnded` | As above. |
 | Events recorded or handled per minute as a figure | `HandlerEventsRecorded`, `HandlerEventsHandled` | The cards draw only their chart, as the prototype did. |
-| Messages that are due, by queue and by handler | `QueueCommandsDue`, `QueueDeadlinesDue`, `HandlerCommandsDue`, `HandlerDeadlinesDue` | Only the backlog rule reads the queues' counts. No view does. |
+| Messages that are due, by handler, for commands | `HandlerCommandsDue` | An aggregate's and an integration's digests count every command that waits. The queues tiles and a process's digest count the messages that are due. |
+| Messages that are waiting but not yet due, by queue and for a process | `QueueCommandsPending`, `QueueDeadlinesPending`, `HandlerDeadlinesPending` | The queues tiles and a process's digest count the messages that are due instead. |
 | Instances that a node holds in memory | `AggregateInstancesInMemory`, `ProcessInstancesInMemory` | The Observatory doesn't read them yet, and runkit doesn't support them. |
 | Which queue or handler has the failing messages | `QueueCommandsFailing`, `QueueDeadlinesFailing`, and the handler counterparts | The tile and the card show only the total. |
 | The Issues that the health rules find | `Health.Assess` | No view shows them, and nothing calls `Assess` yet. |
@@ -1175,7 +1176,14 @@ Tick each item when it is done, and write the pull request or commit that did it
   waiting count's annotation is "the number of messages ready to be delivered now"; the queues card's and the compact
   digest's first paragraph is "Commands and deadlines wait on queues until they are delivered. A command is ready to
   be delivered as soon as it is queued, and a deadline once its scheduled time arrives."; and their advice is "Fewer ready messages is
-  better. If the number keeps rising, messages are becoming ready faster than they are being handled."
+  better. If the number keeps rising, messages are becoming ready faster than they are being handled." Done (28f4f72,
+  c783080): the queues tiles count the messages that are due, and so does the compact digest, whose data comes with
+  the site view's server side. Settled by what was already decided: an engine that reports the messages waiting but not
+  the ones that are due has the tile of an engine that doesn't report the messages in queues, whose headline is its rate;
+  and the cards keep the word "messages", which the explainers' approved words describe. Built as recommended, for the
+  user to choose on a temporary page: a process's digest counts its deadlines that are due too, with the note "the
+  number of deadlines ready to be handled now"; and, since the spec doesn't say whether a failing message is due, the
+  failing "+N" of a count of due messages is beside it, not taken out of it.
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
   engine's event stream model from the server for this, as the events card has it.
