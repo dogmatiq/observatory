@@ -40,11 +40,13 @@
 //     absent for an engine that doesn't, whose ID is the ID in the address.
 //     "reportsWorkloads" is true if any node says that it reports the
 //     workloads that it owns, and is absent otherwise.
-//   - "nodes": the members of the cluster, each {"workloads"}, which is the
-//     number of workloads that the node owns, and is absent for a node that
-//     doesn't report them or hasn't yet. For an engine that doesn't run as a
-//     cluster, it holds only the engine, while the engine is reporting, and is
-//     empty otherwise.
+//   - "nodes": the members of the cluster, each {"workloads", "interval"}.
+//     "workloads" is the number of workloads that the node owns, and is absent
+//     for a node that doesn't report them or hasn't yet. "interval" is how long
+//     the node's engine aims to wait between two of its heartbeats, in
+//     milliseconds, and is absent if its preamble doesn't say. For an engine
+//     that doesn't run as a cluster, it holds only the engine, while the engine
+//     is reporting, and is empty otherwise.
 //   - "eventStreams": each event stream, {"length"}. It is absent if no node
 //     supports the length of event streams.
 //   - "oneStream": true if every node says that its engine appends every event

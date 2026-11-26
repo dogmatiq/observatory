@@ -354,6 +354,9 @@ func documentOf(view observe.ClusterView) map[string]any {
 		if n.Workloads != nil {
 			node["workloads"] = *n.Workloads
 		}
+		if n.Interval > 0 {
+			node["interval"] = n.Interval
+		}
 		nodes[n.ID] = node
 	}
 	doc["nodes"] = nodes

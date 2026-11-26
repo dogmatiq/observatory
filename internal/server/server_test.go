@@ -818,6 +818,31 @@ func TestStream(t *testing.T) {
 			})
 		})
 
+		t.Run("it gives each node the interval between the heartbeats that its engine sends", func(t *testing.T) {
+			engine := uuidpb.Generate()
+			start(t, enginegrpc.WatchEngineResponse_Preamble_builder{
+				Id:                engine,
+				HeartbeatInterval: durationpb.New(2 * time.Second),
+			}.Build(), func(doc map[string]any) {
+				node := at(t, doc, "nodes", engine.AsString()).(map[string]any)
+				if got := node["interval"]; got != 2000.0 {
+					t.Fatalf("unexpected interval: got %v, want 2000", got)
+				}
+			})
+		})
+
+		t.Run("it gives no interval for a node whose engine doesn't say one", func(t *testing.T) {
+			engine := uuidpb.Generate()
+			start(t, enginegrpc.WatchEngineResponse_Preamble_builder{
+				Id: engine,
+			}.Build(), func(doc map[string]any) {
+				node := at(t, doc, "nodes", engine.AsString()).(map[string]any)
+				if _, ok := node["interval"]; ok {
+					t.Fatalf("unexpected interval in %v", node)
+				}
+			})
+		})
+
 		t.Run("it says that the engine uses one event stream and one queue, if it says so", func(t *testing.T) {
 			start(t, enginegrpc.WatchEngineResponse_Preamble_builder{
 				Id: uuidpb.Generate(),
