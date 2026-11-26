@@ -937,8 +937,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   page at every address that a browser asks for a page at outside `/-/`, which the Observatory's own server must do
   too once it serves the page. A name
   address keeps the address that was visited. `/clusters/{id}` moves to `/-/cluster/{id}` only for an ID that is a
-  UUID, because a site named "clusters" has addresses of the same form. The page of a site, of an application at
-  several sites, and the lists of candidates are plain lists of links until they are designed. Their words, and the
+  UUID, because a site named "clusters" has addresses of the same form. The page of an application at several sites
+  and the lists of candidates are plain lists of links until they are designed; a site's page is the site view. Their words, and the
   heading "Clusters" of the root list, whose entries are now applications at sites, are placeholders until then, and
   are settled as those pages are designed on `/-/review`. Every page that waits
   for something to become known asks again every second.
@@ -976,7 +976,14 @@ Tick each item when it is done, and write the pull request or commit that did it
   alternative. An application is sending a signal while its engine, or any node of its cluster, is. The coverage rule
   applies across the site: a total's coverage is the share of the nodes at the site that report it, and an application
   with no signal counts as nodes that don't. The view of the applications at no site is the same, at the nil UUID's
-  address. The backend is built once the design is settled.
+  address. The backend is built once the design is settled. Done (f79c6ca, 44aed09): the server adds up the cluster
+  views of the clusters at the site (`observe.SiteViewOf`), and serves it at `/-/api/sites/{key}` and as a stream at
+  `/-/api/sites/{key}/watch`, in the cluster's stream's protocol. An application that runs as several clusters at one
+  site is one digest, whose figures are the sums of its clusters'; a cluster that is down adds no figures and counts
+  as a node that doesn't report. An application's coverage is the lowest of its figures'. A site's page shows the site
+  view, with the stopped flag and a trail of the site alone; the applications at no site have no trail. The compact
+  digest's rate is a whole number per minute, hour or day, as the tiles' is, and every rate on the page holds while a
+  node is being measured.
 - What a cluster's page shows of `HandlerEventStreamLag`. The spec gives no rule for combining it across nodes, on
   purpose: what makes sense to show is for the Observatory to work out. Until then a cluster shows it only if
   `WatchClusterMetrics` reports it.
@@ -1087,8 +1094,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   with no shade under it, falling to empty, before its share shrinks away. An application's section on the site view follows the latest
   deadline of its nodes, and a heartbeat raises it only if it moves that deadline later. Done for the cluster and engine
   tiles (93cd265, 8482139, 2cacb1f, 53ae090, 0424877): the stream sends each heartbeat's expiry with it, and a node that gives no way to tell
-  when its heartbeats expire stays full while it is connected. The site view's applications tile follows once its server
-  side is built.
+  when its heartbeats expire stays full while it is connected. The site view's applications tile follows (44aed09).
   Decided: the demo engine keeps its 15-second expiry, though its chart barely moves between heartbeats, because
   runkit's own heartbeats, every second with a 5-second expiry, drain a section by about as much. Of the ideas to give
   the chart character from real data, tried on a temporary page, neither a blip when a heartbeat arrives (too much with
