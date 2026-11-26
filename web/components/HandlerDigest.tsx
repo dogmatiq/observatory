@@ -203,9 +203,11 @@ function Summary({
 	// The number of commands that are pending for the handler is those that
 	// aren't failing, and then those that are, as in "2 +1", because the failing
 	// ones are pending too, so that the two add up to all that is pending. A
-	// process's deadlines are those that are ready to be delivered now, and its
-	// failing ones are counted beside them, because a failing deadline may or may
-	// not be ready, as it waits for its next attempt.
+	// process's deadlines are those that are ready to be delivered now, and then
+	// those that are failing, which add up to every deadline that is either. That
+	// relies on the count of ready deadlines leaving out the failing ones, which
+	// the spec doesn't say yet (dogmatiq/protobuf#53); until it does, a failing
+	// deadline whose next attempt is due may be counted in both.
 	// It recedes when it is zero. It is left out if the engine doesn't report it.
 	const queue = (icon: IconName, plural: string, ready = false) => {
 		const { queuedMessages } = summary;

@@ -855,6 +855,11 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		}
 	}
 
+	// The tile counts the messages that are due beside those that are failing,
+	// and the page adds the two. That relies on the due metrics leaving out the
+	// messages whose most recent delivery attempt failed, which the spec doesn't
+	// say yet (dogmatiq/protobuf#53); until it does, a failing message whose next
+	// attempt is due may be counted in both.
 	due := supported[metric(new(metricsgrpc.QueueCommandsDue))] ||
 		supported[metric(new(metricsgrpc.QueueDeadlinesDue))]
 	removed := supported[metric(new(metricsgrpc.QueueCommandsRemoved))] ||

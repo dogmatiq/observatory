@@ -391,11 +391,12 @@ export function QueuesTile({
 	const messages = queues?.reduce((sum, q) => sum + q.size, 0) ?? 0;
 
 	// The headline is the messages that are ready to be delivered now, and then
-	// those that are failing, as in "24 +1". A failing message may or may not be
-	// ready, as it waits for its next attempt, so the failing ones are counted
-	// beside the ready ones. If no node supports the
-	// messages in queues that are ready, it is the messages that are removed per
-	// minute.
+	// those that are failing, as in "24 +1", which add up to every message that is
+	// either. That relies on the counts of ready messages leaving out the failing
+	// ones, which the spec doesn't say yet (dogmatiq/protobuf#53); until it does,
+	// a failing message whose next attempt is due may be counted in both. If no
+	// node supports the messages in queues that are ready, the headline is the
+	// messages that are removed per minute.
 	const failing = useCurrent(data.failing);
 
 	// The rate of removal is a whole number per minute, or per hour or per day if
