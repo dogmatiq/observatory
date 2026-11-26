@@ -1102,7 +1102,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   lines, so that it moves nothing under the pointer. Nothing opens, and an ID can't be copied from a bar any more; the
   trail in the title bar is where keys and IDs are copied. A handler's digest gets a readout beside its kind icon,
   over the end of its name, which keeps its size and fades out under it, and its chart gets a readout as a tile's has.
-  On a screen that is touched, a tap on a segment or a chart does what pointing does. Done (f83b85c, 6a7a2d6).
+  A digest's readout has the color of the bar or the chart that is pointed at, not the digest's own. On a screen that is touched, a tap on a segment or a chart does what pointing does. Done (f83b85c, 6a7a2d6).
   Done with the explainers: no card's icon opens a hovercard, so an icon no longer grows when it is pointed at.
   Approved and done (ID 2; daab9a7, 9f153b0): the title bar says where the page is as a trail, which is the page's address: the site
   and the application, and, on a cluster's own page, the cluster or the engine, each a link to its own page. An
