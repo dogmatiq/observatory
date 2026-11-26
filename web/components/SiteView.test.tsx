@@ -219,3 +219,22 @@ test("the site's events tile holds its rate while a node is being measured", () 
 	expect(tile().textContent).toMatch(/^330events per minute/);
 	expect(tile().querySelector(".glitch")).toBeNull();
 });
+
+test("the events tile of applications whose engines don't report the rate counts the events on their streams, as a cluster's does", () => {
+	const data = siteOf(apps, euWest);
+	const events = data.events as NonNullable<typeof data.events>;
+	render(
+		<SiteOverview
+			data={{
+				...data,
+				events: { ...events, rate: undefined, history: undefined },
+			}}
+		/>,
+	);
+
+	const tile = screen.getByRole("article", { name: "Events" });
+
+	expect(tile.textContent).toBe(
+		`${formatCompact(events.streams?.events ?? 0)}events on ${events.streams?.count} streams`,
+	);
+});

@@ -197,7 +197,7 @@ export function applicationSegments(
 		application: { name: string; key: string };
 		amount: number;
 	}[],
-	of: "events" | "messages",
+	of: "events" | "storedEvents" | "messages",
 ): BarSegment[] {
 	const total = applications.reduce((sum, a) => sum + a.amount, 0);
 	const [singular, plural] = applicationAmounts[of];
@@ -230,6 +230,7 @@ export function applicationSegments(
  */
 const applicationAmounts = {
 	events: ["event per minute", "events per minute"],
+	storedEvents: ["event", "events"],
 	messages: ["message waiting", "messages waiting"],
 } as const;
 
@@ -239,6 +240,7 @@ const applicationAmounts = {
  */
 const applicationUnits = {
 	events: ["event/min", "events/min"],
+	storedEvents: ["event", "events"],
 	messages: ["message", "messages"],
 } as const;
 

@@ -1089,12 +1089,20 @@ function siteTitle(what: string, site: string | undefined) {
  */
 export function siteExplainers(site: string | undefined): {
 	events: ExplainerSpec;
+	eventsNoRate: ExplainerSpec;
 	queues: ExplainerSpec;
 	applications: ExplainerSpec;
 } {
 	return {
 		events: {
 			...siteEventsExample,
+			title: siteTitle(
+				"The events and event streams of the applications",
+				site,
+			),
+		},
+		eventsNoRate: {
+			...siteEventsNoRateExample,
 			title: siteTitle(
 				"The events and event streams of the applications",
 				site,
@@ -1110,6 +1118,56 @@ export function siteExplainers(site: string | undefined): {
 		},
 	};
 }
+
+/**
+ * The site's events tile of applications whose engines don't report the rate of
+ * events, whose headline is the events on their streams, as a cluster's events
+ * tile has it.
+ */
+const siteEventsNoRateExample: ExplainerSpec = {
+	label: "events tile of applications whose engines don't report the rate",
+	// siteExplainers gives the title, which names the site.
+	title: null,
+	width: 360,
+	card: explainedSite.events && (
+		<SiteEventsTile
+			data={explainedSite}
+			events={{ ...explainedSite.events, rate: undefined, history: undefined }}
+		/>
+	),
+	notes: [
+		{
+			at: ".text-4xl",
+			text: "total number of events on the applications' event streams",
+			side: "left",
+			atText: true,
+		},
+		{
+			at: ":scope > article > span",
+			text: "the number of event streams the applications have",
+			side: "right",
+			atText: `${formatCompact(explainedSite.events?.streams?.count ?? 0)} streams`,
+			bow: "under",
+		},
+		{
+			at: "div.h-2",
+			text: "how the events are spread across the applications",
+			side: "left",
+			dy: 6,
+		},
+		{
+			at: "[data-moon]",
+			text: "the moon",
+			side: "right",
+		},
+	],
+	paragraphs: [
+		{
+			text: "Events that an application records are written to event streams. Streams store events in the order they are written, so they can be read in that order.",
+			when: { has: "stream" },
+		},
+	],
+};
 
 const siteEventsExample: ExplainerSpec = {
 	label: "events tile",

@@ -1009,6 +1009,21 @@ test("selectSite gives the applications at no site no site", () => {
 	expect(selectSite(s, 0)).toEqual({ applications: [] });
 });
 
+test("selectSite leaves out the site's rate of events when no engine supports it", () => {
+	const s = applied([
+		changed({
+			site: { name: "eu-west", key: "s1" },
+			events: { streams: { count: 3, events: 40 } },
+			applications: { a1: { name: "statements", nodes: {} } },
+		}),
+		0,
+	]);
+
+	expect(selectSite(s, 0)?.events).toEqual({
+		streams: { count: 3, events: 40 },
+	});
+});
+
 test("selectSite doesn't give a site view of a document with no applications", () => {
 	const s = applied([changed({ site: { name: "eu-west", key: "s1" } }), 0]);
 

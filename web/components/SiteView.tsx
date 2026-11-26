@@ -113,7 +113,11 @@ export function SiteTotals({ data }: { data: SiteData }) {
 			<Presence shape="fade">
 				{data.events && (
 					<ErrorBoundary>
-						<Explained spec={explainers.events}>
+						<Explained
+							spec={
+								data.events.rate ? explainers.events : explainers.eventsNoRate
+							}
+						>
 							<Distrusted value={down}>
 								<Covered coverage={data.events.coverage ?? 1}>
 									<SiteEventsTile data={data} events={data.events} />
@@ -159,11 +163,12 @@ export function SiteEventsTile({
 	data: SiteData;
 	events: NonNullable<SiteData["events"]>;
 }) {
-	const { scaled, per, state } = useRate(
-		events.rate.perMinute,
-		events.rate.measuring,
-	);
+	const { rate, streams } = events;
+	const { scaled, per, state } = useRate(rate?.perMinute, rate?.measuring);
 
+	// The tile shows what the engines can tell it. Its headline is the events per
+	// minute, or, if no application's engine supports that, how many events there
+	// are, as a cluster's events tile does.
 	return (
 		<MetricTile
 			subsystem="streams"
@@ -171,38 +176,58 @@ export function SiteEventsTile({
 			icon="event"
 			statuses={[
 				...(events.coverage === undefined ? [] : [someApplicationsReport]),
-				...rateStatuses(state),
+				...(rate ? rateStatuses(state) : []),
 			]}
 			value={
-				<span>
-					<Figure number={scaled?.amount} format={formatCompact} unit={per} />
-				</span>
+				rate ? (
+					<span>
+						<Figure number={scaled?.amount} format={formatCompact} unit={per} />
+					</span>
+				) : (
+					<Ramped value={streams?.events ?? 0} format={formatCompact} />
+				)
 			}
 			detail={
-				<>
-					<span>
-						<Noun>{`events per ${per}`}</Noun>
-					</span>
-					{events.streams !== undefined && (
-						<>
-							{", "}
-							<Ramped value={events.streams.events} format={formatCompact} />
-							{` ${nounFor(events.streams.events, "event", "events")} on `}
-							<Ramped value={events.streams.count} format={formatCompact} />
-							{` ${nounFor(events.streams.count, "stream", "streams")}`}
-						</>
-					)}
-				</>
+				rate ? (
+					<>
+						<span>
+							<Noun>{`events per ${per}`}</Noun>
+						</span>
+						{streams !== undefined && (
+							<>
+								{", "}
+								<Ramped value={streams.events} format={formatCompact} />
+								{` ${nounFor(streams.events, "event", "events")} on `}
+								<Ramped value={streams.count} format={formatCompact} />
+								{` ${nounFor(streams.count, "stream", "streams")}`}
+							</>
+						)}
+					</>
+				) : (
+					<>
+						<Noun>{nounFor(streams?.events ?? 0, "event", "events")}</Noun>
+						{streams !== undefined && (
+							<>
+								{" on "}
+								<Ramped value={streams.count} format={formatCompact} />
+								{` ${nounFor(streams.count, "stream", "streams")}`}
+							</>
+						)}
+					</>
+				)
 			}
 			bar={
 				<StackedBar
 					subsystem="streams"
+					// The bar is of the applications' rates, or, with no rate, of the
+					// events on their streams.
 					segments={applicationSegments(
 						data.applications.map((a) => ({
 							application: a.application,
-							amount: a.events?.perMinute ?? 0,
+							amount:
+								(rate ? a.events?.perMinute : a.events?.streams?.events) ?? 0,
 						})),
-						"events",
+						rate ? "events" : "storedEvents",
 					)}
 				/>
 			}

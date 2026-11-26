@@ -60,9 +60,10 @@ export interface SiteData {
 		/**
 		 * The events recorded per minute, across the applications. `measuring` is
 		 * true while it can't be given only because a node's count is still being
-		 * measured.
+		 * measured. Absent if no application's engine supports the rate, as it is
+		 * for a cluster's events tile.
 		 */
-		rate: { perMinute?: number; measuring?: boolean };
+		rate?: { perMinute?: number; measuring?: boolean };
 
 		/**
 		 * The event streams of all the applications together, if any application's

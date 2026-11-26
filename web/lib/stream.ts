@@ -861,11 +861,12 @@ export function selectSite(
 	if (doc.events !== undefined) {
 		data.events = attempt(() => {
 			const e = object(doc.events, "events");
-			// A rate that no engine supports is shown as one that isn't known.
-			const events: NonNullable<SiteData["events"]> = {
-				rate: rateOf(e.rate, "events.rate") ?? {},
-			};
-			if (e.rate !== undefined) {
+			// A rate that no engine supports is left out, and the tile shows the
+			// events instead, as a cluster's events tile does.
+			const events: NonNullable<SiteData["events"]> = {};
+			const rate = rateOf(e.rate, "events.rate");
+			if (rate !== undefined) {
+				events.rate = rate;
 				events.history = chartOf(snapshot.series.get("events"), ref, 60);
 			}
 			if (e.streams !== undefined) {
