@@ -1190,8 +1190,11 @@ Tick each item when it is done, and write the pull request or commit that did it
   whose most recent delivery attempt failed and a due one as one ready to be delivered now, so a failing message whose
   next attempt has come due is both, and the sum counts it twice. Filed as dogmatiq/protobuf#53, which asks for the messages
   that wait to be reported as counts that never overlap: scheduled (deadlines only), ready and failing, with the
-  pending metrics removed, since they are the sum of the others. The Observatory relies on that future behaviour, and says so where it adds the
-  two counts: in `internal/observe/overview.go`, `web/components/Overview.tsx` and `web/components/HandlerDigest.tsx`.
+  pending metrics removed, since they are the sum of the others. Until it is done or rejected, the Observatory emulates
+  it: the ready count of each queue, of each kind of message, and of a process's deadlines is the smaller of the due
+  count and the pending count less the failing one, which is exact for commands and the closest bound for deadlines
+  (`readyOf` in `internal/observe/overview.go`; done, 0f8743d). Revisit when dogmatiq/protobuf#53 is done, to read the
+  ready counts as reported and remove `readyOf`, or if it is rejected, to settle what the cards count instead.
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
   engine's event stream model from the server for this, as the events card has it.
