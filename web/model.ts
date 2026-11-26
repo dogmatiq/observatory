@@ -298,9 +298,11 @@ export interface OverviewData {
 		/**
 		 * The events recorded per minute. Absent if no node supports it. Its
 		 * `perMinute` is absent while the Observatory can't give it yet, and is
-		 * shown rounded.
+		 * shown rounded. `measuring` is true while it can't give it only because a
+		 * node's count is still being measured, as for a few seconds after the node
+		 * joins the cluster or reconnects.
 		 */
-		rate?: { perMinute?: number };
+		rate?: { perMinute?: number; measuring?: boolean };
 
 		/** The length of each of the cluster's event streams, in events. */
 		streams?: SpreadPart[];
@@ -351,6 +353,9 @@ export interface OverviewData {
 		 */
 		throughput?: {
 			perMinute?: number;
+
+			/** True while `perMinute` is absent only because a node's count is still being measured, as for the events' rate. */
+			measuring?: boolean;
 
 			/**
 			 * What it counts: the messages that handlers have handled, those that are

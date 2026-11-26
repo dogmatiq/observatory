@@ -14,6 +14,7 @@ import { ClusterTile, EngineTile, Overview } from "./Overview.tsx";
 import {
 	noSignalFromEngine,
 	noSignalFromNodes,
+	rateLost,
 	rateUnavailable,
 } from "./statuses.ts";
 
@@ -251,6 +252,40 @@ test("a rate that the Observatory has never had is a zero in dot-matrix type, th
 	expect(
 		within(events).getByRole("img", { name: "not available" }),
 	).toBeDefined();
+});
+
+test("a rate that waits only on a node being measured stays as it was, unblurred and with no flag", () => {
+	const withRate = (rate: { perMinute?: number; measuring?: boolean }) => (
+		<Overview
+			application={application}
+			data={{ ...overview, events: { ...overview.events, rate } }}
+		/>
+	);
+	const { rerender } = render(withRate({ perMinute: 330 }));
+	const events = () => screen.getByRole("article", { name: "Events" });
+
+	rerender(withRate({ measuring: true }));
+	expect(events().textContent).toBe(
+		"330events per minute, 1.2K events on 2 streams",
+	);
+	expect(events().querySelector(".distrust-blur")).toBeNull();
+});
+
+test("a rate that isn't known for any other reason is lost, and stays lost while a node is then measured", () => {
+	const withRate = (rate: { perMinute?: number; measuring?: boolean }) => (
+		<Overview
+			application={application}
+			data={{ ...overview, events: { ...overview.events, rate } }}
+		/>
+	);
+	const { rerender } = render(withRate({ perMinute: 330 }));
+	const events = () => screen.getByRole("article", { name: "Events" });
+
+	rerender(withRate({}));
+	expect(events().textContent).toContain(rateLost.text);
+
+	rerender(withRate({ measuring: true }));
+	expect(events().textContent).toContain(rateLost.text);
 });
 
 test("the events tile of an engine that appends every event to one stream doesn't count streams, and has no bar", () => {

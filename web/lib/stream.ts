@@ -607,16 +607,21 @@ export function selectCluster(
 
 	// A part of a tile that the document doesn't have is one that no node
 	// supports, and the tile leaves it out. A rate that the document has, and that
-	// has no number, is one that the nodes support and that isn't known yet.
+	// has no number, is one that the nodes support and that isn't known yet, which
+	// may be only because a node's count is still being measured.
 	const rateOf = (
 		v: unknown,
 		what: string,
-	): { perMinute?: number } | undefined => {
+	): { perMinute?: number; measuring?: true } | undefined => {
 		if (v === undefined) {
 			return undefined;
 		}
-		const perSecond = maybeNumber(object(v, what).rate, `${what}.rate`);
-		return perSecond === undefined ? {} : { perMinute: perSecond * 60 };
+		const rate = object(v, what);
+		const perSecond = maybeNumber(rate.rate, `${what}.rate`);
+		if (perSecond !== undefined) {
+			return { perMinute: perSecond * 60 };
+		}
+		return rate.measuring === true ? { measuring: true } : {};
 	};
 
 	if (doc.eventStreams !== undefined || rates.events !== undefined) {

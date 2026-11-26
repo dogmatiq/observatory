@@ -253,7 +253,7 @@ export function EventsTile({
 	// A rate is a whole number of events per minute, or per hour or per day if it
 	// is less than one per minute, and is lost, as the figure shows it, for a
 	// minute at most.
-	const { scaled, per, state } = useRate(rate?.perMinute);
+	const { scaled, per, state } = useRate(rate?.perMinute, rate?.measuring);
 
 	// The tile shows what the nodes can tell it. Its headline is the events per
 	// minute, or, if no node supports that, how many events there are.
@@ -399,7 +399,10 @@ export function QueuesTile({
 
 	// The rate of removal is a whole number per minute, or per hour or per day if
 	// it is less than one per minute, as the rate of events is.
-	const { scaled, per, state } = useRate(throughput?.perMinute);
+	const { scaled, per, state } = useRate(
+		throughput?.perMinute,
+		throughput?.measuring,
+	);
 
 	// What the rate counts, which is the messages that handlers have handled, or
 	// those that are removed from the queues, or only the commands, or only the

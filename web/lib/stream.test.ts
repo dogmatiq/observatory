@@ -683,6 +683,21 @@ test("a rate that a change removes gives no figure again", () => {
 	expect(selectCluster(s, 1)?.overview.events?.rate).toEqual({});
 });
 
+test("a rate that isn't known only because a node is being measured says so", () => {
+	const s = applied([
+		changed({
+			application: { name: "a", key: "k" },
+			eventStreams: {},
+			rates: { events: { measuring: true } },
+		}),
+		0,
+	]);
+
+	expect(selectCluster(s, 0)?.overview.events?.rate).toEqual({
+		measuring: true,
+	});
+});
+
 test("a part of the document that isn't well formed is left out and the others are not", () => {
 	const s = applied([
 		changed({
