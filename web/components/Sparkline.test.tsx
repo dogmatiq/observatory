@@ -228,6 +228,30 @@ describe("pointing at a chart", () => {
 		expect(last()).toBeUndefined();
 	});
 
+	test("on a screen that is touched, a tap gives the value at that place until a tap elsewhere", () => {
+		const { layer, last } = chartWithReadouts();
+
+		fireEvent.pointerDown(layer, { clientX: 120, pointerType: "touch" });
+		fireEvent.pointerLeave(layer, { pointerType: "touch" });
+		expect(last()).toEqual({ figure: "40", unit: "things", age: "30 s ago" });
+
+		fireEvent.pointerDown(document.body, { pointerType: "touch" });
+		expect(last()).toBeUndefined();
+	});
+
+	test("a tap on a chart doesn't follow a link around it", () => {
+		const { container } = render(
+			<a href="/somewhere">
+				<Sparkline chart={chart} describe={write} className="h-12" />
+			</a>,
+		);
+		const layer = container.querySelector("div") as HTMLElement;
+
+		fireEvent.pointerDown(layer, { clientX: 120, pointerType: "touch" });
+
+		expect(fireEvent.click(layer)).toBe(false);
+	});
+
 	test("there is no cursor over a chart that has no describe", () => {
 		const { container } = render(<Sparkline chart={chart} />);
 

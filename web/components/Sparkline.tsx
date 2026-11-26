@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { useDistrusted } from "../lib/distrust.tsx";
 import { useScrolled } from "../lib/live.tsx";
@@ -107,6 +107,34 @@ function Cursor({
 }) {
 	// Where the pointer is, as a share of the chart's width, if it is on it.
 	const [pointer, setPointer] = useState<number>();
+	const layer = useRef<HTMLDivElement>(null);
+	const tapped = useRef(false);
+
+	// On a screen that is touched, a tap anywhere but the chart ends what a tap on
+	// it began.
+	useEffect(() => {
+		if (pointer === undefined) {
+			return;
+		}
+
+		const onPointerDown = (event: globalThis.PointerEvent) => {
+			if (
+				event.pointerType === "touch" &&
+				!layer.current?.contains(event.target as Node)
+			) {
+				setPointer(undefined);
+			}
+		};
+		document.addEventListener("pointerdown", onPointerDown);
+		return () => document.removeEventListener("pointerdown", onPointerDown);
+	}, [pointer]);
+
+	const pointAt = (event: { clientX: number; currentTarget: Element }) => {
+		const box = event.currentTarget.getBoundingClientRect();
+		setPointer(
+			Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)),
+		);
+	};
 
 	// The chart scrolls, so the time under a pointer that is still goes on moving.
 	const mark = markAt(
@@ -126,14 +154,30 @@ function Cursor({
 		// values are given as text beside it, so the pointer is the only way to point
 		// at a place on it.
 		<div
+			ref={layer}
+			aria-hidden="true"
 			className={cn("absolute inset-x-0 bottom-0", className)}
-			onPointerMove={(e) => {
-				const box = e.currentTarget.getBoundingClientRect();
-				setPointer(
-					Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)),
-				);
+			onPointerMove={pointAt}
+			// A finger leaves the chart as it lifts, which doesn't end what the tap
+			// began.
+			onPointerLeave={(e) => {
+				if (e.pointerType !== "touch") {
+					setPointer(undefined);
+				}
 			}}
-			onPointerLeave={() => setPointer(undefined)}
+			onPointerDown={(e) => {
+				tapped.current = e.pointerType === "touch";
+				if (tapped.current) {
+					pointAt(e);
+				}
+			}}
+			// A tap on a chart in a card that is a link points at the chart, and
+			// doesn't follow the link.
+			onClick={(e) => {
+				if (tapped.current) {
+					e.preventDefault();
+				}
+			}}
 		>
 			{mark && <CursorMark x={mark.x} y={mark.y} />}
 		</div>

@@ -11,16 +11,26 @@ import type { Subsystem } from "../components/subsystems.ts";
  * ago"; or the thing that a segment of a bar is of, over its amount and its share
  * of the bar, such as "queue 113cbdc3" over "12 messages, 63%".
  *
- * A readout is never more than two lines, the subject or the age and the line of
- * the figure, so that it never makes the card's top row taller.
+ * A readout is two lines at most: the line of the figure, and either the subject
+ * above it or the age below it, never both, so that it never makes the card's
+ * top row taller.
  */
-export interface Readout {
-	/**
-	 * The thing that the measurement is of, such as "node 3f8e2a10", for a chart
-	 * or a bar of more than one thing. It is shown above the figure.
-	 */
-	subject?: string;
+export type Readout = (
+	| {
+			/**
+			 * The thing that the measurement is of, such as "node 3f8e2a10", for a
+			 * chart or a bar of more than one thing. It is shown above the figure.
+			 */
+			subject: string;
+			age?: never;
+	  }
+	| {
+			subject?: never;
 
+			/** How long ago the figure was, if it isn't itself a time. */
+			age?: string;
+	  }
+) & {
 	/** What the figure measures, such as "heartbeat", shown before it. */
 	label?: string;
 
@@ -35,16 +45,13 @@ export interface Readout {
 	 */
 	share?: string;
 
-	/** How long ago the figure was, if it isn't itself a time. */
-	age?: string;
-
 	/**
 	 * The subsystem whose color the figure and the share have, if it isn't the
 	 * card's: that of the bar or the chart that is pointed at, on a card whose bars
 	 * and charts have colors of their own, such as a handler's digest.
 	 */
 	subsystem?: Subsystem;
-}
+};
 
 /**
  * readoutKey returns a string that is the same for two readouts that say the

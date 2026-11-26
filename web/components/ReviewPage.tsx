@@ -825,7 +825,7 @@ export function ReviewPage() {
 					step={6}
 					title="The explainer's sentence about workloads"
 					deciding="That the explainer says that workloads vary in size, at the end of its paragraph about workloads, which is there only when the engine reports workloads; and the sentence's words."
-					notDeciding="The rest of the explainer, which is approved; the hovercards of the bar's segments (CL 4)."
+					notDeciding="The rest of the explainer, which is approved; the readout of the bar's segments."
 					note="The sentence was a paragraph of each node's hovercard. It tells the reader not to read a node's count of workloads as how busy the node is, and its words never change, so it explains, which is the explainer's job. Point at the tile and press its &quot;?&quot; to read it."
 				>
 					<State
