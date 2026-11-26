@@ -950,8 +950,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   gets the worked example of a number set apart. Done (c89822f): the bar and the heartbeat chart are of the nodes
   sending a signal, and a member with no signal counts as a node that doesn't report its workloads, so the number of
   workloads blurs and the tile's flag says that only some nodes report them. The cluster explainer's annotation of the
-  "+N" is "the number of nodes with no signal", placed above the card; its wording is compared with others on a
-  temporary page, for the user to choose.
+  "+N" is "the number of nodes with no signal" (decided), placed above the card, as the site view's applications tile
+  says "the number of applications with no signal". It needn't say that the part is counted separately, because the
+  explainer's arrows show it.
 - Under review on `/-/review` (SV): the site view. Three tiles, the same size as the cluster view's: the events per
   minute across the applications, with the events in the event streams of all the applications together, and the number of
   those streams, which is how widely a reader of the site's events has to read, and a bar of which applications record the most; the messages waiting, with those
