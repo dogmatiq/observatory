@@ -1159,7 +1159,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   headline hovercards), and reviews the site view's explainers (SW) and the engine tile's (EN 4). Done: the segment hovercards' advice says
   "An even spread is better".
 - Later, for the design review: whether the queues card's detail line says what its rate counts. While the card shows
-  the messages waiting, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
+  the messages that are ready, the rate in the detail line is a bare "442/min", whatever the engine counts; only the explainer's
   annotation says whether it is messages handled, messages removed, commands handled or deadlines handled. The chart's
   hovercard already gives a unit for each ("handled", "removals", "commands", "deadlines"), which the detail line could
   use, as in "442 commands/min". While the rate is the headline, its label already says what it counts.
@@ -1182,7 +1182,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   the ones that are due has the tile of an engine that doesn't report the messages in queues, whose headline is its rate;
   and the cards keep the word "messages", which the explainers' approved words describe. Built as recommended, for the
   user to choose on a temporary page: a process's digest counts its deadlines that are due too, with the note "the
-  number of deadlines ready to be handled now"; and, since the spec doesn't say whether a failing message is due, the
+  number of deadlines ready to be delivered now", as the queues' note says "ready to be delivered now"; and, since the spec doesn't say whether a failing message is due, the
   failing "+N" of a count of due messages is beside it, not taken out of it.
 - To build after the review of the explainers: an aggregate's digest has no bar when the engine reports that it has one
   event stream, as the events card has none, because a bar with one segment shows no spread. The digest needs the
