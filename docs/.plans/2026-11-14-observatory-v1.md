@@ -1067,11 +1067,13 @@ Tick each item when it is done, and write the pull request or commit that did it
   runkit's own heartbeats, every second with a 5-second expiry, drain a section by about as much. Of the ideas to give
   the chart character from real data, tried on a temporary page, neither a blip when a heartbeat arrives (too much with
   frequent heartbeats and many nodes) nor a mark where the next is due is built.
-  Decided: a node's section glitches while its heartbeat is late, which is once the interval that its engine gives has
-  passed with no new heartbeat, until the heartbeat expires. It is the figures' glitch turned on its side for a line:
-  the left and the right half of the section slip up and down on the figures' keyframes, with their red and cyan
-  shadows, by more as the heartbeat gets later, and the ends of the section stay joined to the line. Done for the
-  cluster and engine tiles (d11d974, df9ce8d): the stream sends each node's interval in the state document, and for a
+  Decided: a node's section glitches once each time that it misses a heartbeat, which is each time that the interval
+  that its engine gives passes with no new heartbeat, until the heartbeat expires, because a glitch marks an event and
+  never lasts. Each glitch is half a second, or half the interval if that is shorter, so that two never run together.
+  It is the figures' glitch turned on its side for a line: the left and the right half of the section slip up and down,
+  once through the figures' keyframes, with their red and cyan shadows, by more as the heartbeat gets later, and the
+  ends of the section stay joined to the line. Done for the cluster and engine tiles (d11d974, df9ce8d, and the glitch
+  once for each missed heartbeat in 9f999dc): the stream sends each node's interval in the state document, and for a
   viewer who asks for less motion the section doesn't slip, and has only its shadows.
   Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
   sparklines' readouts are shown: "node 3f8e2a10", with "node" muted and the short ID in the cluster's color, over
