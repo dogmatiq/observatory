@@ -52,6 +52,26 @@ export const unavailableClasses = "inline-block distrust-blur [--distrust:1]";
 
 const Coverage = createContext(1);
 
+/** Whether the parts inside are an explainer's copy of a card. See [ExampleData]. */
+const Example = createContext(false);
+
+/**
+ * ExampleData marks an explainer's copy of a card, which shows what the card's
+ * numbers mean with made-up data, not how sure they are: its numbers are as
+ * trusted as if every node reported them, whatever their coverage, and its flag
+ * shows only a status that says that something is wrong, not one that only
+ * qualifies the figures. On a real card, the blur and the flag say how sure the
+ * numbers are, when it matters.
+ */
+export function ExampleData({ children }: { children: ReactNode }) {
+	return <Example.Provider value={true}>{children}</Example.Provider>;
+}
+
+/** useExampleData returns true inside an explainer's copy of a card. */
+export function useExampleData(): boolean {
+	return useContext(Example);
+}
+
 /**
  * Covered says what share of the cluster's nodes, from 0 to 1, the numbers inside
  * it include, which is less than all of them while only some nodes report what
@@ -65,7 +85,12 @@ export function Covered({
 	coverage: number;
 	children: ReactNode;
 }) {
-	return <Coverage.Provider value={coverage}>{children}</Coverage.Provider>;
+	const example = useExampleData();
+	return (
+		<Coverage.Provider value={example ? 1 : coverage}>
+			{children}
+		</Coverage.Provider>
+	);
 }
 
 /** useCoverage returns the share of the cluster's nodes that the numbers here include. */

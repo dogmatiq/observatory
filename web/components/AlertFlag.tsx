@@ -1,5 +1,6 @@
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn.ts";
+import { useExampleData } from "../lib/distrust.tsx";
 import { prefersReducedMotion } from "../lib/ramped.ts";
 import { Icon } from "./Icon.tsx";
 import { Popover } from "./Popover.tsx";
@@ -21,9 +22,18 @@ const appearGlitchTime = 500;
  * move when the page first draws, nor for a viewer who asks for less motion.
  *
  * A screen reader reads the statuses where the flag is, because the tooltip only
- * appears to a pointer or a finger.
+ * appears to a pointer or a finger. In an explainer's copy of a card, the flag
+ * shows only the statuses that say that something is wrong.
  */
-export function AlertFlag({ statuses }: { statuses: readonly Status[] }) {
+export function AlertFlag({
+	statuses: given,
+}: {
+	statuses: readonly Status[];
+}) {
+	// An explainer's copy of a card shows only what says something is wrong. See
+	// [ExampleData].
+	const example = useExampleData();
+	const statuses = example ? given.filter((s) => s.tone === "bad") : given;
 	const shown = statuses.length > 0;
 	const glitching = useGlitchOnAppearing(shown);
 	const bad = statuses.some((s) => s.tone === "bad");
