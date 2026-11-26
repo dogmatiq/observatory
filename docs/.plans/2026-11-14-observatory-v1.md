@@ -1072,7 +1072,12 @@ Tick each item when it is done, and write the pull request or commit that did it
   passed with no new heartbeat, until the heartbeat expires. It is the figures' glitch turned on its side for a line:
   the left and the right half of the section slip up and down on the figures' keyframes, with their red and cyan
   shadows, by more as the heartbeat gets later, and the ends of the section stay joined to the line. Still to build;
-  it needs the engine's interval on the page. Next on the temporary page: pointing at a node's share of the chart.
+  it needs the engine's interval on the page.
+  Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
+  sparklines' readouts are shown: "node 3f8e2a10", with "node" muted and the short ID in the cluster's color, over
+  "heartbeat 4 s ago", "heartbeat just now" under 1.5 seconds, or "heartbeat 3 s late" once the heartbeat is late. The
+  share's line is thicker and its shade stronger, fading out at the share's edges so that it has no border; how thick
+  the line is, is being tried on the temporary page. Still to build.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
