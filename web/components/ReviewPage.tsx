@@ -295,7 +295,7 @@ export function ReviewPage() {
 					</State>
 					<State
 						label="The handler digests' bars"
-						note="Today each segment of a handler digest's bar has a tooltip of one line, with the ID inside the sentence: &quot;100 instances on event stream 8b0081fd ⧉&quot; on an aggregate's bar, &quot;20 instances on deadline queue c42e7a19 ⧉&quot; on a process's, and &quot;120 commands/min on node 113cbdc3 ⧉&quot; on an integration's or a projection's. These follow the rule instead, as cards with the ID in the place of a name, the kind, and the figure. They have no paragraphs, as the digest's explainer says what the bar is."
+						note="Today each segment of a handler digest's bar has a tooltip of one line, with the ID inside the sentence: &quot;100 instances bound to event stream 8b0081fd ⧉&quot; on an aggregate's bar, &quot;20 instances bound to deadline queue c42e7a19 ⧉&quot; on a process's, and &quot;120 commands/min on node 113cbdc3 ⧉&quot; on an integration's or a projection's. These follow the rule instead, as cards with the ID in the place of a name, the kind, and the figure. They have no paragraphs, as the digest's explainer says what the bar is."
 						recommendation="Approve: make these segments drill down the way the cluster view's do, so that every segment about one thing follows the rule."
 						wide
 					>
@@ -738,7 +738,7 @@ export function ReviewPage() {
 					title="The headlines and detail lines"
 					deciding="The words on the tiles themselves: each headline and detail line, such as &quot;messages in 7 queues, 2.1K/min&quot;."
 					notDeciding="The tiles' explainers (SW); the tooltip of a compact digest's alert flag (SH 2); the bars (SB); the charts (SC); the look of the tiles in each state, which is settled (SS)."
-					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events in the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications sending a signal, with the number that send none set apart in red, and its detail line is the word &quot;applications&quot;."
+					note="The words on the tiles themselves. The events tile's headline is the events per minute, and its detail line gives the events on the event streams of all the applications together, and how many streams there are. The queues tile's is the messages waiting, with those that are failing set apart in orange, as on the cluster view, and its detail line gives the number of queues of all the applications together and the messages handled per minute. The applications tile's is the number of applications sending a signal, with the number that send none set apart in red, and its detail line is the word &quot;applications&quot;."
 				>
 					<State
 						label="Two applications with no signal, three with failing messages"
@@ -749,7 +749,7 @@ export function ReviewPage() {
 								status: "settled",
 								words: (
 									<>
-										<p>events per minute, 844 events in 1 stream</p>
+										<p>events per minute, 844 events on 1 stream</p>
 										<p>messages in 2 queues, 370/min</p>
 									</>
 								),

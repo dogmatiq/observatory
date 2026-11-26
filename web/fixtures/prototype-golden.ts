@@ -41,19 +41,19 @@ export const golden = {
 			{
 				x: "0.000",
 				width: "62.400",
-				title: "63 instances on event stream fc53a99f",
+				title: "63 instances bound to event stream fc53a99f",
 			},
 			{
 				x: "63.000",
 				width: "37.000",
-				title: "37 instances on event stream 85d749b5",
+				title: "37 instances bound to event stream 85d749b5",
 			},
 		],
 		statementSchedule: [
 			{
 				x: "0.000",
 				width: "100.000",
-				title: "20 instances on deadline queue 113cbdc3",
+				title: "20 instances bound to deadline queue 113cbdc3",
 			},
 		],
 	},

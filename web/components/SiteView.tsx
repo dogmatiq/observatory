@@ -146,7 +146,7 @@ export function SiteTotals({ data }: { data: SiteData }) {
 
 /**
  * SiteEventsTile is the site's events tile, whose headline is the events per
- * minute across the applications, whose detail line gives the events in the
+ * minute across the applications, whose detail line gives the events on the
  * event streams of all the applications together, and how many streams there
  * are, as the cluster view's does, and whose bar shows which
  * applications record the most.
@@ -183,7 +183,7 @@ export function SiteEventsTile({
 						<>
 							{", "}
 							<Ramped value={events.streams.events} format={formatCompact} />
-							{` ${nounFor(events.streams.events, "event", "events")} in `}
+							{` ${nounFor(events.streams.events, "event", "events")} on `}
 							<Ramped value={events.streams.count} format={formatCompact} />
 							{` ${nounFor(events.streams.count, "stream", "streams")}`}
 						</>

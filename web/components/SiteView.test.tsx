@@ -122,7 +122,7 @@ test("the events tile counts the events and event streams of all the application
 	const tile = screen.getByRole("article", { name: "Events" });
 
 	expect(tile.textContent).toContain(
-		`events per minute, ${formatCompact(data.events?.streams?.events ?? 0)} events in ${data.events?.streams?.count} streams`,
+		`events per minute, ${formatCompact(data.events?.streams?.events ?? 0)} events on ${data.events?.streams?.count} streams`,
 	);
 });
 

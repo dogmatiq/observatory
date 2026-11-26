@@ -34,7 +34,7 @@ test("the totals are the prototype's", () => {
 	const cluster = totals.getByRole("article", { name: "Cluster" });
 
 	expect(events.textContent).toBe(
-		"347events per minute, 1.2K events in 2 streams",
+		"347events per minute, 1.2K events on 2 streams",
 	);
 	expect(queues.textContent).toBe("19messages in 1 queue, 442/min");
 	expect(cluster.textContent).toBe("3cluster nodes, 5 workloads");
@@ -243,7 +243,7 @@ test("a rate that the Observatory has never had is a zero in dot-matrix type, th
 	const queues = screen.getByRole("article", { name: "Queues" });
 	// Neither rate is known yet, which each tile's alert flag reads where it is.
 	expect(events.textContent).toBe(
-		`0${rateUnavailable.text}events per minute, 1.2K events in 2 streams`,
+		`0${rateUnavailable.text}events per minute, 1.2K events on 2 streams`,
 	);
 	expect(queues.textContent).toBe(
 		`19${rateUnavailable.text}messages in 1 queue, 0/min`,
@@ -477,7 +477,7 @@ test("a rate of less than one event per minute is a whole number per hour", () =
 	).getByRole("article", { name: "Events" });
 
 	expect(events.textContent).toBe(
-		"24events per hour, 1.2K events in 2 streams",
+		"24events per hour, 1.2K events on 2 streams",
 	);
 });
 

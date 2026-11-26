@@ -311,13 +311,13 @@ export function bindingSegments(
 						title: `${countOf(b.instances, "instance", "instances")} with no ${singular} yet`,
 					}
 				: ofThing(
-						`${countOf(b.instances, "instance", "instances")} on ${singular}`,
+						`${countOf(b.instances, "instance", "instances")} bound to ${singular}`,
 						b.id,
 						singular,
 					)),
 		})),
 		(total, count) =>
-			`${countOf(total, "instance", "instances")} on ${count} other ${plural}`,
+			`${countOf(total, "instance", "instances")} bound to ${count} other ${plural}`,
 	);
 }
 

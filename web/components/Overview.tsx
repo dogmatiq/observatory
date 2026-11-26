@@ -240,10 +240,10 @@ export function EventsTile({
 
 	// An engine that appends every event to one stream has no streams to count,
 	// and no spread of events across them to show.
-	const inStreams =
+	const onStreams =
 		streams === undefined || oneStream ? null : (
 			<>
-				{" in "}
+				{" on "}
 				<Ramped value={streams.length} format={String} />
 				{` ${nounFor(streams.length, "stream", "streams")}`}
 			</>
@@ -286,7 +286,7 @@ export function EventsTile({
 								{", "}
 								<Ramped value={total} format={formatCompact} />
 								{` ${nounFor(total, "event", "events")}`}
-								{inStreams}
+								{onStreams}
 							</>
 						)}
 					</>
@@ -295,7 +295,7 @@ export function EventsTile({
 						<Noun>{nounFor(total, "event", "events")}</Noun>
 						{oneStream ? null : (
 							<>
-								{" in "}
+								{" on "}
 								<Ramped value={streams?.length ?? 0} format={String} />
 								{` ${nounFor(streams?.length ?? 0, "stream", "streams")}`}
 							</>
