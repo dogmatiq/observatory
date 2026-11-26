@@ -770,7 +770,7 @@ but isn't shown, and decide towards the end which of them to show and where.
 | Events recorded or handled per minute as a figure | `HandlerEventsRecorded`, `HandlerEventsHandled` | The cards draw only their chart, as the prototype did. |
 | Messages that are due, by handler, for commands | `HandlerCommandsDue` | An aggregate's and an integration's digests count every command that waits. The queues tiles and a process's digest count the messages that are due. |
 | Messages that are waiting but not yet due, by queue and for a process | `QueueCommandsPending`, `QueueDeadlinesPending`, `HandlerDeadlinesPending`; to become the scheduled deadlines of dogmatiq/protobuf#53 | The queues tiles and a process's digest count the messages that are due instead. |
-| Instances that a node holds in memory | `AggregateInstancesInMemory`, `ProcessInstancesInMemory` | The Observatory doesn't read them yet, and runkit doesn't support them. |
+| Instances that a node holds in memory | `AggregateInstancesInMemory`, `ProcessInstancesInMemory` | The Observatory doesn't read them yet, and runkit doesn't support them. Their removal is proposed in [dogmatiq/protobuf#49](https://github.com/dogmatiq/protobuf/issues/49). |
 | Which queue or handler has the failing messages | `QueueCommandsFailing`, `QueueDeadlinesFailing`, and the handler counterparts | The tile and the card show only the total. |
 | The Issues that the health rules find | `Health.Assess` | No view shows them, and nothing calls `Assess` yet. |
 | Removing a cluster | `Observer.Forget` | The "remove" action has no control. |
@@ -779,7 +779,7 @@ but isn't shown, and decide towards the end which of them to show and where.
 | The name and version of the engine's software, and the version of the application | `implementation` and `application.version` in the engine API's preamble | Nothing shows them yet. The footer and the statuses about versions are where they would go. |
 | How the nodes of a cluster share its work | `ClusterModel` in the engine API's preamble | The page shows a cluster whose nodes compete for work as one whose nodes assign themselves workloads and don't report them. |
 | A handler's failing events | `HandlerEventsFailing` | The card's failing messages are its commands and deadlines. |
-| The compactions and reset operations of a projection, and whether a projection supports them | `ProjectionCompactions*`, the messages about projections of `WatchEngine`, `ProjectionAPI`, and `configpb` | No view reads them. |
+| The compactions and reset operations of a projection, and whether a projection supports them | `ProjectionCompactions*`, the messages about projections of `WatchEngine`, `ProjectionAPI`, and `configpb` | No view reads them. The removal of the `ProjectionCompactions*` totals is proposed in [dogmatiq/protobuf#51](https://github.com/dogmatiq/protobuf/issues/51). |
 | A handler's lag on each event stream | `HandlerEventStreamLag` | The card shows the total over the streams. |
 | A handler's and an application's Go type, and the messages that a handler uses | `configpb` | Only a handler's name, type and key are used. |
 | A handler's failing messages split into commands and deadlines | `HandlerCommandsFailing`, `HandlerDeadlinesFailing` | The card shows one total. |
