@@ -21,9 +21,21 @@ const shareTime = 500;
 
 /**
  * How long the line takes to settle to the height of the flat line when the last
- * node leaves, in milliseconds.
+ * node has gone, in milliseconds.
  */
 const leaveTime = 700;
+
+/**
+ * How long a node's section stays on the chart after the node has gone, in
+ * milliseconds, before its share shrinks away.
+ */
+const lingerTime = 5000;
+
+/**
+ * How long the glitch of a node's section lasts when the node goes, in
+ * milliseconds.
+ */
+const glitchTime = 500;
 
 /**
  * How long a node's line takes to widen when its share is pointed at, and to
@@ -51,24 +63,6 @@ export interface Section {
 	level: number;
 
 	/**
-	 * How late the node's next heartbeat is, from just above 0 when it is first
-	 * late to 1 when the latest expires, as {@link latenessOf} gives it. It is
-	 * absent while the next heartbeat isn't late.
-	 *
-	 * [latenessOf]: ../lib/lateness.ts
-	 */
-	late?: number;
-
-	/**
-	 * How far through the glitch of a missed heartbeat the section is, from 0
-	 * when the glitch starts to 1 when it ends, as {@link missedGlitchOf} gives
-	 * it. It is absent while the section isn't glitching.
-	 *
-	 * [missedGlitchOf]: ../lib/lateness.ts
-	 */
-	glitch?: number;
-
-	/**
 	 * What the tile says about the node while its share is pointed at. A chart
 	 * whose sections have none can't be pointed at.
 	 */
@@ -77,19 +71,41 @@ export interface Section {
 
 /**
  * Share is what the chart draws for one node, which includes a node that has
- * left and whose share is shrinking away.
+ * gone, whose section lingers and then whose share shrinks away.
  */
 interface Share {
 	id: string;
+
+	/**
+	 * The level of the node's heartbeat. For a node that has gone, it is the
+	 * level that its section had when the node went.
+	 */
 	level: number;
-	late?: number;
-	glitch?: number;
+
+	/** When the node went, on the scale of `performance.now()`, if it has. */
+	goneAt?: number;
 
 	/** How much of its full share the node has, from 0 to 1. */
 	size: number;
 
-	/** The size that it is moving towards: 1 for a node that is live, else 0. */
+	/**
+	 * The size that it is moving towards: 1 for a node that is live or that has
+	 * gone and is lingering, and 0 once it has lingered.
+	 */
 	target: number;
+}
+
+/**
+ * lingering returns the share as it is drawn at `now`: a node that has gone
+ * drains from the level that its section had when it went to empty over
+ * {@link lingerTime}.
+ */
+function lingering(share: Share, now: number): Share {
+	if (share.goneAt === undefined) {
+		return share;
+	}
+	const t = Math.min(1, Math.max(0, (now - share.goneAt) / lingerTime));
+	return { ...share, level: share.level * (1 - t) };
 }
 
 /**
@@ -100,16 +116,18 @@ interface Share {
  * must be sorted by ID, like the segments of the bar of workloads above it. A
  * section has the level of its node's heartbeat, from 0 when it is empty to 1
  * when the node has just sent one. A node's share grows from nothing when it
- * joins and shrinks away when it leaves, so that the line doesn't jump. The chart
- * is drawn again when its levels change, when its size changes, and when the
- * page's colors do.
+ * joins, so that the line doesn't jump. The chart is drawn again when its levels
+ * change, when its size changes, and when the page's colors do.
  *
- * With no node live the line is flat, at the height of a full heartbeat, in gray.
+ * A node goes when its section is no longer in `sections`. Its section then
+ * glitches once, as a figure does, turned on its side: the left and the right
+ * half of the section slip up and down on their own, with a red and a cyan
+ * shadow. It then lingers for {@link lingerTime}, in the gray of the flat line,
+ * draining from the level that it had to empty, and then its share shrinks
+ * away. A node that comes back while its section lingers is live again.
  *
- * Each time that a node misses a heartbeat, its section glitches once, as a
- * figure does, turned on its side: the left and the right half of the section
- * slip up and down on their own, with a red and a cyan shadow, by more the later
- * the heartbeat is.
+ * With no node live and none lingering, the line is flat, at the height of a
+ * full heartbeat, in gray.
  *
  * If the sections have readouts, pointing at a node's share widens its line and
  * strengthens its shade, and gives the tile the section's readout to show. On a
@@ -154,11 +172,18 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 	const sightingFrame = useRef<number>(0);
 
 	// The shares of the last nodes of the cluster, as they were when the last of them
-	// left, while the line that they drew settles to the height of the flat line.
+	// had lingered, while the line that they drew settles to the height of the flat
+	// line.
 	const leaving = useRef<{ start: number; shares: Share[] } | undefined>(
 		undefined,
 	);
 	const leaveFrame = useRef<number>(0);
+
+	// The sections of the nodes that have gone linger, and drain, on the chart's
+	// own clock, which runs while any does. `lingers` is true while any does, so
+	// that the line isn't flat until none is left.
+	const lingerTimer = useRef<{ stop: () => void } | undefined>(undefined);
+	const [lingers, setLingers] = useState(false);
 
 	const draw = useCallback(() => {
 		const element = canvas.current;
@@ -170,6 +195,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 		const line = flat.current;
 		const c = sighted.current;
 		const l = leaving.current;
+		const drawn = shares.current.map((s) => lingering(s, now));
 
 		if (l !== undefined) {
 			const reveal = 1 - Math.min(1, (now - l.start) / leaveTime);
@@ -178,7 +204,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 			const f = sightingFrameAt(c, now);
 			drawHeartbeats(
 				element,
-				shares.current,
+				drawn,
 				{ burst: f.burst, scan: f.scan },
 				f.reveal,
 				{ from: c.found, size: c.fromSize },
@@ -186,11 +212,12 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 		} else {
 			drawHeartbeats(
 				element,
-				shares.current,
+				drawn,
 				line === undefined ? undefined : frameAt(line, now),
 				undefined,
 				undefined,
 				{
+					now,
 					widened: (id) => widenedAt(widening.current.get(id), now),
 					still: prefersReducedMotion(),
 				},
@@ -279,17 +306,59 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 		return () => document.removeEventListener("pointerdown", onPointerDown);
 	}, [pointed, point]);
 
-	useEffect(() => {
-		const known = new Map(shares.current.map((s) => [s.id, s]));
-		const live = new Set(sections.map((s) => s.id));
+	// Each share grows towards its size, or shrinks away, on the chart's own clock.
+	const resize = useCallback(() => {
+		if (
+			frame.current !== 0 ||
+			!shares.current.some((s) => s.size !== s.target)
+		) {
+			return;
+		}
 
-		// The last node leaving does not make the line vanish: it settles to the
-		// height that the flat line has.
-		const going = shares.current.filter((s) => s.target > 0);
-		if (sections.length === 0 && going.length > 0 && !prefersReducedMotion()) {
+		let before = performance.now();
+		const step = (now: number) => {
+			const moved = (now - before) / shareTime;
+			before = now;
+
+			shares.current = shares.current
+				.map((s) => ({
+					...s,
+					size:
+						s.target > s.size
+							? Math.min(s.target, s.size + moved)
+							: Math.max(s.target, s.size - moved),
+				}))
+				.filter((s) => s.target > 0 || s.size > 0);
+
+			draw();
+
+			frame.current = shares.current.some((s) => s.size !== s.target)
+				? requestAnimationFrame(step)
+				: 0;
+		};
+		frame.current = requestAnimationFrame(step);
+	}, [draw]);
+
+	// The latest sections, which the clock of the lingering sections reads.
+	const latest = useRef(sections);
+	latest.current = sections;
+
+	// The sections of the nodes that have gone are drawn again as they glitch and
+	// drain, with every frame, or once a second for a viewer who asks for less
+	// motion. A section that has lingered shrinks away. When the last that lingered
+	// has, and no node is live, the line that the gone nodes drew settles to the
+	// height of the flat line.
+	const linger = useCallback(() => {
+		if (lingerTimer.current !== undefined) {
+			return;
+		}
+
+		// The line of the last nodes doesn't vanish: it settles to the height that
+		// the flat line has, in its gray.
+		const settle = (last: Share[]) => {
 			leaving.current = {
 				start: performance.now(),
-				shares: going.map((s) => ({ ...s, size: 1, target: 1 })),
+				shares: last.map((s) => ({ ...s, size: 1, target: 1 })),
 			};
 
 			const step = () => {
@@ -309,37 +378,108 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 				leaveFrame.current = requestAnimationFrame(step);
 			};
 			leaveFrame.current = requestAnimationFrame(step);
-		} else if (sections.length > 0) {
+		};
+
+		const tick = () => {
+			const now = performance.now();
+			const lingered: Share[] = [];
+			shares.current = shares.current.map((s) => {
+				if (
+					s.goneAt !== undefined &&
+					s.target > 0 &&
+					now - s.goneAt >= lingerTime
+				) {
+					const done = { ...s, level: 0, target: 0 };
+					lingered.push(done);
+					return done;
+				}
+				return s;
+			});
+
+			const still = shares.current.some(
+				(s) => s.goneAt !== undefined && s.target > 0,
+			);
+			if (lingered.length > 0) {
+				if (!still && latest.current.length === 0 && !prefersReducedMotion()) {
+					settle(lingered);
+				}
+				resize();
+			}
+			draw();
+
+			if (!still) {
+				lingerTimer.current?.stop();
+				setLingers(false);
+			}
+		};
+
+		const reduced = prefersReducedMotion();
+		let id = 0;
+		const run = () => {
+			tick();
+			if (lingerTimer.current !== undefined) {
+				id = reduced
+					? window.setTimeout(run, 1000)
+					: requestAnimationFrame(run);
+			}
+		};
+		lingerTimer.current = {
+			stop: () => {
+				window.clearTimeout(id);
+				cancelAnimationFrame(id);
+				lingerTimer.current = undefined;
+			},
+		};
+		id = reduced ? window.setTimeout(run, 1000) : requestAnimationFrame(run);
+	}, [draw, resize]);
+
+	useEffect(() => {
+		const now = performance.now();
+		const known = new Map(shares.current.map((s) => [s.id, s]));
+		const live = new Set(sections.map((s) => s.id));
+
+		if (sections.length > 0) {
 			leaving.current = undefined;
 			cancelAnimationFrame(leaveFrame.current);
 		}
 
+		// A node that comes back while its section lingers is live again.
 		const next: Share[] = sections.map((s) => ({
 			id: s.id,
 			level: s.level,
-			late: s.late,
-			glitch: s.glitch,
 			// A node that is new has no share yet, and the first sections that the
 			// chart is given have all of theirs.
 			size: known.get(s.id)?.size ?? (shares.current.length === 0 ? 1 : 0),
 			target: 1,
 		}));
 
-		// A node that has gone keeps the level that it had as its share shrinks.
+		// A node that has gone lingers, from the level that its section had when it
+		// went.
+		let went = false;
 		for (const old of shares.current) {
 			if (!live.has(old.id)) {
-				next.push({ ...old, target: 0 });
+				if (old.goneAt === undefined) {
+					went = true;
+					next.push({ ...old, goneAt: now });
+				} else {
+					next.push(old);
+				}
 			}
 		}
 
 		next.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 		shares.current = next;
 
+		if (went) {
+			setLingers(true);
+			linger();
+		}
+
 		// The first node coming back to a cluster that had none ends the scan: static,
 		// and then the lens finds the heartbeat.
 		const line = departed.current;
-		departed.current = undefined;
-		if (line !== undefined && next.length > 0) {
+		if (line !== undefined && sections.length > 0) {
+			departed.current = undefined;
 			sighted.current = sightingAt(line, performance.now());
 
 			const step = () => {
@@ -362,37 +502,16 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 		}
 
 		draw();
+		resize();
+	}, [sections, draw, linger, resize]);
 
-		if (next.some((s) => s.size !== s.target) && frame.current === 0) {
-			let before = performance.now();
-
-			const step = (now: number) => {
-				const moved = (now - before) / shareTime;
-				before = now;
-
-				shares.current = shares.current
-					.map((s) => ({
-						...s,
-						size:
-							s.target > s.size
-								? Math.min(s.target, s.size + moved)
-								: Math.max(s.target, s.size - moved),
-					}))
-					.filter((s) => s.target > 0 || s.size > 0);
-
-				draw();
-
-				frame.current = shares.current.some((s) => s.size !== s.target)
-					? requestAnimationFrame(step)
-					: 0;
-			};
-
-			frame.current = requestAnimationFrame(step);
-		}
-	}, [sections, draw]);
-
-	// With no node live the line moves, until a node comes back.
-	const empty = sections.length === 0;
+	// With no node live, and none lingering, the line moves, until a node comes
+	// back. The nodes that have just gone are still in the shares until the effect
+	// above marks them as gone, and they linger.
+	const empty =
+		sections.length === 0 &&
+		!lingers &&
+		!shares.current.some((s) => s.target > 0);
 	useEffect(() => {
 		if (!empty || prefersReducedMotion()) {
 			flat.current = undefined;
@@ -427,6 +546,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 			leaving.current = undefined;
 			cancelAnimationFrame(widenFrame.current);
 			widenFrame.current = 0;
+			lingerTimer.current?.stop();
 		},
 		[],
 	);
@@ -600,9 +720,10 @@ function drawHeartbeats(
 	}
 
 	// There is one line, and not a heartbeat and a flat line that fade into each
-	// other: it settles to the height of the flat line, as it takes its color.
+	// other: it settles to the height of the flat line. It is already the flat
+	// line's color, as the sections of the nodes that have gone are.
 	const eased = reveal * reveal * (3 - 2 * reveal);
-	drawLine(g, style, shares, width, height, ratio, 1 - eased, eased);
+	drawLine(g, style, shares, width, height, ratio, 1, eased);
 }
 
 /** smooth eases from 0 to 1 as `t` goes from 0 to 1, and stays at either end. */
@@ -1119,8 +1240,8 @@ function widenedAt(w: Widening | undefined, now: number): number {
 
 /**
  * shareAt returns the ID of the node whose share is under the pointer of
- * `event`, if any. A node that has left, whose share is shrinking away, can't be
- * pointed at.
+ * `event`, if any. A node that has gone, whose section lingers or whose share is
+ * shrinking away, can't be pointed at.
  */
 function shareAt(
 	shares: readonly Share[],
@@ -1135,7 +1256,7 @@ function shareAt(
 	for (const [i, s] of shares.entries()) {
 		before += sizes[i] as number;
 		if (u * total <= before) {
-			return s.target > 0 ? s.id : undefined;
+			return s.goneAt === undefined ? s.id : undefined;
 		}
 	}
 	return undefined;
@@ -1143,20 +1264,34 @@ function shareAt(
 
 /**
  * Moving is what the chart draws over the line of the heartbeats, which moves
- * with time and not only with the levels: the glitch of a node that has missed
- * a heartbeat, and the widening of the line of a share that is pointed at.
- * `widened` says how far the line of a node's share has
- * widened, and `still` is true for a viewer who asks for less motion, for whom a
- * glitching section doesn't slip, and has only its shadows.
+ * with time and not only with the levels: the glitch of the section of a node
+ * that has just gone, the gray of the sections of the nodes that have gone, and
+ * the widening of the line of a share that is pointed at. `now` is the time,
+ * `widened` says how far the line of a node's share has widened, and `still` is
+ * true for a viewer who asks for less motion, for whom a glitching section
+ * doesn't slip, and has only its shadows.
  */
 interface Moving {
+	now: number;
 	widened: (id: string) => number;
 	still: boolean;
 }
 
 /**
- * The keyframes of the glitch of a figure, from index.css, which a glitching
- * section follows, once, over its glitch: for each, the share of the way through
+ * How long the section of a node that has gone takes to turn gray, after its
+ * glitch, in milliseconds.
+ */
+const grayTime = 300;
+
+/**
+ * How far past each edge of a section its gray fades into the line's color, as
+ * a share of the section's width.
+ */
+const grayReach = 0.15;
+
+/**
+ * The keyframes of the glitch of a figure, from index.css, which the section of
+ * a node that has just gone follows, once, over its glitch: for each, the share of the way through
  * the glitch at which it starts, and how far it slips, in pixels, when the
  * distrust is 1.
  */
@@ -1215,9 +1350,10 @@ function taper(x: number, x0: number, x1: number, edge: number): number {
 }
 
 /**
- * drawMoving draws the glitch of each node that has just missed a heartbeat, and
- * then the widening of the line of each share that is pointed at, along the line
- * as the glitches left it.
+ * drawMoving draws the glitch of the section of each node that has just gone,
+ * then the gray of the sections of the nodes that have gone, and then the
+ * widening of the line of each share that is pointed at, along the line as the
+ * glitches left it.
  */
 function drawMoving(
 	g: CanvasRenderingContext2D,
@@ -1259,49 +1395,59 @@ function drawMoving(
 	});
 
 	for (const { share, x0, x1 } of places) {
-		if (share.glitch !== undefined && share.target > 0 && x1 > x0) {
-			drawLate(g, line, x0, x1, height, ratio, share, moving, color(1), soft);
+		const since =
+			share.goneAt === undefined ? undefined : moving.now - share.goneAt;
+		if (since !== undefined && since < glitchTime && x1 > x0) {
+			const t = since / glitchTime;
+			drawGlitch(g, line, x0, x1, height, ratio, t, moving, color(1), soft);
+		}
+	}
+
+	for (const { share, x0, x1 } of places) {
+		if (share.goneAt === undefined || x1 <= x0) {
+			continue;
+		}
+		const gray = smooth((moving.now - share.goneAt - glitchTime) / grayTime);
+		if (gray > 0) {
+			drawGone(g, style, line, x0, x1, width, height, ratio, gray);
 		}
 	}
 
 	for (const { share, x0, x1 } of places) {
 		const widened = moving.widened(share.id);
-		if (widened > 0 && x1 > x0) {
+		if (share.goneAt === undefined && widened > 0 && x1 > x0) {
 			drawWidened(g, line, x0, x1, width, height, ratio, widened, color);
 		}
 	}
 }
 
 /**
- * drawLate draws the section of a node that has just missed a heartbeat, from
- * `x0` to `x1`, as a figure's glitch turned on its side, and moves the points of
- * `line` in the section to where it drew them.
+ * drawGlitch draws the section of a node that has just gone, from `x0` to `x1`,
+ * `t` of the way through its glitch, from 0 to 1, as a figure's glitch turned on
+ * its side, and moves the points of `line` in the section to where it drew them.
  *
  * The left and the right half of the section slip up and down on their own, on
  * the keyframes of a figure's glitch, once over the glitch, with a red and a
- * cyan shadow above and below the line, by more as the heartbeat gets later. The slip and the shadows
- * taper to nothing at the section's ends, so that it stays joined to the line
- * beside it.
+ * cyan shadow above and below the line. The slip and the shadows taper to
+ * nothing at the section's ends, so that it stays joined to the line beside it.
  */
-function drawLate(
+function drawGlitch(
 	g: CanvasRenderingContext2D,
 	line: [number, number][],
 	x0: number,
 	x1: number,
 	height: number,
 	ratio: number,
-	share: Share,
+	t: number,
 	moving: Moving,
 	stroke: string,
 	fill: string,
 ) {
-	// The distrust is there as soon as the heartbeat is late, and is at its most
-	// as the latest heartbeat expires. A figure's glitch slips by more pixels than
-	// this, because it is bigger.
-	const distrust = 0.35 + 0.65 * (share.late ?? 0);
+	// The glitch is at its strongest, as a figure's is when its distrust is 1. A
+	// figure's glitch slips by more pixels than this, because it is bigger.
+	const distrust = 1;
 	const scale = 0.9 * distrust * ratio;
 
-	const t = share.glitch ?? 0;
 	const left = moving.still ? 0 : slipAt(glitchLeft, t);
 	const right = moving.still ? 0 : slipAt(glitchRight, t);
 	const middle = (x0 + x1) / 2;
@@ -1436,4 +1582,75 @@ function drawWidened(
 	g.closePath();
 	g.fillStyle = color(1);
 	g.fill();
+}
+
+/**
+ * drawGone draws the section of a node that has gone, from `x0` to `x1`, along
+ * `line`, in the gray of the flat line and without the shade under it, by
+ * `amount`, from 0 to 1, as it turns gray after its glitch. The gray fades into
+ * the line's color, and the shade back in, just past the section's edges, so
+ * that the section has no border.
+ */
+function drawGone(
+	g: CanvasRenderingContext2D,
+	style: CSSStyleDeclaration,
+	line: readonly (readonly [number, number])[],
+	x0: number,
+	x1: number,
+	width: number,
+	height: number,
+	ratio: number,
+	amount: number,
+) {
+	const reach = (x1 - x0) * grayReach;
+	const from = x0 - reach;
+	const to = x1 + reach;
+	const edge = (2 * reach) / (to - from);
+	const across = (color: (alpha: number) => string) => {
+		const fade = g.createLinearGradient(from, 0, to, 0);
+		fade.addColorStop(0, color(0));
+		fade.addColorStop(edge, color(amount));
+		fade.addColorStop(1 - edge, color(amount));
+		fade.addColorStop(1, color(0));
+		return fade;
+	};
+
+	const within = line.filter(
+		([x]) => x >= from - 2 * ratio && x <= to + 2 * ratio,
+	);
+	const trace = () => {
+		g.beginPath();
+		for (const [i, [x, y]] of within.entries()) {
+			if (i === 0) {
+				g.moveTo(x, y);
+			} else {
+				g.lineTo(x, y);
+			}
+		}
+	};
+
+	g.save();
+
+	// The shade under the section is taken away, as the flat line has none.
+	g.globalCompositeOperation = "destination-out";
+	g.beginPath();
+	g.moveTo(0, height);
+	for (const [x, y] of line) {
+		g.lineTo(x, y);
+	}
+	g.lineTo(width, height);
+	g.closePath();
+	g.fillStyle = across((a) => `rgba(0, 0, 0, ${a})`);
+	g.fill();
+	g.globalCompositeOperation = "source-over";
+
+	// The line is drawn over in gray, a little wider, so that none of its color
+	// shows at its edges.
+	const [r, gr, b] = rgbOf(g, style.getPropertyValue("--color-faint").trim());
+	trace();
+	g.lineWidth = (lineWidth + 0.5) * ratio;
+	g.strokeStyle = across((a) => `rgba(${r}, ${gr}, ${b}, ${a})`);
+	g.stroke();
+
+	g.restore();
 }

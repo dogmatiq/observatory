@@ -1,20 +1,25 @@
 import { expect, test } from "vitest";
-import { deadlineLevel, levelOf, riseTime } from "./levels.ts";
+import { deadlineLevel, expiredLevel, levelOf, riseTime } from "./levels.ts";
 
 test("a level with a deadline is empty with no heartbeat", () => {
 	expect(deadlineLevel([], 15_000, 5000)).toBe(0);
 });
 
-test("a level with a deadline is full once it has risen, and empty exactly at the deadline", () => {
+test("a level with a deadline is full once it has risen, and drains in a straight line to a third exactly at the deadline", () => {
 	const deadline = 15_000;
 
+	expect(expiredLevel).toBeCloseTo(1 / 3);
 	expect(deadlineLevel([0], deadline, riseTime)).toBe(1);
 	expect(deadlineLevel([0], deadline, (riseTime + deadline) / 2)).toBeCloseTo(
-		0.5,
+		(1 + expiredLevel) / 2,
 	);
-	expect(deadlineLevel([0], deadline, deadline - 1)).toBeGreaterThan(0);
-	expect(deadlineLevel([0], deadline, deadline)).toBe(0);
-	expect(deadlineLevel([0], deadline, deadline + 10_000)).toBe(0);
+	expect(deadlineLevel([0], deadline, deadline - 1)).toBeGreaterThan(
+		expiredLevel,
+	);
+	expect(deadlineLevel([0], deadline, deadline)).toBeCloseTo(expiredLevel);
+	expect(deadlineLevel([0], deadline, deadline + 10_000)).toBeCloseTo(
+		expiredLevel,
+	);
 });
 
 test("a heartbeat with a deadline rises from the level that the one before it had drained to", () => {
@@ -37,7 +42,7 @@ test("a node's level drains to its deadline, from the times of its heartbeats be
 	// it arrived, so 14 s after the data arrived.
 	const node = { heartbeats: [4000, 1000], deadline: 14_000 };
 
-	expect(levelOf(node, 14_000)).toBe(0);
+	expect(levelOf(node, 14_000)).toBeCloseTo(expiredLevel);
 	expect(levelOf(node, 0)).toBeGreaterThan(0.9);
 });
 

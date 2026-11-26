@@ -79,7 +79,7 @@ test("the nodes that the chart is first given have all of their shares", () => {
 	expect(last().weights).toEqual([1, 1]);
 });
 
-test("a node that leaves keeps its place and its level while its share shrinks away", () => {
+test("a node that goes keeps its place, lingers as its level drains to empty, and then its share shrinks away", () => {
 	const { rerender } = render(
 		<HeartbeatChart
 			sections={[
@@ -99,16 +99,50 @@ test("a node that leaves keeps its place and its level while its share shrinks a
 		/>,
 	);
 
-	// It has not gone yet.
+	// It lingers, from the level that it had when it went.
 	expect(last().levels).toEqual([1, 0.5, 0.2]);
 	expect(last().weights).toEqual([1, 1, 1]);
 
+	advance(2500);
+	expect(last().levels).toEqual([1, 0.25, 0.2]);
+	expect(last().weights).toEqual([1, 1, 1]);
+
+	// It has lingered, and its share shrinks away.
+	advance(2500);
+	expect(last().levels).toEqual([1, 0, 0.2]);
+
 	advance(250);
-	expect(last().levels).toEqual([1, 0.5, 0.2]);
 	expect(last().weights[1]).toBeCloseTo(0.5, 1);
 
 	advance(300);
 	expect(last().levels).toEqual([1, 0.2]);
+	expect(last().weights).toEqual([1, 1]);
+});
+
+test("a node that comes back while its section lingers is live again", () => {
+	const { rerender } = render(
+		<HeartbeatChart
+			sections={[
+				{ id: "a", level: 1 },
+				{ id: "b", level: 0.5 },
+			]}
+		/>,
+	);
+
+	rerender(<HeartbeatChart sections={[{ id: "a", level: 1 }]} />);
+	advance(1000);
+
+	rerender(
+		<HeartbeatChart
+			sections={[
+				{ id: "a", level: 1 },
+				{ id: "b", level: 1 },
+			]}
+		/>,
+	);
+	advance(5000);
+
+	expect(last().levels).toEqual([1, 1]);
 	expect(last().weights).toEqual([1, 1]);
 });
 

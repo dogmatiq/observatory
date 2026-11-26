@@ -871,21 +871,6 @@ test("a node's deadline is when its latest heartbeat expires, after the moment t
 	expect(node?.deadline).toBe(12_000);
 });
 
-test("a node has the interval between its heartbeats that its engine gives", () => {
-	const s = applied([
-		changed({
-			application: { name: "a", key: "k" },
-			cluster: {},
-			nodes: { n: { interval: 2000 }, m: {} },
-		}),
-		0,
-	]);
-
-	const [m, n] = selectCluster(s, 0)?.overview.cluster?.nodes ?? [];
-	expect(n?.interval).toBe(2000);
-	expect(m?.interval).toBeUndefined();
-});
-
 test("a node whose latest heartbeat gives no way to calculate when it expires has no deadline", () => {
 	const s = applied(
 		[

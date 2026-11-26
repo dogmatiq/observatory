@@ -21,13 +21,13 @@ const fixtureExpiry = 3000;
 
 /**
  * beatsAt returns the heartbeats, and the deadline of the latest, of a node that
- * sends one every second, whose heartbeat level is the given one at the moment of
- * the page. The prototype's page was captured with the levels of its three nodes
- * partway down. A level drains from full, once it has risen, to empty at the
- * deadline, so the latest heartbeat arrived as long ago as gives that level.
+ * sends one every second, whose heartbeat has `left` of its drain still to go at
+ * the moment of the page, from 1 when it has just risen to 0 at the deadline.
+ * The prototype's page was captured with its three nodes partway through their
+ * drains, and the latest heartbeat arrived as long ago as gives that share.
  */
-function beatsAt(level: number): { heartbeats: number[]; deadline: number } {
-	const since = riseTime + (1 - level) * (fixtureExpiry - riseTime);
+function beatsAt(left: number): { heartbeats: number[]; deadline: number } {
+	const since = riseTime + (1 - left) * (fixtureExpiry - riseTime);
 	return { heartbeats: [since + 1000, since], deadline: fixtureExpiry - since };
 }
 

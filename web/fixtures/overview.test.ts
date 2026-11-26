@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { levelOf } from "../lib/levels.ts";
+import { expiredLevel, levelOf } from "../lib/levels.ts";
 import {
 	apply,
 	parseEvent,
@@ -9,12 +9,13 @@ import {
 import { application, overview } from "./overview.ts";
 import { streamOf } from "./stream.ts";
 
-test("the fixture's heartbeats give the levels that the prototype's page was captured with", () => {
+test("the fixture's heartbeats are as far through their drains as the prototype's page was captured with", () => {
 	const levels = overview.cluster.nodes.map((n) => levelOf(n, 0));
+	const drained = (left: number) => expiredLevel + (1 - expiredLevel) * left;
 
 	expect(levels[0]).toBe(1);
-	expect(levels[1]).toBeCloseTo(0.62, 10);
-	expect(levels[2]).toBeCloseTo(0.3, 10);
+	expect(levels[1]).toBeCloseTo(drained(0.62), 10);
+	expect(levels[2]).toBeCloseTo(drained(0.3), 10);
 });
 
 test("the fixture survives the stream: the page selects from the burst what the burst was made from", () => {

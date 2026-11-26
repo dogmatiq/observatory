@@ -475,7 +475,7 @@ export function ReviewPage() {
 					title="The applications tile's chart"
 					deciding="How the applications tile's heartbeat chart gives each application sending a signal a share, which heartbeats an application's share follows, and what happens to it when the signal stops."
 					notDeciding="How the heartbeat chart draws a heartbeat, which is the cluster tile's (CL 5), including how a node's section falls to its deadline; the tile's words (SH 1) and its explainer (SW 3)."
-					note="Each application sending a signal has an equal share of the chart's width. An application's share follows the application's deadline, which is the latest of its nodes' deadlines, because the application is sending a signal while any of its nodes is: a heartbeat raises it only if it moves that deadline later, and it falls to empty at the deadline, which is when the application stops sending a signal. Its share then shrinks away. Each application here has the fixture's number of nodes, from one to six, which beat every two to five seconds, with a deadline 15 seconds after each heartbeat. Stop an application to see it go."
+					note="Each application sending a signal has an equal share of the chart's width. An application's share follows the application's deadline, which is the latest of its nodes' deadlines, because the application is sending a signal while any of its nodes is: a heartbeat raises it only if it moves that deadline later, and it falls to a third at the deadline, which is when the application stops sending a signal. It then glitches once, lingers in the grey of the flat line for five seconds, falling to empty, and its share shrinks away. Each application here has the fixture's number of nodes, from one to six, which beat every two to five seconds, with a deadline 15 seconds after each heartbeat. Stop an application to see it go."
 				>
 					<State
 						label="Applications sending a signal"
@@ -1152,9 +1152,9 @@ export function ReviewPage() {
 				<Part
 					step={5}
 					title="The chart"
-					deciding="How a node's section of the chart falls between its heartbeats: to empty at the deadline that its latest heartbeat gives, which is when the Observatory takes it to be with no signal."
+					deciding="How a node's section of the chart falls between its heartbeats: to a third at the deadline that its latest heartbeat gives, which is when the Observatory takes it to be with no signal; and how a node that has gone lingers."
 					notDeciding="The rest of how the chart moves, which is settled: the static and the lens with no node live, the ripple when the first comes back, and the line settling when the last goes."
-					note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. A node's section falls to empty at the deadline of its latest heartbeat: the time by which the node says that it sends the next, or, if it says none, three of the intervals that its engine gives. A node whose heartbeats give neither stays full while it is connected. The nodes here beat every two to five seconds, with a deadline 15 seconds after each heartbeat, as the demo engine's do. A stopped node's section glitches once its next heartbeat is late, and the tile names a node while its share is pointed at. Add nodes, and stop them, to see each."
+					note="The heartbeat of each live node. With none live, the grey line breaks into static now and then, and a lens scans along it. When the first node comes back the lens finds it, after static and a short search if it wasn't scanning, and the heartbeat grows out of that place as a ripple. When the last node goes, the heartbeat settles back to the flat line. A node's section falls to a third at the deadline of its latest heartbeat: the time by which the node says that it sends the next, or, if it says none, three of the intervals that its engine gives. A node whose heartbeats give neither stays full while it is connected. When a node goes, its section glitches once, then lingers in the grey of the flat line for five seconds, falling to empty, and then its share shrinks away. The nodes here beat every two to five seconds, with a deadline 15 seconds after each heartbeat, as the demo engine's do. Add nodes, and stop them, to see each."
 				>
 					<State
 						label="Nodes coming and going"
@@ -1590,12 +1590,10 @@ function beat(nodes: DemoNode[], now: number): boolean {
 	let changed = false;
 
 	for (const n of nodes) {
-		// A heartbeat arrives when it is due, though the page only finds it at its
-		// next tick, so that a running node is never late.
 		if (n.next !== undefined && now >= n.next) {
 			changed = true;
-			n.beats = [...n.beats, n.next].slice(-9);
-			n.next += n.interval;
+			n.beats = [...n.beats, now].slice(-9);
+			n.next = now + n.interval * (0.9 + Math.random() * 0.2);
 		}
 	}
 
@@ -1665,7 +1663,6 @@ function Nodes() {
 					workloads: n.workloads,
 					heartbeats: n.beats.map((t) => receivedAt - t),
 					deadline: (n.beats.at(-1) ?? receivedAt) + demoExpiry - receivedAt,
-					interval: n.interval,
 				})),
 			}}
 			href={undefined}

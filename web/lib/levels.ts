@@ -5,6 +5,13 @@
 export const riseTime = 280;
 
 /**
+ * The level that a node's heartbeat has drained to when its latest heartbeat
+ * expires, which is when the node stops sending a signal. The chart then shows
+ * the node's section draining from this level to empty, as a node that has gone.
+ */
+export const expiredLevel = 1 / 3;
+
+/**
  * deadlineLevel returns the level of a heartbeat at the time `now`, from 0 when
  * it is empty to 1 when it is full, given the times at which the heartbeats
  * arrived, oldest first, and the deadline of the latest of them, which is the
@@ -12,10 +19,10 @@ export const riseTime = 280;
  * milliseconds on the same scale, whatever its origin.
  *
  * A heartbeat raises the level to full, over {@link riseTime}, and the level
- * then drains, in a straight line, to empty at the deadline, so that it is
- * empty exactly when the heartbeat expires. The level just before a heartbeat
- * is worked out as if the heartbeat before it gave a deadline the same length of
- * time after it arrived. With no heartbeat, the level is empty.
+ * then drains, in a straight line, to {@link expiredLevel} at the deadline,
+ * which is when the heartbeat expires, and stays there. The level just before a
+ * heartbeat is worked out as if the heartbeat before it gave a deadline the same
+ * length of time after it arrived. With no heartbeat, the level is empty.
  */
 export function deadlineLevel(
 	times: readonly number[],
@@ -29,9 +36,11 @@ export function deadlineLevel(
 
 	const span = deadline - last;
 	const drain = (from: number, at: number) =>
-		span <= riseTime
-			? 0
-			: Math.max(0, Math.min(1, (from + span - at) / (span - riseTime)));
+		expiredLevel +
+		(1 - expiredLevel) *
+			(span <= riseTime
+				? 0
+				: Math.max(0, Math.min(1, (from + span - at) / (span - riseTime))));
 
 	const since = now - last;
 	if (since < riseTime) {
@@ -48,7 +57,8 @@ export function deadlineLevel(
  * of the heartbeats that the data describes, with their times in milliseconds
  * before it arrived, and the deadline of the latest in milliseconds after: the
  * time by which the next is due, which is when the node stops sending a signal.
- * The level drains to empty at the deadline, by {@link deadlineLevel}. Heartbeats
+ * The level drains to {@link expiredLevel} at the deadline, by
+ * {@link deadlineLevel}. Heartbeats
  * that give no way to calculate a deadline keep the level full, as the node is
  * sending a signal for as long as it is connected.
  */

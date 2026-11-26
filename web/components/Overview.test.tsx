@@ -587,7 +587,6 @@ function pointableClusterTile(href?: string) {
 						id: "3f8e2a10-0000-4000-8000-000000000000",
 						heartbeats: [500],
 						deadline: 14_500,
-						interval: 3000,
 					},
 				],
 			}}
