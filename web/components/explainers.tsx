@@ -683,7 +683,7 @@ export function cardExplainers(
 				},
 				{
 					at: ".flex-wrap",
-					text: "the number of deadlines waiting to be handled",
+					text: "the number of deadlines ready to be handled now",
 					side: "right",
 					atText: "5",
 					with: [

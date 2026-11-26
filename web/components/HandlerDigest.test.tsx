@@ -110,6 +110,25 @@ test("a process shows the instances in progress, its events and its deadlines", 
 	});
 });
 
+test("a process counts its ready deadlines with its failing ones beside them, not taken out of them", () => {
+	const { container } = digest("process", {
+		queuedMessages: 3,
+		failing: 2,
+		schedulesDeadlines: true,
+	});
+
+	expect(stats(container).deadlines).toMatch(/^3\+2/);
+});
+
+test("an integration counts the commands that aren't failing, and then those that are", () => {
+	const { container } = digest("integration", {
+		queuedMessages: 3,
+		failing: 2,
+	});
+
+	expect(stats(container).commands).toMatch(/^1\+2/);
+});
+
 test("a process that schedules no deadlines has no deadlines or bar", () => {
 	const { container } = digest("process", {
 		bindings: [{ id: "aaaaaaaa", instances: 4 }],

@@ -83,7 +83,10 @@ export interface SiteData {
 	 * queues.
 	 */
 	queues?: {
-		/** The number of messages that are waiting, across the applications. */
+		/**
+		 * The number of messages that are ready to be delivered now, across the
+		 * applications.
+		 */
 		messages: number;
 
 		/**
@@ -93,7 +96,10 @@ export interface SiteData {
 		 */
 		queues?: number;
 
-		/** The number of those messages whose delivery is failing. */
+		/**
+		 * The number of messages whose delivery is failing, which may or may not
+		 * be ready.
+		 */
 		failing: number;
 
 		/** The share of the nodes at the site that report the messages in queues. */
@@ -150,7 +156,10 @@ export interface SiteApplication {
 	 */
 	events?: { perMinute?: number; streams?: Streams };
 
-	/** The messages that are waiting, if the engine supports it. */
+	/**
+	 * The messages that are ready to be delivered now, and those that are
+	 * failing, if the engine supports them.
+	 */
 	queues?: { messages: number; failing: number; queues?: number };
 }
 
@@ -341,7 +350,10 @@ export interface OverviewData {
 		/** The share of the nodes that report what the tile is made from. */
 		coverage?: number;
 
-		/** The number of messages in each of the cluster's queues. */
+		/**
+		 * The number of messages in each of the cluster's queues that are ready to
+		 * be delivered now.
+		 */
 		queues?: SpreadPart[];
 
 		/**
@@ -524,8 +536,9 @@ export interface HandlerSummary {
 	activeInstances?: { count: number; title: string };
 
 	/**
-	 * The number of commands or deadlines that the handler has queued. Absent
-	 * if the engine doesn't report it.
+	 * The number of commands that are queued for the handler, for an aggregate or
+	 * an integration, or of deadlines that are ready to be delivered to it now,
+	 * for a process. Absent if the engine doesn't report it.
 	 */
 	queuedMessages?: number;
 
@@ -597,7 +610,8 @@ export interface ClusterDocument {
 	oneStream?: boolean;
 
 	/**
-	 * The number of messages in each queue, by ID. Absent if no node supports it.
+	 * The number of messages in each queue that are ready to be delivered now,
+	 * by ID. Absent if no node supports it.
 	 */
 	queues?: Record<string, { messages: number }>;
 

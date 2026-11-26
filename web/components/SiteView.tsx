@@ -223,9 +223,10 @@ export function SiteEventsTile({
 
 /**
  * SiteQueuesTile is the site's queues tile, whose headline is the messages that
- * wait across the applications, with those that are failing, whose detail line
- * gives the number of queues of all the applications together, and whose bar
- * shows which applications have the most waiting.
+ * are ready to be delivered now across the applications, with those that are
+ * failing beside them, as the cluster view's queues tile has them, whose detail
+ * line gives the number of queues of all the applications together, and whose
+ * bar shows which applications have the most ready.
  */
 export function SiteQueuesTile({
 	data,
@@ -235,7 +236,6 @@ export function SiteQueuesTile({
 	queues: NonNullable<SiteData["queues"]>;
 }) {
 	const { scaled, per, state } = useRate(queues.throughput?.perMinute);
-	const healthy = Math.max(0, queues.messages - queues.failing);
 
 	return (
 		<MetricTile
@@ -249,7 +249,7 @@ export function SiteQueuesTile({
 			accent={queues.failing > 0 ? "failing" : undefined}
 			value={
 				<span>
-					<Ramped value={healthy} format={formatCompact} />
+					<Ramped value={queues.messages} format={formatCompact} />
 					<Failing count={queues.failing} size="headline" />
 				</span>
 			}
@@ -508,7 +508,7 @@ export const noSignalText =
 	"There is no signal from the application, so it's unknown whether it is working.";
 
 /**
- * ApplicationFigures is the events per minute and the messages waiting of one
+ * ApplicationFigures is the events per minute and the messages that are ready of one
  * application, each with the icon of what it counts, in the colors of its
  * subsystem, for whichever of them the application's engine supports.
  */
@@ -548,10 +548,7 @@ function ApplicationFigures({ app }: { app: SiteApplication }) {
 						className="size-3.5 self-center text-(--subsystem)"
 					/>
 					<span>
-						<Figure
-							number={app.queues.messages - app.queues.failing}
-							format={formatCompact}
-						/>
+						<Figure number={app.queues.messages} format={formatCompact} />
 						<Failing count={app.queues.failing} size="stat" />
 					</span>
 				</span>

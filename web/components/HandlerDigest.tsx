@@ -200,15 +200,19 @@ function Summary({
 	const stats: StatProps[] = [];
 	let bar: ReactNode = null;
 
-	// The number of commands or deadlines that are pending for the handler is
-	// those that aren't failing, and then those that are, as in "2 +1", because
-	// the failing ones are pending too, so that the two add up to all that is
-	// pending. It recedes when it is zero. It is left out if the engine doesn't
-	// report it.
-	const queue = (icon: IconName, plural: string) => {
+	// The number of commands that are pending for the handler is those that
+	// aren't failing, and then those that are, as in "2 +1", because the failing
+	// ones are pending too, so that the two add up to all that is pending. A
+	// process's deadlines are those that are ready to be delivered now, and its
+	// failing ones are counted beside them, not taken out of them, because a
+	// failing deadline may or may not be ready, as it waits for its next attempt.
+	// It recedes when it is zero. It is left out if the engine doesn't report it.
+	const queue = (icon: IconName, plural: string, ready = false) => {
 		const { queuedMessages } = summary;
 		if (queuedMessages !== undefined) {
-			const healthy = Math.max(0, queuedMessages - summary.failing);
+			const healthy = ready
+				? queuedMessages
+				: Math.max(0, queuedMessages - summary.failing);
 			stats.push({
 				id: "queued",
 				icon,
@@ -289,7 +293,7 @@ function Summary({
 			eventsPending();
 
 			if (summary.schedulesDeadlines) {
-				queue("deadline", "deadlines");
+				queue("deadline", "deadlines", true);
 
 				if (summary.bindings !== undefined) {
 					bar = (

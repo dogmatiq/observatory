@@ -119,6 +119,25 @@ test("failing messages are shown in the queues tile, and the plural is exact", (
 	expect(tile.textContent).not.toContain("442/min, ");
 });
 
+test("the queues tile's headline is every message that is ready, with the failing ones beside it, not taken out of it", () => {
+	render(
+		<Overview
+			application={application}
+			data={{
+				...overview,
+				queues: {
+					...overview.queues,
+					queues: [{ id: "113cbdc3", size: 19 }],
+					failing: 3,
+				},
+			}}
+		/>,
+	);
+
+	const tile = screen.getByRole("article", { name: "Queues" });
+	expect(tile.textContent).toMatch(/^19\+3/);
+});
+
 test("a cluster with no live nodes has a red number, and the words after it still make a sentence", () => {
 	render(
 		<Overview
