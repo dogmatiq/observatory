@@ -649,12 +649,14 @@ parts. An item that says "Done" is built.
   the nodes that have enough readings, so that the rate never pauses for a joined node, and dips by that node's share
   until it counts, and to say so in the card's status, so that "lost" means that no node has enough readings, which is
   at the start and not often after. A node that leaves stops counting at once either way.
-- Places for the `Glitch`, which James likes and which is in use in one place so far, a lost figure just before its
-  zero: somewhere that needs attention, kept for the
-  exceptional so that it keeps its meaning. Candidates so far: the cluster tile's "0 cluster nodes", the notice that updates
-  have stopped because the Observatory can't be reached, a node leaving the cluster, a handler's failing count when it
-  first rises, and the health Issues when the rules come back. It would be a short burst and not a constant shake, and
-  with reduced motion only the split. More are added as they are found.
+- Places for the `Glitch`: somewhere that needs attention, kept for the exceptional so that it keeps its meaning. A
+  glitch marks an event, the moment that something happens, as a short burst, and never a lasting state. In use: a lost
+  figure just before its zero, an alert flag appearing, and a node's section of the heartbeat chart when the node goes.
+  Decided: the orange or red "+N" of a number glitches once as it grows in, when the part that it counts begins (done,
+  69e11af). Still to decide, on the temporary glitches page: the notice that updates have stopped because the
+  Observatory can't be reached. Later: the health Issues when the rules come back. More are added as they are found.
+- Decided: the engine tile's readout says "heartbeat 4 s ago", with "heartbeat" muted and the time in the tile's color,
+  and doesn't name the engine, because its chart has one share (done, 69e11af).
 - The prepositions of the page (decided). The spec's own words are kept: events are "on" an event stream, messages are
   "in" a queue, instances are "bound to" an event stream or a queue, and workloads are "owned by" a node. A distribution
   is "across" the things that it is of, and "between" is not used, because it means two. Done (3f51cb3): the events
