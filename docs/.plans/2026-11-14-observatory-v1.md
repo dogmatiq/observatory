@@ -781,6 +781,7 @@ but isn't shown, and decide towards the end which of them to show and where.
 | Which nodes handled a handler's messages, and how many each | the per-node samples that `Combine` adds up | Only the sums are used. |
 | The signals that the queues tile's rate doesn't use, when nodes report several of the removed messages, the handled commands and the handled deadlines | `QueueCommandsRemoved`, `QueueDeadlinesRemoved`, `HandlerCommandsHandled`, `HandlerDeadlinesHandled` | The tile shows one, by a rule, and the others are not shown anywhere, because there is no deeper view yet. Revisit when there is, for example to show the removals that are not handled, which are the cancelled deadlines. |
 | A handler's concurrency preference when it is not minimize | `ConcurrencyPreference` | Only minimize has an icon. |
+| The whole ID of an event stream, a queue or a node, to copy | the bars' segments | A segment's readout gives the first part of the ID, and a readout can't be pointed at, so nothing offers the whole ID to copy. |
 
 ## Delivery order
 
@@ -1091,17 +1092,17 @@ Tick each item when it is done, and write the pull request or commit that did it
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
-  does. A thing with no name, such as a stream, a queue or a node, has its shortened ID in the place of the name, in the
-  same style, with a copy button that says what it copied, such as "Copied queue ID", in a note above it that moves
-  nothing. A thing that has a name shows no ID or key, on a hovercard or a digest, so only the bars' drill-down
-  hovercards and the title bar show IDs (approved, IC 1A). An alert flag opens a tooltip of its status, not a hovercard.
-  On a screen that is touched, a tap on an element opens its hovercard or tooltip, such as a bar's segment's or an
-  alert flag's, and a tap on it again, or anywhere but the panel, closes it; a segment is a finger's height to tap.
-  Done.
-  Approved (IC 1B, IC 1C), to build after the review: the segments of a handler digest's bars, whose tooltips today
-  have the ID inside a sentence, become drill-down cards that follow the same rule, with the ID, the kind and the
-  figure, and no paragraphs. A segment that is about no one thing, such as the merged last segment, keeps a tooltip of
-  one line.
+  does (IC 1A). An alert flag opens a tooltip of its status, not a hovercard. On a screen that is touched, a tap on an
+  element opens its hovercard or tooltip, and a tap on it again, or anywhere but the panel, closes it. Done.
+  Decided since, in place of the bars' drill-down hovercards, their copyable IDs (IC 1A) and the drill-down cards on a
+  handler digest's bars (IC 1B, IC 1C): pointing at a segment of any bar shows what the segment is of in the card's
+  readout, beside its icon, where the charts' readouts are. The thing is in the muted color, by its name or the first
+  part of its ID, over its amount and its share of the bar in the bar's color, as "queue 113cbdc3" over "12 messages,
+  63%". A bar that has no shares, and a segment that merges the rest, give the amount only. A readout is at most two
+  lines, so that it moves nothing under the pointer. Nothing opens, and an ID can't be copied from a bar any more; the
+  trail in the title bar is where keys and IDs are copied. A handler's digest gets a readout beside its kind icon,
+  over the end of its name, which keeps its size and fades out under it, and its chart gets a readout as a tile's has.
+  On a screen that is touched, a tap on a segment does what pointing does. Done (f83b85c).
   Done with the explainers: no card's icon opens a hovercard, so an icon no longer grows when it is pointed at.
   Approved and done (ID 2; daab9a7, 9f153b0): the title bar says where the page is as a trail, which is the page's address: the site
   and the application, and, on a cluster's own page, the cluster or the engine, each a link to its own page. An
