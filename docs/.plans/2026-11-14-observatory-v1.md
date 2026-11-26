@@ -653,10 +653,13 @@ parts. An item that says "Done" is built.
   glitch marks an event, the moment that something happens, as a short burst, and never a lasting state. In use: a lost
   figure just before its zero, an alert flag appearing, and a node's section of the heartbeat chart when the node goes.
   Decided: the orange or red "+N" of a number glitches once as it grows in, when the part that it counts begins (done,
-  69e11af). Still to decide, on the temporary glitches page: the notice that updates have stopped because the
-  Observatory can't be reached. Later: the health Issues when the rules come back. More are added as they are found.
-- Decided: the engine tile's readout says "heartbeat 4 s ago", with "heartbeat" muted and the time in the tile's color,
-  and doesn't name the engine, because its chart has one share (done, 69e11af).
+  69e11af). Decided: a page that has stopped being updated, because the Observatory can't be reached, says so by a red
+  alert flag in its title bar, in place of the line of text that it had above the page, and the flag glitches as it
+  appears, as a card's does (done, aa3dbc3). Later: the health Issues when the rules come back. More are added as they are
+  found.
+- Decided: the time in a heartbeat chart's readout is its measurement, so it has the tile's color, as a sparkline's
+  value does, and the rest is muted: the cluster tile's says "node 3f8e2a10" over "heartbeat 4 s ago", and the engine
+  tile's only "heartbeat 4 s ago", because its chart has one share (done, 69e11af, aa3dbc3).
 - The prepositions of the page (decided). The spec's own words are kept: events are "on" an event stream, messages are
   "in" a queue, instances are "bound to" an event stream or a queue, and workloads are "owned by" a node. A distribution
   is "across" the things that it is of, and "between" is not used, because it means two. Done (3f51cb3): the events
@@ -1079,8 +1082,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   keyframes, with their red and cyan shadows, and the ends of the section stay joined to the line. For a viewer who asks
   for less motion the section doesn't slip, and has only its shadows. Done (926c390, 7b5301c).
   Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
-  sparklines' readouts are shown: "node 3f8e2a10", with "node" muted and the short ID in the cluster's color, over
-  "heartbeat 4 s ago", or "heartbeat just now" under 1.5 seconds. The
+  sparklines' readouts are shown: "node 3f8e2a10", muted, over "heartbeat 4 s ago", or
+  "heartbeat just now" under 1.5 seconds, with the time in the cluster's color (aa3dbc3). The
   share's line itself widens, from 1.5 to 4 pixels, over about 220 milliseconds, and narrows again when the pointer
   leaves. It is widest in the share and tapers back to 1.5 pixels just past its edges, so that it has no border, and it
   follows the line where a glitch has moved it. The share's shade is stronger by as much. Done for the cluster and
