@@ -1071,14 +1071,16 @@ Tick each item when it is done, and write the pull request or commit that did it
   Decided: a node's section glitches while its heartbeat is late, which is once the interval that its engine gives has
   passed with no new heartbeat, until the heartbeat expires. It is the figures' glitch turned on its side for a line:
   the left and the right half of the section slip up and down on the figures' keyframes, with their red and cyan
-  shadows, by more as the heartbeat gets later, and the ends of the section stay joined to the line. Still to build;
-  it needs the engine's interval on the page.
+  shadows, by more as the heartbeat gets later, and the ends of the section stay joined to the line. Done for the
+  cluster and engine tiles (d11d974, df9ce8d): the stream sends each node's interval in the state document, and for a
+  viewer who asks for less motion the section doesn't slip, and has only its shadows.
   Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
   sparklines' readouts are shown: "node 3f8e2a10", with "node" muted and the short ID in the cluster's color, over
   "heartbeat 4 s ago", "heartbeat just now" under 1.5 seconds, or "heartbeat 3 s late" once the heartbeat is late. The
   share's line itself widens, from 1.5 to 4 pixels, over about 220 milliseconds, and narrows again when the pointer
   leaves. It is widest in the share and tapers back to 1.5 pixels just past its edges, so that it has no border, and it
-  follows the line where a glitch has moved it. The share's shade is stronger by as much. Still to build.
+  follows the line where a glitch has moved it. The share's shade is stronger by as much. Done for the cluster and
+  engine tiles (df9ce8d), with a tap on a share doing the same on a screen that is touched; the temporary page is gone.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
