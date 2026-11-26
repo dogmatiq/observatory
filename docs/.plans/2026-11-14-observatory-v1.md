@@ -1177,7 +1177,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   digest's first paragraph is "Commands and deadlines wait on queues until they are delivered. A command is ready to
   be delivered as soon as it is queued, and a deadline once its scheduled time arrives."; and their advice is "Fewer ready messages is
   better. If the number keeps rising, messages are becoming ready faster than they are being handled." Done (28f4f72,
-  c783080): the queues tiles count the messages that are due, and so does the compact digest, whose data comes with
+  c783080, 787048d): the queues tiles count the messages that are due, and so does the compact digest, whose data comes with
   the site view's server side. Settled by what was already decided: an engine that reports the messages waiting but not
   the ones that are due has the tile of an engine that doesn't report the messages in queues, whose headline is its rate;
   and the cards keep the word "messages", which the explainers' approved words describe. Built as recommended, for the
