@@ -983,7 +983,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   as a node that doesn't report. An application's coverage is the lowest of its figures'. A site's page shows the site
   view, with the stopped flag and a trail of the site alone; the applications at no site have no trail. The compact
   digest's rate is a whole number per minute, hour or day, as the tiles' is, and every rate on the page holds while a
-  node is being measured.
+  node is being measured. When no engine at the site supports the rate of events, the events tile's headline is the
+  events on the applications' streams, its bar is of how those are spread across the applications, and it has its own
+  explainer, as a cluster's events tile does (b9bb0d9).
 - What a cluster's page shows of `HandlerEventStreamLag`. The spec gives no rule for combining it across nodes, on
   purpose: what makes sense to show is for the Observatory to work out. Until then a cluster shows it only if
   `WatchClusterMetrics` reports it.
