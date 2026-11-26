@@ -688,8 +688,9 @@ func (r summedRate) rate() *float64 {
 
 // handlerFigures is what the samples say about one handler.
 type handlerFigures struct {
-	commandsPending, deadlinesDue, eventsPending   *uint64
+	commandsPending, eventsPending                 *uint64
 	failing                                        uint64
+	deadlines                                      waiting
 	eventsRecorded, eventsHandled, commandsHandled summedRate
 
 	// bindings is the number of instances bound to each event stream, for an
@@ -701,11 +702,70 @@ type handlerFigures struct {
 	unbound uint64
 }
 
+// waiting is what the samples say about one kind of message that waits in one
+// queue, or for one handler: how many of them are due, pending and failing, each
+// nil if no sample gives it.
+type waiting struct {
+	due, pending, failing *uint64
+}
+
+// ready returns how many of the messages are ready to be delivered now and
+// have never failed, or nil if the samples don't give how many are due. See
+// [readyOf].
+func (w waiting) ready() *uint64 {
+	if w.due == nil {
+		return nil
+	}
+	n := readyOf(*w.due, w.pending, w.failing)
+	return &n
+}
+
+// count adds v to the count that c points to, making it first if there is none.
+func count(c **uint64, v uint64) {
+	if *c == nil {
+		*c = new(uint64)
+	}
+	**c += v
+}
+
+// readyOf returns how many messages are ready to be delivered now and have
+// never failed, given how many a node reports as due, and as pending and
+// failing, if it reports them.
+//
+// It emulates dogmatiq/protobuf#53, which asks for the due metrics to leave out
+// the messages whose most recent delivery attempt failed, so that the due and
+// failing counts never share a message. Today a failing message whose next
+// attempt is due is counted as due and as failing. A message that is ready and
+// has never failed is due, and is pending and not failing, so their number is
+// at most the smaller of the due messages and the pending ones less the
+// failing ones. For commands that is exact, because a command is ready as soon
+// as it is queued, so a pending command that isn't failing is ready; for
+// deadlines it is the closest bound there is, because a deadline whose time
+// hasn't come is pending and not due. Without the pending or the failing count,
+// it is the due count, as the spec will make it.
+//
+// Once dogmatiq/protobuf#53 is done, the due metrics are the ready counts and
+// this goes.
+func readyOf(due uint64, pending, failing *uint64) uint64 {
+	if pending == nil || failing == nil {
+		return due
+	}
+	if *failing >= *pending {
+		return 0
+	}
+	return min(due, *pending-*failing)
+}
+
 // figures is what the combined samples of a cluster say, in the form that an
 // [Overview] is made from.
 type figures struct {
-	streams        map[string]uint64
-	dueInQueue     map[string]uint64
+	streams map[string]uint64
+
+	// readyInQueue is the number of messages in each queue that are ready to be
+	// delivered now and have never failed, by its ID, for each queue that some
+	// kind of message is reported as due in.
+	readyInQueue map[string]uint64
+
 	failing        uint64
 	eventsRecorded summedRate
 	removed        summedRate
@@ -716,9 +776,20 @@ type figures struct {
 // figuresOf sorts the combined samples of a cluster by what they measure.
 func figuresOf(samples []ClusterSample) figures {
 	f := figures{
-		streams:    map[string]uint64{},
-		dueInQueue: map[string]uint64{},
-		handlers:   map[string]*handlerFigures{},
+		streams:  map[string]uint64{},
+		handlers: map[string]*handlerFigures{},
+	}
+
+	// The commands and the deadlines in each queue, by its ID.
+	commands := map[string]*waiting{}
+	deadlines := map[string]*waiting{}
+	in := func(m map[string]*waiting, id *uuidpb.UUID) *waiting {
+		w, ok := m[id.AsString()]
+		if !ok {
+			w = &waiting{}
+			m[id.AsString()] = w
+		}
+		return w
 	}
 
 	handler := func(key *uuidpb.UUID) *handlerFigures {
@@ -739,13 +810,19 @@ func figuresOf(samples []ClusterSample) figures {
 			f.streams[m.GetEventStreamId().AsString()] = v
 
 		case *metricsgrpc.QueueCommandsDue:
-			f.dueInQueue[m.GetQueueId().AsString()] += v
+			count(&in(commands, m.GetQueueId()).due, v)
 		case *metricsgrpc.QueueDeadlinesDue:
-			f.dueInQueue[m.GetQueueId().AsString()] += v
+			count(&in(deadlines, m.GetQueueId()).due, v)
+		case *metricsgrpc.QueueCommandsPending:
+			count(&in(commands, m.GetQueueId()).pending, v)
+		case *metricsgrpc.QueueDeadlinesPending:
+			count(&in(deadlines, m.GetQueueId()).pending, v)
 		case *metricsgrpc.QueueCommandsFailing:
 			f.failing += v
+			count(&in(commands, m.GetQueueId()).failing, v)
 		case *metricsgrpc.QueueDeadlinesFailing:
 			f.failing += v
+			count(&in(deadlines, m.GetQueueId()).failing, v)
 		case *metricsgrpc.QueueCommandsRemoved:
 			f.removed.add(s)
 		case *metricsgrpc.QueueDeadlinesRemoved:
@@ -754,7 +831,9 @@ func figuresOf(samples []ClusterSample) figures {
 		case *metricsgrpc.HandlerCommandsPending:
 			handler(m.GetHandlerKey()).commandsPending = &v
 		case *metricsgrpc.HandlerDeadlinesDue:
-			handler(m.GetHandlerKey()).deadlinesDue = &v
+			handler(m.GetHandlerKey()).deadlines.due = &v
+		case *metricsgrpc.HandlerDeadlinesPending:
+			handler(m.GetHandlerKey()).deadlines.pending = &v
 		case *metricsgrpc.HandlerEventStreamLag:
 			// The events that the handler has yet to reach are its lag on each
 			// stream, added up.
@@ -767,6 +846,7 @@ func figuresOf(samples []ClusterSample) figures {
 			handler(m.GetHandlerKey()).failing += v
 		case *metricsgrpc.HandlerDeadlinesFailing:
 			handler(m.GetHandlerKey()).failing += v
+			handler(m.GetHandlerKey()).deadlines.failing = &v
 		case *metricsgrpc.HandlerCommandsHandled:
 			handler(m.GetHandlerKey()).commandsHandled.add(s)
 			f.handled.add(s)
@@ -785,6 +865,17 @@ func figuresOf(samples []ClusterSample) figures {
 				handler(m.GetHandlerKey()).bindings[m.GetQueueId().AsString()] += v
 			} else {
 				handler(m.GetHandlerKey()).unbound += v
+			}
+		}
+	}
+
+	// The messages in a queue that are ready are its commands and its deadlines
+	// that are ready, of each kind that is reported as due.
+	f.readyInQueue = map[string]uint64{}
+	for _, m := range []map[string]*waiting{commands, deadlines} {
+		for id, w := range m {
+			if n := w.ready(); n != nil {
+				f.readyInQueue[id] += *n
 			}
 		}
 	}
@@ -855,11 +946,10 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		}
 	}
 
-	// The tile counts the messages that are due beside those that are failing,
-	// and the page adds the two. That relies on the due metrics leaving out the
-	// messages whose most recent delivery attempt failed, which the spec doesn't
-	// say yet (dogmatiq/protobuf#53); until it does, a failing message whose next
-	// attempt is due may be counted in both.
+	// The tile counts the messages that are ready beside those that are failing,
+	// and the page adds the two. The ready ones leave out the failing ones, as
+	// dogmatiq/protobuf#53 asks the due metrics to do, which [readyOf] emulates
+	// until it is done.
 	due := supported[metric(new(metricsgrpc.QueueCommandsDue))] ||
 		supported[metric(new(metricsgrpc.QueueDeadlinesDue))]
 	removed := supported[metric(new(metricsgrpc.QueueCommandsRemoved))] ||
@@ -870,7 +960,7 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		o.Queues = &QueuesTile{Failing: f.failing}
 
 		if due {
-			o.Queues.Queues = spreadOf(f.dueInQueue)
+			o.Queues.Queues = spreadOf(f.readyInQueue)
 		}
 		o.Queues.OneQueue = everyNode(nodes, func(p *enginegrpc.WatchEngineResponse_Preamble) bool {
 			return p.GetQueueModel().HasSingleQueue()
@@ -1096,7 +1186,7 @@ func handlerCards(
 			}
 
 		case configpb.HandlerType_HANDLER_TYPE_PROCESS:
-			s.QueuedMessages = figs.deadlinesDue
+			s.QueuedMessages = figs.deadlines.ready()
 			s.UnhandledEvents = figs.eventsPending
 			recorded = &figs.eventsHandled
 			for name, use := range h.GetMessages() {

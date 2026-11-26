@@ -392,9 +392,9 @@ export function QueuesTile({
 
 	// The headline is the messages that are ready to be delivered now, and then
 	// those that are failing, as in "24 +1", which add up to every message that is
-	// either. That relies on the counts of ready messages leaving out the failing
-	// ones, which the spec doesn't say yet (dogmatiq/protobuf#53); until it does,
-	// a failing message whose next attempt is due may be counted in both. If no
+	// either. The ready ones leave out the failing ones, as dogmatiq/protobuf#53
+	// asks the spec's due counts to do, which the server emulates until it is
+	// done. If no
 	// node supports the messages in queues that are ready, the headline is the
 	// messages that are removed per minute.
 	const failing = useCurrent(data.failing);

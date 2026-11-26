@@ -424,6 +424,66 @@ func TestOverview(t *testing.T) {
 				})
 			})
 
+			t.Run("it doesn't count a failing message whose next attempt is due as ready", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					q := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						name(new(metricsgrpc.QueueCommandsDue)),
+						name(new(metricsgrpc.QueueCommandsPending)),
+						name(new(metricsgrpc.QueueCommandsFailing)),
+					)
+					// Six commands wait: three that have never failed, and three
+					// that are failing, of which one is due for its next attempt,
+					// so the node counts four as due.
+					n.sample(t, 0, "due", 1, metricsgrpc.QueueCommandsDue_builder{QueueId: q, CurrentCount: 4}.Build())
+					n.sample(t, 1, "pending", 1, metricsgrpc.QueueCommandsPending_builder{QueueId: q, CurrentCount: 6}.Build())
+					n.sample(t, 2, "failing", 1, metricsgrpc.QueueCommandsFailing_builder{QueueId: q, CurrentCount: 3}.Build())
+
+					tile := viewOf(t, r, o, c).Overview.Queues
+					if len(tile.Queues) != 1 || tile.Queues[0].Size != 3 {
+						t.Fatalf("unexpected queues: %v", tile.Queues)
+					}
+					if tile.Failing != 3 {
+						t.Fatalf("unexpected number of failing messages: got %d, want 3", tile.Failing)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it counts no more deadlines as ready than are due", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					q := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c, appOf("statements", uuidpb.Generate()),
+						name(new(metricsgrpc.QueueDeadlinesDue)),
+						name(new(metricsgrpc.QueueDeadlinesPending)),
+						name(new(metricsgrpc.QueueDeadlinesFailing)),
+					)
+					// Ten deadlines wait, of which six are scheduled for later and
+					// two are failing.
+					n.sample(t, 0, "due", 1, metricsgrpc.QueueDeadlinesDue_builder{QueueId: q, CurrentCount: 2}.Build())
+					n.sample(t, 1, "pending", 1, metricsgrpc.QueueDeadlinesPending_builder{QueueId: q, CurrentCount: 10}.Build())
+					n.sample(t, 2, "failing", 1, metricsgrpc.QueueDeadlinesFailing_builder{QueueId: q, CurrentCount: 2}.Build())
+
+					tile := viewOf(t, r, o, c).Overview.Queues
+					if len(tile.Queues) != 1 || tile.Queues[0].Size != 2 {
+						t.Fatalf("unexpected queues: %v", tile.Queues)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
 			t.Run("it doesn't count the messages that are only waiting", func(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancel(t.Context())
@@ -971,6 +1031,41 @@ func TestOverview(t *testing.T) {
 					}
 					if s.Unbound != 3 {
 						t.Fatalf("unexpected number of instances bound to no queue: got %d, want 3", s.Unbound)
+					}
+
+					cancel()
+					<-n.Engine.Done
+				})
+			})
+
+			t.Run("it doesn't count a process's failing deadline whose next attempt is due as ready", func(t *testing.T) {
+				synctest.Test(t, func(t *testing.T) {
+					ctx, cancel := context.WithCancel(t.Context())
+					o, r := NewObserver(), NewRecorder()
+					c := uuidpb.Generate()
+					key := uuidpb.Generate()
+
+					n := startApp(t, ctx, o, c,
+						appOf("statements", uuidpb.Generate(),
+							handler("schedule", key, configpb.HandlerType_HANDLER_TYPE_PROCESS, map[string]*configpb.MessageUsage{
+								"example.Deadline": configpb.MessageUsage_builder{IsProduced: true, IsConsumed: true}.Build(),
+							})),
+						name(new(metricsgrpc.HandlerDeadlinesDue)),
+						name(new(metricsgrpc.HandlerDeadlinesPending)),
+						name(new(metricsgrpc.HandlerDeadlinesFailing)),
+					)
+					// Five deadlines wait, all due: three that have never failed,
+					// and two that are failing and due for their next attempts.
+					n.sample(t, 0, "due", 1, metricsgrpc.HandlerDeadlinesDue_builder{HandlerKey: key, CurrentCount: 5}.Build())
+					n.sample(t, 1, "pending", 1, metricsgrpc.HandlerDeadlinesPending_builder{HandlerKey: key, CurrentCount: 5}.Build())
+					n.sample(t, 2, "failing", 1, metricsgrpc.HandlerDeadlinesFailing_builder{HandlerKey: key, CurrentCount: 2}.Build())
+
+					s := viewOf(t, r, o, c).Overview.Handlers[0].Summary
+					if s.QueuedMessages == nil || *s.QueuedMessages != 3 {
+						t.Fatalf("unexpected number of ready deadlines: %v", s.QueuedMessages)
+					}
+					if s.Failing != 2 {
+						t.Fatalf("unexpected number of failing deadlines: got %d, want 2", s.Failing)
 					}
 
 					cancel()
