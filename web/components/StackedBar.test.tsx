@@ -1,13 +1,7 @@
-import {
-	act,
-	cleanup,
-	fireEvent,
-	render,
-	screen,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { Distrusted } from "../lib/distrust.tsx";
-import { tipOf } from "../test-support.ts";
+import { type Readout, ReadoutContext } from "../lib/readout.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 
 afterEach(cleanup);
@@ -30,7 +24,7 @@ test("a bar is an empty track if the numbers around it are not current", () => {
 	const { container } = render(
 		<Distrusted value>
 			<StackedBar
-				segments={[{ id: "a", title: "A", lead: "A", value: 1 } as never]}
+				segments={[{ title: "A", readout: { figure: "A" }, value: 1 }]}
 				subsystem="queues"
 			/>
 		</Distrusted>,
@@ -39,26 +33,80 @@ test("a bar is an empty track if the numbers around it are not current", () => {
 	expect(segmentsOf(container)).toHaveLength(0);
 });
 
-test("each segment is a box whose popover is its title", async () => {
+test("each segment is a box as wide as its share of the bar, less a gap", () => {
 	const { container } = render(
 		<StackedBar
 			subsystem="streams"
 			segments={[
-				{ value: 3, title: "three" },
-				{ value: 1, title: "one" },
+				{ value: 3, title: "three", readout: { figure: "three" } },
+				{ value: 1, title: "one", readout: { figure: "one" } },
 			]}
 		/>,
 	);
 
-	const boxes = segmentsOf(container);
-	expect([
-		await tipOf(boxes[0] as Element),
-		await tipOf(boxes[1] as Element),
-	]).toEqual(["three", "one"]);
-	expect(boxes.map((b) => [b.style.left, b.style.width])).toEqual([
+	expect(
+		segmentsOf(container).map((b) => [b.style.left, b.style.width]),
+	).toEqual([
 		["0%", "74.4%"],
 		["75%", "25%"],
 	]);
+});
+
+/**
+ * pointable renders a bar inside a card that shows readouts, and returns the
+ * bar's segments and the readouts that the card was given, in order.
+ */
+function pointable() {
+	const given: (Readout | undefined)[] = [];
+	const { container } = render(
+		<ReadoutContext.Provider value={(r) => given.push(r)}>
+			<StackedBar
+				subsystem="queues"
+				segments={[
+					{
+						value: 3,
+						title: "12 messages in queue 113cbdc3",
+						readout: { subject: "queue 113cbdc3", figure: "12", share: "75%" },
+					},
+					{
+						value: 1,
+						title: "4 messages in queue 4aeaa462",
+						readout: { subject: "queue 4aeaa462", figure: "4", share: "25%" },
+					},
+				]}
+			/>
+		</ReadoutContext.Provider>,
+	);
+	return { boxes: segmentsOf(container), given };
+}
+
+test("pointing at a segment gives the card's readout what the segment says, and leaving it takes it away", () => {
+	const { boxes, given } = pointable();
+
+	fireEvent.pointerEnter(boxes[1] as Element, { pointerType: "mouse" });
+	expect(given.at(-1)?.subject).toBe("queue 4aeaa462");
+
+	fireEvent.pointerLeave(boxes[1] as Element, { pointerType: "mouse" });
+	expect(given.at(-1)).toBeUndefined();
+});
+
+test("on a screen that is touched, a tap on a segment points at it, and a tap elsewhere ends it", () => {
+	const { boxes, given } = pointable();
+
+	fireEvent.pointerDown(boxes[0] as Element, { pointerType: "touch" });
+	fireEvent.pointerLeave(boxes[0] as Element, { pointerType: "touch" });
+	expect(given.at(-1)?.subject).toBe("queue 113cbdc3");
+
+	fireEvent.pointerDown(document.body, { pointerType: "touch" });
+	expect(given.at(-1)).toBeUndefined();
+});
+
+test("a tap on a segment of a bar in a card that is a link doesn't follow the link", () => {
+	const { boxes } = pointable();
+
+	fireEvent.pointerDown(boxes[0] as Element, { pointerType: "touch" });
+
+	expect(fireEvent.click(boxes[0] as Element)).toBe(false);
 });
 
 test("a segment that has no width is drawn with none, so that it can shrink away", () => {
@@ -66,9 +114,9 @@ test("a segment that has no width is drawn with none, so that it can shrink away
 		<StackedBar
 			subsystem="streams"
 			segments={[
-				{ value: 1000, title: "big" },
-				{ value: 1, title: "tiny" },
-				{ value: 1000, title: "big" },
+				{ value: 1000, title: "big", readout: { figure: "big" } },
+				{ value: 1, title: "tiny", readout: { figure: "tiny" } },
+				{ value: 1000, title: "big", readout: { figure: "big" } },
 			]}
 		/>,
 	);
@@ -88,6 +136,7 @@ test("a segment that has gone is kept with no width while it shrinks away, and t
 			segments={Array.from({ length: n }, (_, i) => ({
 				value: 1,
 				title: `${i}`,
+				readout: { figure: `${i}` },
 			}))}
 		/>
 	);
@@ -97,13 +146,6 @@ test("a segment that has gone is kept with no width while it shrinks away, and t
 	const boxes = segmentsOf(container);
 	expect(boxes).toHaveLength(3);
 	expect(boxes[2]?.style.width).toBe("0%");
-
-	// What has gone has nothing to say.
-	fireEvent.pointerEnter(boxes[2] as Element);
-	act(() => {
-		vi.advanceTimersByTime(400);
-	});
-	expect(screen.queryByRole("tooltip")).toBeNull();
 
 	act(() => {
 		vi.advanceTimersByTime(700);
@@ -119,8 +161,7 @@ test("the bar of nodes keeps a segment that has gone while it shrinks away, and 
 	const segments = (n: number) =>
 		Array.from({ length: n }, (_, i) => ({
 			title: `node ${i}`,
-			lead: `node ${i}`,
-			id: `${i}`,
+			readout: { subject: `node ${i}`, figure: "1" },
 			opacity: 1,
 			percent: 100 / n,
 		}));
@@ -145,8 +186,8 @@ test("a segment rises out of the bar while it is pointed at, and only that one",
 		<StackedBar
 			subsystem="streams"
 			segments={[
-				{ value: 3, title: "three" },
-				{ value: 1, title: "one" },
+				{ value: 3, title: "three", readout: { figure: "three" } },
+				{ value: 1, title: "one", readout: { figure: "one" } },
 			]}
 		/>,
 	);
@@ -167,8 +208,18 @@ test("a segment of the bar of nodes rises out of the bar while it is pointed at"
 	const { container } = render(
 		<NodeBar
 			segments={[
-				{ title: "first", lead: "first", id: "1", opacity: 0.5, percent: 50 },
-				{ title: "second", lead: "second", id: "2", opacity: 0.5, percent: 50 },
+				{
+					title: "first",
+					readout: { figure: "first" },
+					opacity: 0.5,
+					percent: 50,
+				},
+				{
+					title: "second",
+					readout: { figure: "second" },
+					opacity: 0.5,
+					percent: 50,
+				},
 			]}
 		/>,
 	);
@@ -188,9 +239,9 @@ test("only the segments at the ends of a bar have its rounded corners", () => {
 		<StackedBar
 			subsystem="streams"
 			segments={[
-				{ value: 1, title: "one" },
-				{ value: 1, title: "two" },
-				{ value: 1, title: "three" },
+				{ value: 1, title: "one", readout: { figure: "one" } },
+				{ value: 1, title: "two", readout: { figure: "two" } },
+				{ value: 1, title: "three", readout: { figure: "three" } },
 			]}
 		/>,
 	);
@@ -205,68 +256,4 @@ test("only the segments at the ends of a bar have its rounded corners", () => {
 		[false, false],
 		[false, true],
 	]);
-});
-
-test("the popover of a segment of one thing has its ID as an identifier, that can be pointed at", async () => {
-	const id = "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10";
-	const { container } = render(
-		<StackedBar
-			subsystem="streams"
-			segments={[
-				{
-					value: 1,
-					title: "3 events on event stream 8b0081fd",
-					lead: "3 events on event stream",
-					id,
-					of: "event stream",
-				},
-				{ value: 1, title: "5 events on 2 other event streams" },
-			]}
-		/>,
-	);
-
-	const boxes = segmentsOf(container);
-	fireEvent.pointerEnter(boxes[0] as Element);
-	const tip = await screen.findByRole("group");
-	expect(tip.textContent).toBe("3 events on event stream 8b0081fd");
-	expect(
-		screen.getByRole("button", { name: "Copy event stream ID" }),
-	).toBeDefined();
-	fireEvent.pointerLeave(boxes[0] as Element);
-
-	// The merged segment is of no one thing, and has nothing to copy.
-	fireEvent.pointerEnter(boxes[1] as Element);
-	await vi.waitFor(() => {
-		expect(screen.getByRole("tooltip").textContent).toBe(
-			"5 events on 2 other event streams",
-		);
-	});
-});
-
-test("the popover of a segment that has a card about it is the card", async () => {
-	const id = "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10";
-	const { container } = render(
-		<StackedBar
-			subsystem="streams"
-			segments={[
-				{
-					value: 3,
-					title: "3 events on event stream 8b0081fd",
-					about: {
-						thing: "event-stream",
-						id,
-						amount: 3,
-						share: 0.75,
-						total: { amount: 4, things: 2 },
-					},
-				},
-			]}
-		/>,
-	);
-
-	fireEvent.pointerEnter(segmentsOf(container)[0] as Element);
-	const card = await screen.findByRole("group");
-
-	expect(card.textContent).toContain("Event stream");
-	expect(card.textContent).toContain("75%");
 });

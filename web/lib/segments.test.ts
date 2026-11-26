@@ -83,15 +83,11 @@ test("the nodes' bar has the prototype's widths and titles", () => {
 test("each segment of the nodes' bar is about its node, with its share of the workloads", () => {
 	const segments = nodeSegments(overview.cluster.nodes);
 
-	expect(segments.map((s) => s.about)).toEqual(
-		overview.cluster.nodes.map((n) => ({
-			thing: "node",
-			id: n.id,
-			amount: n.workloads,
-			share: (n.workloads ?? 0) / 5,
-			total: { amount: 5, things: 3 },
-		})),
-	);
+	expect(segments.map((s) => s.readout)).toEqual([
+		{ subject: "node 113cbdc3", figure: "3", unit: "workloads", share: "60%" },
+		{ subject: "node 4aeaa462", figure: "1", unit: "workload", share: "20%" },
+		{ subject: "node f2cc5362", figure: "1", unit: "workload", share: "20%" },
+	]);
 });
 
 test("a node that owns no workload has no share of the bar, even when none owns any", () => {
@@ -99,7 +95,7 @@ test("a node that owns no workload has no share of the bar, even when none owns 
 		{ id: "aaaaaaaa", workloads: 0, heartbeats: [] },
 	]);
 
-	expect(segment?.about).toMatchObject({ share: 0 });
+	expect(segment?.readout.share).toBeUndefined();
 });
 
 test("a node that doesn't report its workloads, while others do, has a share that isn't known, and is a faint square", () => {
@@ -110,10 +106,10 @@ test("a node that doesn't report its workloads, while others do, has a share tha
 
 	expect(segments.map((s) => s.percent)).toEqual([100, undefined]);
 	expect(segments[1]?.faint).toBe(true);
-	expect(segments[1]?.about).toEqual({
-		thing: "node",
-		id: "bbbbbbbb",
-		unreported: true,
+	expect(segments[1]?.readout).toEqual({
+		subject: "node bbbbbbbb",
+		label: "workloads",
+		figure: "unknown",
 	});
 });
 
@@ -128,8 +124,15 @@ test("streams are shown largest first", () => {
 
 test("a bar of more than six segments merges the smallest into the last", () => {
 	const segments = limitSegments(
-		[10, 9, 8, 7, 6, 5, 4, 3].map((value) => ({ value, title: "" })),
-		(total, count) => `${total} in ${count} others`,
+		[10, 9, 8, 7, 6, 5, 4, 3].map((value) => ({
+			value,
+			title: "",
+			readout: { figure: "" },
+		})),
+		(total, count) => ({
+			title: `${total} in ${count} others`,
+			readout: { figure: `${total}` },
+		}),
 	);
 
 	expect(segments.map((s) => s.value)).toEqual([10, 9, 8, 7, 6, 12]);
@@ -145,8 +148,14 @@ test("a bar of more than six segments merges the smallest into the last", () => 
 });
 
 test("six segments are not merged", () => {
-	const six = [1, 2, 3, 4, 5, 6].map((value) => ({ value, title: "" }));
-	expect(limitSegments(six, () => "")).toEqual(six);
+	const six = [1, 2, 3, 4, 5, 6].map((value) => ({
+		value,
+		title: "",
+		readout: { figure: "" },
+	}));
+	expect(
+		limitSegments(six, () => ({ title: "", readout: { figure: "" } })),
+	).toEqual(six);
 });
 
 test("an instance that is bound to nothing yet has its own title", () => {
@@ -169,13 +178,15 @@ test("the merged segment of a queue bar names how many queues it holds", () => {
 
 test("an empty bar has no segments to draw", () => {
 	expect(layoutSegments([])).toEqual([]);
-	expect(layoutSegments([{ value: 0, title: "" }])).toEqual([undefined]);
+	expect(
+		layoutSegments([{ value: 0, title: "", readout: { figure: "0" } }]),
+	).toEqual([undefined]);
 });
 
 test("the last segment has no gap after it", () => {
 	const [a, b] = layoutSegments([
-		{ value: 1, title: "" },
-		{ value: 1, title: "" },
+		{ value: 1, title: "", readout: { figure: "1" } },
+		{ value: 1, title: "", readout: { figure: "1" } },
 	]);
 	expect(a).toEqual({ x: 0, width: 49.4 });
 	expect(b).toEqual({ x: 50, width: 50 });
@@ -183,9 +194,9 @@ test("the last segment has no gap after it", () => {
 
 test("a segment that has no value after the last one that has doesn't take away its end of the bar", () => {
 	const [a, b, c] = layoutSegments([
-		{ value: 1, title: "" },
-		{ value: 1, title: "" },
-		{ value: 0, title: "" },
+		{ value: 1, title: "", readout: { figure: "1" } },
+		{ value: 1, title: "", readout: { figure: "1" } },
+		{ value: 0, title: "", readout: { figure: "0" } },
 	]);
 	expect(a).toEqual({ x: 0, width: 49.4 });
 	expect(b).toEqual({ x: 50, width: 50 });
@@ -297,18 +308,15 @@ test("the segments of the nodes of a handler step down in shade with the number 
 	).toEqual([1, 0.88, 0.76, 0.64, 0.52, 0.4, 0.28]);
 });
 
-test("a segment of one thing has the thing's ID, and a title that ends with its first part", () => {
+test("a segment of one thing names it by the first part of its ID, in its title and its readout", () => {
 	const id = "8b0081fd-3f1c-4e8a-9d57-0b1c6a2e4f10";
 	const [segment] = queueSegments([{ id, size: 4 }]);
 
-	expect(segment).toMatchObject({
-		title: "4 messages in queue 8b0081fd",
-		lead: "4 messages in queue",
-		id,
-	});
+	expect(segment?.title).toBe("4 messages in queue 8b0081fd");
+	expect(segment?.readout.subject).toBe("queue 8b0081fd");
 });
 
-test("a segment of no one thing has no ID", () => {
+test("the merged segment of a bar says how many things it holds, and has no share", () => {
 	const segments = streamSegments(
 		Array.from({ length: 8 }, (_, i) => ({
 			id: `${i}`.repeat(8),
@@ -316,7 +324,11 @@ test("a segment of no one thing has no ID", () => {
 		})),
 	);
 
-	expect(segments.at(-1)?.id).toBeUndefined();
+	expect(segments.at(-1)?.readout).toEqual({
+		subject: "3 other event streams",
+		figure: "6",
+		unit: "events",
+	});
 });
 
 test("a segment of an event stream says how much of the events it holds", () => {
@@ -325,20 +337,18 @@ test("a segment of an event stream says how much of the events it holds", () => 
 		{ id: "bbbbbbbb-2", size: 3 },
 	]);
 
-	expect(segments.map((s) => s.about)).toEqual([
+	expect(segments.map((s) => s.readout)).toEqual([
 		{
-			thing: "event-stream",
-			id: "bbbbbbbb-2",
-			amount: 3,
-			share: 0.75,
-			total: { amount: 4, things: 2 },
+			subject: "event stream bbbbbbbb",
+			figure: "3",
+			unit: "events",
+			share: "75%",
 		},
 		{
-			thing: "event-stream",
-			id: "aaaaaaaa-1",
-			amount: 1,
-			share: 0.25,
-			total: { amount: 4, things: 2 },
+			subject: "event stream aaaaaaaa",
+			figure: "1",
+			unit: "event",
+			share: "25%",
 		},
 	]);
 });
@@ -357,20 +367,18 @@ test("a bar of a site's applications is largest first, leaves out those with non
 		"30 events per minute in payments",
 		"10 events per minute in accounts",
 	]);
-	expect(segments.map((s) => s.about)).toEqual([
+	expect(segments.map((s) => s.readout)).toEqual([
 		{
-			thing: "application",
-			of: "events",
-			application: { name: "payments", key: "payments" },
-			amount: 30,
-			share: 0.75,
+			subject: "application payments",
+			figure: "30",
+			unit: "events/min",
+			share: "75%",
 		},
 		{
-			thing: "application",
-			of: "events",
-			application: { name: "accounts", key: "accounts" },
-			amount: 10,
-			share: 0.25,
+			subject: "application accounts",
+			figure: "10",
+			unit: "events/min",
+			share: "25%",
 		},
 	]);
 });
@@ -388,4 +396,51 @@ test("a bar of many applications merges the smallest into the last", () => {
 	expect(segments.at(-1)?.title).toBe(
 		"6 messages waiting in 3 other applications",
 	);
+});
+
+test("a segment of a handler's bar of nodes gives the node's rate and its share", () => {
+	const segments = handlerNodeSegments(
+		[
+			{ id: "aaaaaaaa", rate: 3 },
+			{ id: "bbbbbbbb", rate: 1 },
+		],
+		"integration",
+	);
+
+	expect(segments.map((s) => s.readout)).toEqual([
+		{
+			subject: "node aaaaaaaa",
+			figure: "180",
+			unit: "commands/min",
+			share: "75%",
+		},
+		{
+			subject: "node bbbbbbbb",
+			figure: "60",
+			unit: "commands/min",
+			share: "25%",
+		},
+	]);
+});
+
+test("a segment of a handler's bar of bindings gives its instances, with no share", () => {
+	const [bound, unbound] = bindingSegments(
+		[
+			{ id: "8b0081fd-1", instances: 5 },
+			{ id: undefined, instances: 1 },
+		],
+		"event stream",
+		"event streams",
+	);
+
+	expect(bound?.readout).toEqual({
+		subject: "event stream 8b0081fd",
+		figure: "5",
+		unit: "instances",
+	});
+	expect(unbound?.readout).toEqual({
+		subject: "no event stream yet",
+		figure: "1",
+		unit: "instance",
+	});
 });

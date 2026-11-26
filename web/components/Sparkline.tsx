@@ -1,8 +1,8 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { cn } from "../lib/cn.ts";
 import { useDistrusted } from "../lib/distrust.tsx";
 import { useScrolled } from "../lib/live.tsx";
-import { type Readout, useSetReadout } from "../lib/readout.tsx";
+import { type Readout, useGiveReadout } from "../lib/readout.tsx";
 import {
 	chartWindowMs,
 	heightOf,
@@ -42,7 +42,7 @@ export function Sparkline({
 }: {
 	chart: Chart;
 	className?: string;
-	describe?: (value: number) => { figure: string; unit: string };
+	describe?: (value: number) => Pick<Readout, "figure" | "unit" | "subsystem">;
 }) {
 	const id = useId();
 
@@ -102,11 +102,9 @@ function Cursor({
 }: {
 	chart: Chart;
 	end: number;
-	describe: (value: number) => { figure: string; unit: string };
+	describe: (value: number) => Pick<Readout, "figure" | "unit" | "subsystem">;
 	className?: string;
 }) {
-	const setReadout = useSetReadout();
-
 	// Where the pointer is, as a share of the chart's width, if it is on it.
 	const [pointer, setPointer] = useState<number>();
 
@@ -121,12 +119,7 @@ function Cursor({
 		age: mark.age < 1500 ? "now" : `${Math.round(mark.age / 1000)} s ago`,
 	};
 
-	const key = readout && `${readout.figure}|${readout.unit}|${readout.age}`;
-	// biome-ignore lint/correctness/useExhaustiveDependencies: the key is the readout.
-	useEffect(() => {
-		setReadout?.(readout);
-	}, [key, setReadout]);
-	useEffect(() => () => setReadout?.(undefined), [setReadout]);
+	useGiveReadout(readout);
 
 	return (
 		// The chart is decoration, which is hidden from assistive technology, and its

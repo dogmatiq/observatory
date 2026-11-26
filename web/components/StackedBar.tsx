@@ -1,15 +1,19 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+	type MouseEvent,
+	type PointerEvent,
+	type RefObject,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { cn } from "../lib/cn.ts";
 import { useDistrusted } from "../lib/distrust.tsx";
+import { useGiveReadout } from "../lib/readout.tsx";
 import {
 	type BarSegment,
 	layoutSegments,
 	type NodeSegment,
-	type SegmentAbout,
 } from "../lib/segments.ts";
-import { Identifier } from "./Identifier.tsx";
-import { Popover } from "./Popover.tsx";
-import { SegmentCard } from "./SegmentCard.tsx";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
 /**
@@ -72,31 +76,6 @@ function useKept<T>(segments: readonly T[]): { extent: number; kept: T[] } {
 }
 
 /**
- * describe returns what the popover of a segment holds, which is the segment's
- * title, or, for a segment of one thing that has an ID, the title without the ID,
- * followed by the ID as an [Identifier].
- */
-function describe(s: {
-	title: string;
-	lead?: string;
-	id?: string;
-	of?: string;
-	about?: SegmentAbout;
-}): ReactNode {
-	if (s.about !== undefined) {
-		return <SegmentCard about={s.about} />;
-	}
-
-	return s.id === undefined ? (
-		s.title
-	) : (
-		<>
-			{s.lead} <Identifier id={s.id} what={`${s.of ?? "thing"} ID`} />
-		</>
-	);
-}
-
-/**
  * tapTarget makes a segment, which is only as tall as the bar, a finger's height
  * to tap on a screen that is touched, by an area that reaches above and below it.
  * The segment must be positioned.
@@ -105,17 +84,71 @@ const tapTarget =
 	"pointer-coarse:after:absolute pointer-coarse:after:inset-x-0 pointer-coarse:after:-inset-y-2 pointer-coarse:after:content-['']";
 
 /**
- * useHovered returns the position of the segment that the pointer is on, if any,
- * and the handlers to give the element of each segment.
+ * usePointed returns the position of the segment that is pointed at, if any, and
+ * the handlers to give the element of each segment, and gives the card's readout
+ * what that segment says, from `segments`, in the color of the bar's `subsystem`.
+ *
+ * A mouse points at a segment while it is over it. On a screen that is touched,
+ * a tap on a segment points at it, a tap on it again ends that, and so does a tap
+ * anywhere but the bar, whose element `bar` is. A tap on a bar inside a card that
+ * is a link doesn't follow the link.
  */
-function useHovered() {
-	const [hovered, setHovered] = useState<number>();
+function usePointed(
+	segments: readonly (BarSegment | NodeSegment | undefined)[],
+	subsystem: Subsystem,
+	bar: RefObject<HTMLElement | null>,
+) {
+	const [pointed, setPointed] = useState<number>();
+	const tapped = useRef(false);
+
+	const readout =
+		pointed === undefined ? undefined : segments[pointed]?.readout;
+	useGiveReadout(readout && { ...readout, subsystem });
+
+	// A tap anywhere but the bar ends what a tap on it began.
+	useEffect(() => {
+		if (pointed === undefined) {
+			return;
+		}
+
+		const onPointerDown = (event: globalThis.PointerEvent) => {
+			if (
+				event.pointerType === "touch" &&
+				!bar.current?.contains(event.target as Node)
+			) {
+				setPointed(undefined);
+			}
+		};
+		document.addEventListener("pointerdown", onPointerDown);
+		return () => document.removeEventListener("pointerdown", onPointerDown);
+	}, [pointed, bar]);
 
 	return {
-		hovered,
+		pointed,
 		handlers: (i: number) => ({
-			onPointerEnter: () => setHovered(i),
-			onPointerLeave: () => setHovered((h) => (h === i ? undefined : h)),
+			onPointerEnter: (event: PointerEvent) => {
+				if (event.pointerType !== "touch") {
+					setPointed(i);
+				}
+			},
+			onPointerLeave: (event: PointerEvent) => {
+				// A finger leaves the segment as it lifts, which doesn't end what the
+				// tap began.
+				if (event.pointerType !== "touch") {
+					setPointed((p) => (p === i ? undefined : p));
+				}
+			},
+			onPointerDown: (event: PointerEvent) => {
+				tapped.current = event.pointerType === "touch";
+				if (tapped.current) {
+					setPointed((p) => (p === i ? undefined : i));
+				}
+			},
+			onClick: (event: MouseEvent) => {
+				if (tapped.current) {
+					event.preventDefault();
+				}
+			},
 		}),
 	};
 }
@@ -124,9 +157,10 @@ function useHovered() {
  * StackedBar draws a bar like a disk usage bar, whose segments are proportional
  * to their values and are in the given order, with a gap between them.
  *
- * Pointing at a segment shows its title in a popover, and the segment rises out
- * of the bar by a pixel above and below, at full opacity. The bar as a whole is
- * described to assistive technology by the titles of all its segments. A bar with
+ * Pointing at a segment gives the card's readout what the segment is of, and its
+ * amount, as [usePointed] says, and the segment rises out of the bar by a pixel
+ * above and below, at full opacity. The bar as a whole is described to assistive
+ * technology by the titles of all its segments. A bar with
  * no segments is an empty track, which keeps its place so that the page does not
  * move when it fills. A bar is empty in a cluster whose numbers are not current.
  *
@@ -146,7 +180,8 @@ export function StackedBar({
 	const rects = layoutSegments(segments);
 	const described = segments.length > 0;
 	const { extent, kept } = useKept(segments);
-	const { hovered, handlers } = useHovered();
+	const bar = useRef<HTMLDivElement>(null);
+	const { pointed, handlers } = usePointed(segments, subsystem, bar);
 
 	// A segment that has no width, or has gone, is drawn with none, where it
 	// would begin, so that it can shrink away and grow back.
@@ -163,6 +198,7 @@ export function StackedBar({
 
 	return (
 		<div
+			ref={bar}
 			className={cn(
 				"relative block h-2 w-full rounded bg-sunk",
 				subsystemColors[subsystem],
@@ -176,36 +212,30 @@ export function StackedBar({
 				const look = kept[i];
 
 				return (
-					<Popover
+					<div
 						// A segment has no identity but its position.
 						// biome-ignore lint/suspicious/noArrayIndexKey: see above
 						key={i}
-						content={s && describe(s)}
-						interactive={s?.id !== undefined || s?.about !== undefined}
-						card={s?.about !== undefined}
-					>
-						<div
-							className={cn(
-								"absolute transition-[left,width,top,bottom,opacity] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out] motion-reduce:transition-none",
-								tapTarget,
-								look?.isOther ? "bg-faint" : "bg-(--subsystem)",
-								// The segments at the two ends of the bar have its rounded
-								// ends, which stay as round as the segment is high when it
-								// rises.
-								rect.x < 0.001 && "rounded-l-full",
-								rect.x + rect.width > 99.999 && "rounded-r-full",
-								// A segment rises out of the bar, and then has no shade.
-								hovered === i
-									? "-top-px -bottom-px opacity-100 duration-200"
-									: cn("top-0 bottom-0", !look?.isOther && shades[i]),
-							)}
-							style={{
-								left: `${rect.x.toFixed(3)}%`,
-								width: `${rect.width.toFixed(3)}%`,
-							}}
-							{...(s ? handlers(i) : {})}
-						/>
-					</Popover>
+						className={cn(
+							"absolute transition-[left,width,top,bottom,opacity] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out] motion-reduce:transition-none",
+							tapTarget,
+							look?.isOther ? "bg-faint" : "bg-(--subsystem)",
+							// The segments at the two ends of the bar have its rounded
+							// ends, which stay as round as the segment is high when it
+							// rises.
+							rect.x < 0.001 && "rounded-l-full",
+							rect.x + rect.width > 99.999 && "rounded-r-full",
+							// A segment rises out of the bar, and then has no shade.
+							pointed === i
+								? "-top-px -bottom-px opacity-100 duration-200"
+								: cn("top-0 bottom-0", !look?.isOther && shades[i]),
+						)}
+						style={{
+							left: `${rect.x.toFixed(3)}%`,
+							width: `${rect.width.toFixed(3)}%`,
+						}}
+						{...(s ? handlers(i) : {})}
+					/>
 				);
 			})}
 		</div>
@@ -219,64 +249,60 @@ export function StackedBar({
  * A node that owns no workloads has a small square segment instead. The
  * segments shrink in proportion to make room for the gaps and the squares.
  *
- * Pointing at a segment shows its title in a popover, and the segment rises out
- * of the bar by a pixel above and below, at full opacity, so whatever holds the
- * bar must not clip it.
+ * Pointing at a segment gives the card's readout what the segment is of, as
+ * [usePointed] says, and the segment rises out of the bar by a pixel above and
+ * below, at full opacity, so whatever holds the bar must not clip it. Each
+ * segment is described to assistive technology by its title.
  */
 export function NodeBar({ segments }: { segments: NodeSegment[] }) {
 	// A segment that has gone shrinks away before it is removed.
 	const { extent, kept } = useKept(segments);
-	const { hovered, handlers } = useHovered();
+	const bar = useRef<HTMLDivElement>(null);
+	const { pointed, handlers } = usePointed(segments, "cluster", bar);
 
 	return (
-		<div className="flex h-2 gap-0.5 rounded bg-sunk">
+		<div ref={bar} className="flex h-2 gap-0.5 rounded bg-sunk">
 			{Array.from({ length: extent }, (_, i) => {
 				const s = segments[i];
 
 				return (
-					<Popover
+					<div
 						// A segment has no identity but its position.
 						// biome-ignore lint/suspicious/noArrayIndexKey: see above
 						key={i}
-						content={s && describe(s)}
-						interactive={s?.id !== undefined || s?.about !== undefined}
-						card={s?.about !== undefined}
-					>
-						<div
-							className={cn(
-								"relative min-w-0",
-								tapTarget,
-								s?.faint ? "bg-faint" : "bg-cluster",
-								s === undefined || s.percent !== undefined
-									? "flex-initial"
-									: "flex-none",
-								// The segments at the two ends of the bar have its rounded
-								// ends, which stay as round as the segment is high when it
-								// rises.
-								i === 0 && "rounded-l-full",
-								i === segments.length - 1 && "rounded-r-full",
-								// A segment grows and shrinks as its share changes, and a new one
-								// grows from nothing.
-								"transition-[width,margin,opacity] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out]",
-								s === undefined && "-ml-0.5",
-								// A segment rises out of the bar, by the room that a negative
-								// margin gives a segment that stretches to the bar's height.
-								hovered === i && "-my-px duration-200",
-							)}
-							style={{
-								width:
-									s === undefined
-										? 0
-										: s.percent === undefined
-											? 8
-											: `${s.percent.toFixed(3)}%`,
-								opacity: hovered === i ? 1 : kept[i]?.opacity,
-							}}
-							{...(s
-								? { role: "img", "aria-label": s.title, ...handlers(i) }
-								: { "aria-hidden": true })}
-						/>
-					</Popover>
+						className={cn(
+							"relative min-w-0",
+							tapTarget,
+							s?.faint ? "bg-faint" : "bg-cluster",
+							s === undefined || s.percent !== undefined
+								? "flex-initial"
+								: "flex-none",
+							// The segments at the two ends of the bar have its rounded
+							// ends, which stay as round as the segment is high when it
+							// rises.
+							i === 0 && "rounded-l-full",
+							i === segments.length - 1 && "rounded-r-full",
+							// A segment grows and shrinks as its share changes, and a new one
+							// grows from nothing.
+							"transition-[width,margin,opacity] duration-500 ease-out motion-safe:animate-[bar-in_0.5s_ease-out]",
+							s === undefined && "-ml-0.5",
+							// A segment rises out of the bar, by the room that a negative
+							// margin gives a segment that stretches to the bar's height.
+							pointed === i && "-my-px duration-200",
+						)}
+						style={{
+							width:
+								s === undefined
+									? 0
+									: s.percent === undefined
+										? 8
+										: `${s.percent.toFixed(3)}%`,
+							opacity: pointed === i ? 1 : kept[i]?.opacity,
+						}}
+						{...(s
+							? { role: "img", "aria-label": s.title, ...handlers(i) }
+							: { "aria-hidden": true })}
+					/>
 				);
 			})}
 		</div>

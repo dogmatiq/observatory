@@ -10,7 +10,7 @@ import {
 } from "../lib/flatline.ts";
 import { heartbeatLine, levelY } from "../lib/heartbeat.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
-import { type Readout, useSetReadout } from "../lib/readout.tsx";
+import { type Readout, useGiveReadout } from "../lib/readout.tsx";
 
 /**
  * How long a node's share of the chart takes to grow from nothing when it joins,
@@ -269,16 +269,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 	);
 
 	// The tile shows what the section that is pointed at says about its node.
-	const setReadout = useSetReadout();
-	const readout = sections.find((s) => s.id === pointed)?.readout;
-	const readoutKey =
-		readout &&
-		`${readout.subject}|${readout.label}|${readout.figure}|${readout.unit}|${readout.age}`;
-	// biome-ignore lint/correctness/useExhaustiveDependencies: the key is the readout.
-	useEffect(() => {
-		setReadout?.(readout);
-	}, [readoutKey, setReadout]);
-	useEffect(() => () => setReadout?.(undefined), [setReadout]);
+	useGiveReadout(sections.find((s) => s.id === pointed)?.readout);
 
 	// A node that leaves while its share is pointed at is pointed at no more.
 	const pointable = sections.some((s) => s.readout !== undefined);

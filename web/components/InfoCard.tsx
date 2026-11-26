@@ -30,29 +30,16 @@ export interface Scope {
  * a popover that says more about something on the page. From the top it has:
  *
  * - a header, with an icon in the color of a subsystem, then the name of the
- *   thing that the card is about, or, for a thing that has no name, its ID in the
- *   place of a name, with its kind under it, as a digest has its name over its
- *   kind; and its scope, if it has one, such as "within the Account application";
- * - a figure that is the card's main number, with a unit, and an aside at the
- *   right, such as a share, if the card has them;
- * - paragraphs that say what the figure is;
- * - a status, if the card has one, which says whether the figure can be given at
- *   the moment, and why. It has an icon and a tinted ground, so that it is clearly
+ *   thing that the card is about, if it has one, with its kind under it, as a
+ *   digest has its name over its kind; and its scope, if it has one, such as
+ *   "within the Account application";
+ * - paragraphs that say more about it;
+ * - a status, if the card has one, which says whether what the card is about can
+ *   be told at the moment, and why. It has an icon and a tinted ground, so that it is clearly
  *   about the ability to give the figure, and not about what the figure means.
  *
  * The card sets its own width.
  */
-/**
- * Identity is what an [InfoCard] shows in the place of the name of the thing that
- * it is about, which leads the header, over its kind, in capitals as a digest
- * shows a name: the thing's `name`, or, for a thing that has no name, its `id`,
- * shortened and copyable, and `what` the ID is, such as "queue ID". A card that
- * is about no one thing has neither, and its kind leads.
- */
-type Identity =
-	| { name?: ReactNode; id?: undefined }
-	| { id: { id: string; what: string }; name?: undefined };
-
 export function InfoCard({
 	subsystem,
 	icon,
@@ -60,8 +47,6 @@ export function InfoCard({
 	kind,
 	scope,
 	name,
-	id,
-	figure,
 	children,
 	status,
 }: {
@@ -77,13 +62,8 @@ export function InfoCard({
 	/** Where the thing is, or what it is of, shown under its kind. */
 	scope?: Scope;
 
-	figure?: {
-		value: ReactNode;
-		unit: string;
-
-		/** Shown at the right, in the subsystem's color. */
-		aside?: ReactNode;
-	};
+	/** The name of the thing that the card is about, in capitals, if it has one. */
+	name?: ReactNode;
 
 	/** The paragraphs of the card. */
 	children?: ReactNode;
@@ -93,34 +73,28 @@ export function InfoCard({
 	 * is `busy` says that the figure is being worked out, and its icon turns.
 	 */
 	status?: { icon: IconName; text: ReactNode; busy?: boolean };
-} & Identity) {
+}) {
 	return (
 		<div className={cn("w-64", subsystemColors[subsystem])}>
 			<div
 				className={cn(
 					"flex gap-3 px-3.5 py-3",
-					name !== undefined || id !== undefined || scope
-						? "items-start"
-						: "items-center",
+					name !== undefined || scope ? "items-start" : "items-center",
 				)}
 			>
 				<span
 					className={cn(
 						"flex-none",
 						iconColor ?? "text-(--subsystem)",
-						name !== undefined || id !== undefined || scope ? "mt-px" : "",
+						name !== undefined || scope ? "mt-px" : "",
 					)}
 				>
 					<Icon name={icon} className="size-5" />
 				</span>
 				<div className="flex min-w-0 flex-1 flex-col gap-1">
-					{(name !== undefined || id !== undefined) && (
+					{name !== undefined && (
 						<span className="truncate font-bold tracking-[0.04em] text-fg uppercase">
-							{id === undefined ? (
-								name
-							) : (
-								<Identifier id={id.id} what={id.what} />
-							)}
+							{name}
 						</span>
 					)}
 					<span className="text-2xs font-semibold tracking-[0.08em] text-muted uppercase">
@@ -146,22 +120,6 @@ export function InfoCard({
 					)}
 				</div>
 			</div>
-
-			{figure && (
-				<div className="flex items-baseline justify-between gap-3 border-t border-line px-3.5 py-2.5">
-					<span>
-						<span className="text-xl font-semibold tabular-nums">
-							{figure.value}
-						</span>{" "}
-						<span className="text-muted">{figure.unit}</span>
-					</span>
-					{figure.aside && (
-						<span className="text-xl font-semibold text-(--subsystem) tabular-nums">
-							{figure.aside}
-						</span>
-					)}
-				</div>
-			)}
 
 			{children && (
 				<div className="flex flex-col gap-2 border-t border-line px-3.5 py-3 text-muted">

@@ -1,8 +1,9 @@
 import { type ReactNode, useId } from "react";
 import { cn } from "../lib/cn.ts";
 import { Trusted, useCurrent } from "../lib/distrust.tsx";
-import { formatCompact, nounFor } from "../lib/format.ts";
+import { formatCompact, nounFor, scaleRate, shortPer } from "../lib/format.ts";
 import { useRamped } from "../lib/ramped.ts";
+import { ReadoutContext } from "../lib/readout.tsx";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { AlertFlag } from "./AlertFlag.tsx";
@@ -16,6 +17,7 @@ import {
 import { NameLink } from "./NameLink.tsx";
 import { Popover, Tooltip } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
+import { ReadoutLines, useReadoutPlace } from "./ReadoutLines.tsx";
 import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
@@ -46,7 +48,8 @@ const chartedWords: Record<HandlerData["kind"], string> = {
  * how many of its messages are failing, and, while only some of the cluster's
  * nodes report it, an alert flag that says so. Along its bottom are a bar of how its
  * instances are spread, if it has instances, and a chart of the events that it
- * records or handles per minute, if it has one.
+ * records or handles per minute, if it has one. Pointing at the bar or the chart
+ * shows what is there beside the kind icon, over the end of the name.
  *
  * The digest is an article named by the handler's name. If it has an `href`, the
  * name is a link to the handler's page, and is the only part of the digest that
@@ -60,6 +63,15 @@ export function HandlerDigest({
 	href?: string;
 }) {
 	const nameId = useId();
+
+	// What the chart or the bar says about the place on it that is pointed at,
+	// which is shown beside the kind icon, and is kept for the moment that it
+	// takes to go.
+	const { readout, shown, setReadout } = useReadoutPlace();
+	const charted = handler.charted ?? "events";
+
+	// The chart has the color of the messages that it counts.
+	const chartSubsystem = charted === "commands" ? "queues" : "streams";
 	const { summary, history } = handler;
 	const failing = useCurrent(summary.failing) > 0;
 
@@ -119,8 +131,19 @@ export function HandlerDigest({
 					</span>
 				</span>
 				{/* The alert flag is to the left of the kind icon, where a compact
-				digest has its flag, and clear of the chevron after a linked name. */}
-				<span className="ml-auto flex flex-none items-center gap-2.5 self-start">
+				digest has its flag, and clear of the chevron after a linked name. The
+				readout floats over the end of the name, which keeps its size, with a
+				short fade on its left edge, so that nothing on the digest moves. */}
+				<span className="relative ml-auto flex flex-none items-start gap-2.5 self-start">
+					<span
+						aria-hidden="true"
+						className={cn(
+							"pointer-events-none absolute top-0 right-full mr-2.5 grid bg-panel pl-6 text-right text-xs leading-snug whitespace-nowrap tabular-nums [mask-image:linear-gradient(to_right,transparent,black_1.25rem)] transition-opacity duration-200 ease-out motion-reduce:transition-none",
+							readout ? "opacity-100" : "opacity-0",
+						)}
+					>
+						{shown && <ReadoutLines readout={shown} />}
+					</span>
 					<AlertFlag
 						statuses={handler.coverage === undefined ? [] : [someNodesReport]}
 					/>
@@ -137,13 +160,15 @@ export function HandlerDigest({
 				{history ? (
 					<Sparkline
 						chart={history}
-						// The chart has the color of the messages that it counts.
-						className={cn(
-							"h-10",
-							subsystemColors[
-								handler.charted === "commands" ? "queues" : "streams"
-							],
-						)}
+						describe={(value) => {
+							const { amount, per } = scaleRate(value);
+							return {
+								figure: formatCompact(amount),
+								unit: `${charted}${shortPer[per]}`,
+								subsystem: chartSubsystem,
+							};
+						}}
+						className={cn("h-10", subsystemColors[chartSubsystem])}
 					/>
 				) : (
 					<Sky missing={chartedWords[handler.kind]} height={60} />
@@ -154,7 +179,9 @@ export function HandlerDigest({
 
 	return (
 		<article className={classes} aria-labelledby={nameId}>
-			{content}
+			<ReadoutContext.Provider value={setReadout}>
+				{content}
+			</ReadoutContext.Provider>
 		</article>
 	);
 }

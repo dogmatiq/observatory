@@ -3,12 +3,13 @@ import { cn } from "../lib/cn.ts";
 import { useCurrent } from "../lib/distrust.tsx";
 import { countOf, formatCompact } from "../lib/format.ts";
 import { prefersReducedMotion } from "../lib/ramped.ts";
-import { type Readout, ReadoutContext } from "../lib/readout.tsx";
+import { ReadoutContext } from "../lib/readout.tsx";
 import { AlertFlag } from "./AlertFlag.tsx";
 import { Glitch } from "./Glitch.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
+import { ReadoutLines, useReadoutPlace } from "./ReadoutLines.tsx";
 import type { Status } from "./statuses.ts";
 import { type Subsystem, subsystemColors } from "./subsystems.ts";
 
@@ -106,14 +107,10 @@ export function MetricTile({
 		href !== undefined && accent && "no-underline hover:no-underline",
 	);
 
-	// What the chart says about the place on it that is pointed at, which is
-	// shown beside the icon, and is kept for the moment that it takes to go.
-	const [readout, setReadout] = useState<Readout>();
-	const lastReadout = useRef(readout);
-	if (readout) {
-		lastReadout.current = readout;
-	}
-	const shownReadout = readout ?? lastReadout.current;
+	// What the chart or the bar says about the place on it that is pointed at,
+	// which is shown beside the icon, and is kept for the moment that it takes to
+	// go.
+	const { readout, shown, setReadout } = useReadoutPlace();
 
 	const content = (
 		<ReadoutContext.Provider value={setReadout}>
@@ -129,30 +126,7 @@ export function MetricTile({
 							readout ? "max-w-44 opacity-100" : "max-w-0 opacity-0",
 						)}
 					>
-						{shownReadout && (
-							<>
-								{shownReadout.subject !== undefined && (
-									<span className="text-muted">{shownReadout.subject}</span>
-								)}
-								<span className="font-semibold text-(--subsystem)">
-									{shownReadout.label !== undefined && (
-										<span className="font-normal text-muted">
-											{shownReadout.label}{" "}
-										</span>
-									)}
-									{shownReadout.figure}
-									{shownReadout.unit !== undefined && (
-										<span className="font-normal text-muted">
-											{" "}
-											{shownReadout.unit}
-										</span>
-									)}
-								</span>
-								{shownReadout.age !== undefined && (
-									<span className="text-muted">{shownReadout.age}</span>
-								)}
-							</>
-						)}
+						{shown && <ReadoutLines readout={shown} />}
 					</span>
 					<AlertFlag statuses={statuses} />
 					<span className="flex-none text-(--subsystem)">

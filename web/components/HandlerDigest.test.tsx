@@ -41,10 +41,10 @@ function digest(
 /** The numbers on the digest, each as its label and its value. */
 function stats(container: HTMLElement) {
 	return Object.fromEntries(
-		[...container.querySelectorAll("span.text-xs")].map((label) => [
-			label.textContent,
-			label.previousElementSibling?.textContent,
-		]),
+		// The readout beside the kind icon is for the pointer only, and is hidden.
+		[...container.querySelectorAll("span.text-xs:not([aria-hidden])")].map(
+			(label) => [label.textContent, label.previousElementSibling?.textContent],
+		),
 	);
 }
 
