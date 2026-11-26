@@ -655,11 +655,10 @@ parts. An item that says "Done" is built.
   have stopped because the Observatory can't be reached, a node leaving the cluster, a handler's failing count when it
   first rises, and the health Issues when the rules come back. It would be a short burst and not a constant shake, and
   with reduced motion only the split. More are added as they are found.
-- The prepositions of the page, proposed and not settled. The spec's own words are kept: events are "on" an event
-  stream, messages are "in" a queue, instances are "bound to" an event stream or a queue, and workloads are "owned by" a
-  node. A distribution is "across" the things that it is of, and "between" is not used, because it means two. The places
-  that differ are the Events tile's "events in 2 streams", which would be "on", and the titles and popovers of the
-  instance bars, which say "on event stream" for what is bound.
+- The prepositions of the page (decided). The spec's own words are kept: events are "on" an event stream, messages are
+  "in" a queue, instances are "bound to" an event stream or a queue, and workloads are "owned by" a node. A distribution
+  is "across" the things that it is of, and "between" is not used, because it means two. Done (3f51cb3): the events
+  tiles say "events on 2 streams", and the instance bars "100 instances bound to event stream 8b0081fd".
 - Some bars show load at this moment, such as the bar of the nodes that handled a handler's messages, and others show
   values that build up over a long time, such as the bindings of instances. Both are worth having, so a card for which
   both make sense may need to show both. For later.
