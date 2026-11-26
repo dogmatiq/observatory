@@ -8,6 +8,8 @@ import {
 	type Snapshot,
 	type StreamEvent,
 	selectCluster,
+	selectSite,
+	siteWatchReducer,
 	type WatchAction,
 	type WatchState,
 	watchReducer,
@@ -931,4 +933,182 @@ test("a heartbeat event gives the expiry that the stream sends with it", () => {
 		node: "n",
 		msBefore: 0,
 	});
+});
+
+test("selectSite gives the site's totals, and each application by name, then key", () => {
+	const s = applied(
+		[
+			changed({
+				site: { name: "eu-west", key: "s1" },
+				events: {
+					rate: { rate: 2 },
+					streams: { count: 3, events: 40 },
+					coverage: 0.5,
+				},
+				queues: {
+					messages: 7,
+					failing: 1,
+					queues: 2,
+					throughput: { measuring: true },
+				},
+				applications: {
+					a2: {
+						name: "statements",
+						nodes: { n1: {}, n2: { noSignal: true } },
+						coverage: 0.5,
+						events: { rate: { rate: 2 }, streams: { count: 3, events: 40 } },
+						queues: { messages: 7, failing: 1, queues: 2 },
+					},
+					a3: { name: "billing", nodes: {} },
+					a1: { name: "statements", nodes: {}, events: { rate: {} } },
+				},
+			}),
+			0,
+		],
+		[{ kind: "recorded", series: "events", points: [[1000, 2]] }, 0],
+	);
+
+	expect(selectSite(s, 0)).toEqual({
+		site: { name: "eu-west", key: "s1" },
+		events: {
+			rate: { perMinute: 120 },
+			streams: { count: 3, events: 40 },
+			coverage: 0.5,
+			history: { end: 0, points: [{ at: -1000, value: 120 }] },
+		},
+		queues: {
+			messages: 7,
+			failing: 1,
+			queues: 2,
+			throughput: { measuring: true },
+			history: { end: 0, points: [] },
+		},
+		applications: [
+			{ application: { name: "billing", key: "a3" }, nodes: 0, heartbeats: [] },
+			{
+				application: { name: "statements", key: "a1" },
+				nodes: 0,
+				heartbeats: [],
+				events: {},
+			},
+			{
+				application: { name: "statements", key: "a2" },
+				nodes: 1,
+				heartbeats: [],
+				coverage: 0.5,
+				events: { perMinute: 120, streams: { count: 3, events: 40 } },
+				queues: { messages: 7, failing: 1, queues: 2 },
+			},
+		],
+	});
+});
+
+test("selectSite gives the applications at no site no site", () => {
+	const s = applied([changed({ applications: {} }), 0]);
+
+	expect(selectSite(s, 0)).toEqual({ applications: [] });
+});
+
+test("selectSite gives no site view of a document with no applications", () => {
+	const s = applied([changed({ site: { name: "eu-west", key: "s1" } }), 0]);
+
+	expect(selectSite(s, 0)).toBeUndefined();
+});
+
+test("an application's deadline is the latest of its nodes', and only a heartbeat that moved it later raises its section", () => {
+	const s = applied(
+		[
+			changed({
+				applications: { a: { name: "a", nodes: { n: {}, m: {} } } },
+			}),
+			0,
+		],
+		// n's heartbeat gives a deadline at 5000, and m's, which arrives later,
+		// gives one at 4000, so it doesn't move the application's deadline.
+		[{ kind: "heartbeat", node: "n", msBefore: 0, expiry: 5000 }, 0],
+		[{ kind: "heartbeat", node: "m", msBefore: 0, expiry: 3000 }, 1000],
+		// n's next heartbeat moves the deadline to 7000.
+		[{ kind: "heartbeat", node: "n", msBefore: 0, expiry: 5000 }, 2000],
+	);
+
+	expect(selectSite(s, 2000)?.applications[0]).toMatchObject({
+		nodes: 2,
+		heartbeats: [2000, 0],
+		deadline: 5000,
+	});
+});
+
+test("an application's heartbeats leave out those of a node with no signal", () => {
+	const s = applied(
+		[
+			changed({
+				applications: {
+					a: { name: "a", nodes: { n: {}, m: { noSignal: true } } },
+				},
+			}),
+			0,
+		],
+		[{ kind: "heartbeat", node: "n", msBefore: 0, expiry: 5000 }, 0],
+		[{ kind: "heartbeat", node: "m", msBefore: 0, expiry: 9000 }, 1000],
+	);
+
+	expect(selectSite(s, 1000)?.applications[0]).toMatchObject({
+		nodes: 1,
+		heartbeats: [1000],
+		deadline: 4000,
+	});
+});
+
+test("an application with a node that gives no way to tell when its heartbeats expire has no deadline", () => {
+	const s = applied(
+		[
+			changed({
+				applications: { a: { name: "a", nodes: { n: {}, m: {} } } },
+			}),
+			0,
+		],
+		[{ kind: "heartbeat", node: "n", msBefore: 0, expiry: 5000 }, 0],
+		[{ kind: "heartbeat", node: "m", msBefore: 0 }, 1000],
+	);
+
+	expect(selectSite(s, 1000)?.applications[0]?.deadline).toBeUndefined();
+});
+
+test("a part of a site's document that isn't well formed leaves out its tile or its application, and not the others", () => {
+	const s = applied([
+		changed({
+			events: { rate: "fast" },
+			queues: { messages: 1, failing: 0 },
+			applications: {
+				a: { name: "a", nodes: {} },
+				b: { nodes: {} },
+			},
+		}),
+		0,
+	]);
+
+	const site = selectSite(s, 0);
+	expect(site?.events).toBeUndefined();
+	expect(site?.queues).toEqual({ messages: 1, failing: 0 });
+	expect(site?.applications.map((a) => a.application.key)).toEqual(["a"]);
+});
+
+test("a site's burst is well formed only if its document has the applications", () => {
+	const runSite = (...actions: WatchAction[]) =>
+		actions.reduce(siteWatchReducer, { status: "loading", at: 0 });
+
+	expect(
+		runSite(
+			{ type: "connected" },
+			message("changed", { applications: {} }),
+			message("synced", {}),
+		).status,
+	).toBe("ready");
+	expect(
+		runSite(
+			{ type: "connected" },
+			message("changed", { site: { name: "s", key: "k" } }),
+			message("synced", {}),
+		).status,
+	).toBe("failed");
 });

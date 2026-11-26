@@ -2,12 +2,12 @@ import type { ClusterSummary, Installation } from "../model.ts";
 import { noSite } from "./route.ts";
 
 /**
- * NotFound is the failure to read a cluster that the Observatory doesn't know,
- * which it may once have known.
+ * NotFound is the failure to read a cluster or a site that the Observatory
+ * doesn't know, which it may once have known.
  */
 export class NotFound extends Error {
 	constructor() {
-		super("the Observatory doesn't know the cluster");
+		super("the Observatory has no such cluster or site");
 		this.name = "NotFound";
 	}
 }
@@ -102,15 +102,29 @@ export function fetchInstallations(
  * What the Observatory answers with is not used, because the stream of the
  * cluster tells the page everything that it shows.
  */
-export async function checkCluster(
-	id: string,
-	signal: AbortSignal,
-): Promise<void> {
+export function checkCluster(id: string, signal: AbortSignal): Promise<void> {
+	return check(`/-/api/clusters/${encodeURIComponent(id)}`, signal);
+}
+
+/**
+ * checkSite finds out whether the Observatory knows the site with the given key,
+ * which is {@link noSite} for the applications at no site. It fails with
+ * {@link NotFound} if it doesn't.
+ *
+ * What the Observatory answers with is not used, because the stream of the site
+ * tells the page everything that it shows.
+ */
+export function checkSite(key: string, signal: AbortSignal): Promise<void> {
+	return check(`/-/api/sites/${encodeURIComponent(key)}`, signal);
+}
+
+/**
+ * check finds out whether the Observatory has what is at a path. It fails with
+ * {@link NotFound} if it doesn't.
+ */
+async function check(path: string, signal: AbortSignal): Promise<void> {
 	// Only the status matters, so the Observatory is asked for no body.
-	const response = await fetch(`/-/api/clusters/${encodeURIComponent(id)}`, {
-		method: "HEAD",
-		signal,
-	});
+	const response = await fetch(path, { method: "HEAD", signal });
 
 	if (response.status === 404) {
 		throw new NotFound();
@@ -127,4 +141,13 @@ export async function checkCluster(
  */
 export function watchPath(id: string): string {
 	return `/-/api/clusters/${encodeURIComponent(id)}/watch`;
+}
+
+/**
+ * siteWatchPath returns the path of the stream of events that tells of each
+ * change to the site view of the site with the given key, which is
+ * {@link noSite} for the applications at no site.
+ */
+export function siteWatchPath(key: string): string {
+	return `/-/api/sites/${encodeURIComponent(key)}/watch`;
 }

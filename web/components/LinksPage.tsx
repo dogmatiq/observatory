@@ -12,8 +12,9 @@ export interface PageLink {
 
 /**
  * LinksPage is a plain page with a heading and a list of links. It stands in
- * for the pages that are not designed yet, such as the page of a site, and it
- * lists the candidates when an address leads to more than one thing.
+ * for the pages that are not designed yet, such as the page of an application
+ * at several sites, and it lists the candidates when an address leads to more
+ * than one thing.
  *
  * `stopped` says that the page is no longer being updated, as on any page.
  */

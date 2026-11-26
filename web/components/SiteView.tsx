@@ -159,7 +159,10 @@ export function SiteEventsTile({
 	data: SiteData;
 	events: NonNullable<SiteData["events"]>;
 }) {
-	const { scaled, per, state } = useRate(events.rate.perMinute);
+	const { scaled, per, state } = useRate(
+		events.rate.perMinute,
+		events.rate.measuring,
+	);
 
 	return (
 		<MetricTile
@@ -235,7 +238,10 @@ export function SiteQueuesTile({
 	data: SiteData;
 	queues: NonNullable<SiteData["queues"]>;
 }) {
-	const { scaled, per, state } = useRate(queues.throughput?.perMinute);
+	const { scaled, per, state } = useRate(
+		queues.throughput?.perMinute,
+		queues.throughput?.measuring,
+	);
 
 	return (
 		<MetricTile
@@ -452,7 +458,7 @@ function CompactDigest({
 	// Otherwise it says whether only some of the application's nodes report its
 	// figures, and whether the rate of events can be given, if the engine
 	// reports one.
-	const { state } = useRate(app.events?.perMinute);
+	const { state } = useRate(app.events?.perMinute, app.events?.measuring);
 	const statuses: Status[] = out
 		? [{ text: noSignalText, tone: "bad" }]
 		: [
@@ -510,9 +516,14 @@ export const noSignalText =
 /**
  * ApplicationFigures is the events per minute and the messages that are ready of one
  * application, each with the icon of what it counts, in the colors of its
- * subsystem, for whichever of them the application's engine supports.
+ * subsystem, for whichever of them the application's engine supports. The rate
+ * of events is a whole number, per minute, or per hour or per day if it is less
+ * than one per minute, as the events tile's is, and is held while it is being
+ * measured, as [useRate] says.
  */
 function ApplicationFigures({ app }: { app: SiteApplication }) {
+	const { scaled, per } = useRate(app.events?.perMinute, app.events?.measuring);
+
 	return (
 		<span className="flex items-baseline gap-4 text-sm tabular-nums">
 			{app.events && (
@@ -527,12 +538,8 @@ function ApplicationFigures({ app }: { app: SiteApplication }) {
 						className="size-3.5 self-center text-(--subsystem)"
 					/>
 					<span>
-						<Figure
-							number={app.events.perMinute}
-							format={formatCompact}
-							unit="minute"
-						/>
-						<span className="text-muted">/min</span>
+						<Figure number={scaled?.amount} format={formatCompact} unit={per} />
+						<span className="text-muted">{shortPer[per]}</span>
 					</span>
 				</span>
 			)}

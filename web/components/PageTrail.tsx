@@ -21,10 +21,10 @@ export interface Runner {
 
 /**
  * PageTrail is where a page is, in the title bar: the page's address, as a trail
- * of steps, each a link to its own page. On an application's page, which shows
- * the cluster that runs the application, it is the site and the application; on
- * a cluster's own page, the cluster or the engine follows them. An application
- * at no site has no site step.
+ * of steps, each a link to its own page. On a site's page it is the site. On an
+ * application's page, which shows the cluster that runs the application, it is
+ * the site and the application; on a cluster's own page, the cluster or the
+ * engine follows them. An application at no site has no site step.
  *
  * Pointing at the trail shows a hovercard of every step, the cluster or the
  * engine too, each drawn as a card's heading: its name over its kind, with its
@@ -42,15 +42,23 @@ export function PageTrail({
 	/** The site that the cluster is deployed to, or undefined if it has none. */
 	site: Site | undefined;
 
-	application: { name: string; key: string };
-	runner: Runner;
+	/** The application, which is undefined on a site's page. */
+	application?: { name: string; key: string };
+
+	/**
+	 * The cluster that runs the application, or the engine, which is undefined on
+	 * a site's page.
+	 */
+	runner?: Runner;
 	software?: Software;
 
 	/** True on a cluster's own page, whose trail ends with the cluster. */
 	onClusterPage?: boolean;
 }) {
 	const steps = stepsOf(site, application, runner, software);
-	const shown = onClusterPage ? steps : steps.slice(0, -1);
+	const shown = onClusterPage
+		? steps
+		: steps.filter((s) => s.kind !== "Cluster" && s.kind !== "Engine");
 
 	// On a screen that is touched, a tap on the trail opens its hovercard, as a
 	// tap on a bar's segment does, rather than following a step's link; the
@@ -128,11 +136,14 @@ interface Step {
 	version?: string;
 }
 
-/** stepsOf returns the steps of a trail, the cluster or the engine last. */
+/**
+ * stepsOf returns the steps of a trail, the cluster or the engine last, of
+ * those that it is given.
+ */
 function stepsOf(
 	site: Site | undefined,
-	application: { name: string; key: string },
-	runner: Runner,
+	application: { name: string; key: string } | undefined,
+	runner: Runner | undefined,
 	software: Software | undefined,
 ): Step[] {
 	const range = software?.engineVersions;
@@ -153,18 +164,28 @@ function stepsOf(
 					},
 				];
 
+	if (application === undefined) {
+		return siteSteps;
+	}
+
+	const applicationStep: Step = {
+		kind: "Application",
+		icon: "application",
+		href: applicationAtSitePath(site?.key, application.key),
+		name: application.name,
+		id: { id: application.key, what: "application key" },
+		version: software?.applicationVersionsDiffer
+			? "multiple versions"
+			: software?.applicationVersion,
+	};
+
+	if (runner === undefined) {
+		return [...siteSteps, applicationStep];
+	}
+
 	return [
 		...siteSteps,
-		{
-			kind: "Application",
-			icon: "application",
-			href: applicationAtSitePath(site?.key, application.key),
-			name: application.name,
-			id: { id: application.key, what: "application key" },
-			version: software?.applicationVersionsDiffer
-				? "multiple versions"
-				: software?.applicationVersion,
-		},
+		applicationStep,
 		{
 			kind: runner.kind === "cluster" ? "Cluster" : "Engine",
 			icon: runner.kind,

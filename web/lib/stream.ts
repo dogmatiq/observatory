@@ -9,8 +9,11 @@ import type {
 	HandlerNode,
 	LiveNode,
 	OverviewData,
+	SiteApplication,
+	SiteData,
 	Software,
 	SpreadPart,
+	Streams,
 } from "../model.ts";
 
 /**
@@ -39,8 +42,8 @@ export interface RatePoint {
 }
 
 /**
- * Snapshot is everything that the stream has told the page about a cluster, in
- * the form that the page keeps it. The times are on the page's clock, so a
+ * Snapshot is everything that a stream has told the page about a cluster or a
+ * site, in the form that the page keeps it. The times are on the page's clock, so a
  * snapshot doesn't change as time passes.
  */
 export interface Snapshot {
@@ -279,12 +282,13 @@ export function apply(
 }
 
 /**
- * WatchStatus is what the page can tell about a cluster that it watches.
+ * WatchStatus is what the page can tell about a cluster or a site that it
+ * watches.
  */
 export type WatchStatus = "loading" | "ready" | "stale" | "failed" | "unknown";
 
 /**
- * WatchState is what the page knows of a cluster, as it watches it.
+ * WatchState is what the page knows of a cluster or a site, as it watches it.
  */
 export interface WatchState {
 	status: WatchStatus;
@@ -309,7 +313,7 @@ export interface WatchState {
 }
 
 export type WatchAction =
-	/** Nothing is known about the cluster. */
+	/** Nothing is known about what is watched. */
 	| { type: "reset" }
 	/** The stream connected, so a burst of messages begins. */
 	| { type: "connected" }
@@ -317,19 +321,44 @@ export type WatchAction =
 	| { type: "message"; name: string; data: string; now: number }
 	/** The stream broke, or the Observatory couldn't be read. */
 	| { type: "broken" }
-	/** The Observatory has no such cluster. */
+	/** The Observatory has no such cluster or site. */
 	| { type: "unknown" };
 
 export const initialWatchState: WatchState = { status: "loading", at: 0 };
 
 /**
- * watchReducer returns what the page knows of a cluster after something
- * happens, which is a message of the stream, or a change in the connection.
+ * watchReducerFor returns a function that returns what the page knows of what it
+ * watches after something happens, which is a message of the stream, or a
+ * change in the connection. A burst whose document `complete` returns false for
+ * is not well formed.
  *
  * Until the first burst ends there is nothing to show, and a message that isn't
  * well formed makes the page stale, or failed if there is nothing to keep.
  */
-export function watchReducer(
+export function watchReducerFor(
+	complete: (document: Record<string, unknown>) => boolean,
+): (state: WatchState, action: WatchAction) => WatchState {
+	return (state, action) => reduce(complete, state, action);
+}
+
+/**
+ * watchReducer returns what the page knows of a cluster after something happens,
+ * as {@link watchReducerFor} says. A burst is well formed if its document has
+ * the application.
+ */
+export const watchReducer = watchReducerFor((doc) => isObject(doc.application));
+
+/**
+ * siteWatchReducer returns what the page knows of a site after something
+ * happens, as {@link watchReducerFor} says. A burst is well formed if its
+ * document has the applications.
+ */
+export const siteWatchReducer = watchReducerFor((doc) =>
+	isObject(doc.applications),
+);
+
+function reduce(
+	complete: (document: Record<string, unknown>) => boolean,
 	state: WatchState,
 	action: WatchAction,
 ): WatchState {
@@ -357,7 +386,7 @@ export function watchReducer(
 				if (
 					done === undefined ||
 					!isObject(done.document) ||
-					!isObject(done.document.application)
+					!complete(done.document)
 				) {
 					return degrade(state);
 				}
@@ -420,6 +449,28 @@ function attempt<T>(read: () => T): T | undefined {
 	} catch {
 		return undefined;
 	}
+}
+
+/**
+ * Returns a rate per minute from its part of a document, in which it is per
+ * second. A part of a tile that the document doesn't have is one that no node
+ * supports, and the tile leaves it out. A rate that the document has, and that
+ * has no number, is one that the nodes support and that isn't known yet, which
+ * may be only because a node's count is still being measured.
+ */
+function rateOf(
+	v: unknown,
+	what: string,
+): { perMinute?: number; measuring?: true } | undefined {
+	if (v === undefined) {
+		return undefined;
+	}
+	const rate = object(v, what);
+	const perSecond = maybeNumber(rate.rate, `${what}.rate`);
+	if (perSecond !== undefined) {
+		return { perMinute: perSecond * 60 };
+	}
+	return rate.measuring === true ? { measuring: true } : {};
 }
 
 /** Returns what the throughput counts, which is the messages removed if it isn't said. */
@@ -605,25 +656,6 @@ export function selectCluster(
 
 	const overview: OverviewData = { handlers: [] };
 
-	// A part of a tile that the document doesn't have is one that no node
-	// supports, and the tile leaves it out. A rate that the document has, and that
-	// has no number, is one that the nodes support and that isn't known yet, which
-	// may be only because a node's count is still being measured.
-	const rateOf = (
-		v: unknown,
-		what: string,
-	): { perMinute?: number; measuring?: true } | undefined => {
-		if (v === undefined) {
-			return undefined;
-		}
-		const rate = object(v, what);
-		const perSecond = maybeNumber(rate.rate, `${what}.rate`);
-		if (perSecond !== undefined) {
-			return { perMinute: perSecond * 60 };
-		}
-		return rate.measuring === true ? { measuring: true } : {};
-	};
-
 	if (doc.eventStreams !== undefined || rates.events !== undefined) {
 		overview.events = attempt(() => {
 			const events: NonNullable<OverviewData["events"]> = {};
@@ -795,4 +827,191 @@ function softwareOf(doc: Record<string, unknown>): Software {
 		software.applicationVersionsDiffer = true;
 	}
 	return software;
+}
+
+/**
+ * selectSite returns what the site view draws, from a snapshot of the stream of
+ * a site. The times in the result are in milliseconds before `ref`, which is a
+ * time on the page's clock, usually the time of the latest change to the
+ * snapshot.
+ *
+ * A tile or an application whose part of the document isn't well formed is
+ * left out, so that it fails on its own. It returns undefined if the document
+ * has no applications.
+ */
+export function selectSite(
+	snapshot: Snapshot,
+	ref: number,
+): SiteData | undefined {
+	const doc = snapshot.document;
+	if (!isObject(doc) || !isObject(doc.applications)) {
+		return undefined;
+	}
+
+	const data: SiteData = { applications: [] };
+
+	if (
+		isObject(doc.site) &&
+		typeof doc.site.name === "string" &&
+		typeof doc.site.key === "string"
+	) {
+		data.site = { name: doc.site.name, key: doc.site.key };
+	}
+
+	if (doc.events !== undefined) {
+		data.events = attempt(() => {
+			const e = object(doc.events, "events");
+			// A rate that no engine supports is shown as one that isn't known.
+			const events: NonNullable<SiteData["events"]> = {
+				rate: rateOf(e.rate, "events.rate") ?? {},
+			};
+			if (e.rate !== undefined) {
+				events.history = chartOf(snapshot.series.get("events"), ref, 60);
+			}
+			if (e.streams !== undefined) {
+				events.streams = streamsOf(e.streams, "events.streams");
+			}
+			if (isNumber(e.coverage)) {
+				events.coverage = e.coverage;
+			}
+			return events;
+		});
+	}
+
+	if (doc.queues !== undefined) {
+		data.queues = attempt(() => {
+			const q = object(doc.queues, "queues");
+			const queues: NonNullable<SiteData["queues"]> = {
+				messages: number(q.messages, "queues.messages"),
+				failing: maybeNumber(q.failing, "queues.failing") ?? 0,
+			};
+			const count = maybeNumber(q.queues, "queues.queues");
+			if (count !== undefined) {
+				queues.queues = count;
+			}
+			if (q.throughput !== undefined) {
+				queues.throughput = rateOf(q.throughput, "queues.throughput");
+				queues.history = chartOf(snapshot.series.get("throughput"), ref, 60);
+			}
+			if (isNumber(q.coverage)) {
+				queues.coverage = q.coverage;
+			}
+			return queues;
+		});
+	}
+
+	for (const [key, a] of Object.entries(doc.applications)) {
+		const app = attempt(() =>
+			siteApplicationOf(snapshot, ref, key, object(a, `applications.${key}`)),
+		);
+		if (app !== undefined) {
+			data.applications.push(app);
+		}
+	}
+
+	// The applications go by name, and then by key, so that each keeps its place.
+	data.applications.sort(
+		(a, b) =>
+			a.application.name.localeCompare(b.application.name) ||
+			a.application.key.localeCompare(b.application.key),
+	);
+
+	return data;
+}
+
+/** Returns some event streams from their part of a document. */
+function streamsOf(v: unknown, what: string): Streams {
+	const s = object(v, what);
+	return {
+		count: number(s.count, `${what}.count`),
+		events: number(s.events, `${what}.events`),
+	};
+}
+
+/**
+ * Returns what the site view shows of one application, from its part of the
+ * document of a site.
+ *
+ * The application's heartbeats are those of its nodes that are sending a
+ * signal, and its deadline is the latest of theirs, because the application is
+ * sending a signal while any of them is. A heartbeat is kept only if it moved
+ * that deadline later, so that the application's section of the heartbeat chart
+ * rises only when its deadline moves. Each heartbeat of a node is taken to give
+ * a deadline as long after it arrived as the node's latest one gives. If a node
+ * gives no way to calculate a deadline, the application has none, as such a
+ * node is sending a signal for as long as it is connected.
+ */
+function siteApplicationOf(
+	snapshot: Snapshot,
+	ref: number,
+	key: string,
+	a: Record<string, unknown>,
+): SiteApplication {
+	if (typeof a.name !== "string") {
+		throw new Error(`application ${key} has no name`);
+	}
+
+	const live = entries(a.nodes, "nodes")
+		.filter(([, n]) => n.noSignal !== true)
+		.map(([id]) => id);
+
+	// Each heartbeat of a live node, with the deadline that it gives.
+	const beats: { at: number; deadline: number | undefined }[] = [];
+	for (const id of live) {
+		const expiry = snapshot.expiries.get(id);
+		for (const at of snapshot.beats.get(id) ?? []) {
+			beats.push({
+				at,
+				deadline: expiry === undefined ? undefined : at + expiry,
+			});
+		}
+	}
+	beats.sort((x, y) => x.at - y.at);
+
+	let deadline: number | undefined;
+	let bounded = beats.length > 0;
+	const raised: number[] = [];
+	for (const b of beats) {
+		if (b.deadline === undefined) {
+			bounded = false;
+			raised.push(b.at);
+		} else if (deadline === undefined || b.deadline > deadline) {
+			deadline = b.deadline;
+			raised.push(b.at);
+		}
+	}
+
+	const app: SiteApplication = {
+		application: { name: a.name, key },
+		nodes: live.length,
+		heartbeats: raised.slice(-recentBeats).map((t) => Math.max(0, ref - t)),
+	};
+	if (bounded && deadline !== undefined) {
+		app.deadline = deadline - ref;
+	}
+	if (isNumber(a.coverage)) {
+		app.coverage = a.coverage;
+	}
+
+	if (a.events !== undefined) {
+		const e = object(a.events, "events");
+		app.events = { ...rateOf(e.rate, "events.rate") };
+		if (e.streams !== undefined) {
+			app.events.streams = streamsOf(e.streams, "events.streams");
+		}
+	}
+
+	if (a.queues !== undefined) {
+		const q = object(a.queues, "queues");
+		app.queues = {
+			messages: number(q.messages, "queues.messages"),
+			failing: maybeNumber(q.failing, "queues.failing") ?? 0,
+		};
+		const count = maybeNumber(q.queues, "queues.queues");
+		if (count !== undefined) {
+			app.queues.queues = count;
+		}
+	}
+
+	return app;
 }

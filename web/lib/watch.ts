@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useReducer } from "react";
-import type { ClusterData } from "../model.ts";
-import { checkCluster, NotFound, watchPath } from "./api.ts";
+import type { ClusterData, SiteData } from "../model.ts";
+import {
+	checkCluster,
+	checkSite,
+	NotFound,
+	siteWatchPath,
+	watchPath,
+} from "./api.ts";
 import { browserClock, type Clock } from "./live.tsx";
 import type { Polled } from "./poll.ts";
 import {
 	initialWatchState,
 	messageNames,
+	type Snapshot,
 	selectCluster,
+	selectSite,
+	siteWatchReducer,
+	type WatchAction,
+	type WatchState,
 	watchReducer,
 } from "./stream.ts";
 
@@ -14,8 +25,8 @@ import {
 export const retryInterval = 1000;
 
 /**
- * How long to wait before asking again about a cluster that isn't known, which
- * may become known when a node of it connects.
+ * How long to wait before asking again about a cluster or a site that isn't
+ * known, which may become known when a node of it connects.
  */
 export const unknownInterval = 5000;
 
@@ -48,7 +59,56 @@ export function useWatched(
 	id: string,
 	clock: Clock = browserClock,
 ): Polled<ClusterData> {
-	const [state, dispatch] = useReducer(watchReducer, initialWatchState);
+	return useStream(clusterStream, id, clock);
+}
+
+/**
+ * useWatchedSite returns what the site view shows for the site with the given
+ * key, which is {@link noSite} for the applications at no site, and which the
+ * Observatory keeps up to date, in the same way as {@link useWatched} does for a
+ * cluster.
+ */
+export function useWatchedSite(
+	key: string,
+	clock: Clock = browserClock,
+): Polled<SiteData> {
+	return useStream(siteStream, key, clock);
+}
+
+/**
+ * Stream is how to watch one kind of thing, such as a cluster, by its ID or its
+ * key.
+ */
+interface Stream<T> {
+	/** Returns the path of the stream of the thing. */
+	path: (id: string) => string;
+
+	/** Finds out whether the Observatory knows the thing, as `checkCluster` does. */
+	check: (id: string, signal: AbortSignal) => Promise<void>;
+
+	reducer: (state: WatchState, action: WatchAction) => WatchState;
+
+	/** Returns what the page shows, as `selectCluster` does. */
+	select: (snapshot: Snapshot, ref: number) => T | undefined;
+}
+
+const clusterStream: Stream<ClusterData> = {
+	path: watchPath,
+	check: checkCluster,
+	reducer: watchReducer,
+	select: selectCluster,
+};
+
+const siteStream: Stream<SiteData> = {
+	path: siteWatchPath,
+	check: checkSite,
+	reducer: siteWatchReducer,
+	select: selectSite,
+};
+
+/** useStream watches the thing with the given ID, as {@link useWatched} says. */
+function useStream<T>(stream: Stream<T>, id: string, clock: Clock): Polled<T> {
+	const [state, dispatch] = useReducer(stream.reducer, initialWatchState);
 
 	useEffect(() => {
 		dispatch({ type: "reset" });
@@ -58,7 +118,7 @@ export function useWatched(
 		let timer: number | undefined;
 
 		const watch = () => {
-			const events = new EventSource(watchPath(id));
+			const events = new EventSource(stream.path(id));
 			source = events;
 
 			events.addEventListener("open", () => dispatch({ type: "connected" }));
@@ -87,7 +147,7 @@ export function useWatched(
 
 		const check = async () => {
 			try {
-				await checkCluster(id, controller.signal);
+				await stream.check(id, controller.signal);
 				if (!controller.signal.aborted) {
 					watch();
 				}
@@ -116,14 +176,14 @@ export function useWatched(
 			window.clearTimeout(timer);
 			source?.close();
 		};
-	}, [id, clock]);
+	}, [stream, id, clock]);
 
 	const data = useMemo(
 		() =>
 			state.snapshot === undefined
 				? undefined
-				: selectCluster(state.snapshot, state.at),
-		[state.snapshot, state.at],
+				: stream.select(state.snapshot, state.at),
+		[stream, state.snapshot, state.at],
 	);
 
 	if (state.status === "unknown") {

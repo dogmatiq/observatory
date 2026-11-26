@@ -57,8 +57,12 @@ export interface SiteData {
 	 * recorded.
 	 */
 	events?: {
-		/** The events recorded per minute, across the applications. */
-		rate: { perMinute?: number };
+		/**
+		 * The events recorded per minute, across the applications. `measuring` is
+		 * true while it can't be given only because a node's count is still being
+		 * measured.
+		 */
+		rate: { perMinute?: number; measuring?: boolean };
 
 		/**
 		 * The event streams of all the applications together, if any application's
@@ -105,8 +109,11 @@ export interface SiteData {
 		/** The share of the nodes at the site that report the messages in queues. */
 		coverage?: number;
 
-		/** The messages handled per minute, if any engine supports it. */
-		throughput?: { perMinute?: number };
+		/**
+		 * The messages handled per minute, if any engine supports it, with
+		 * `measuring` as it is for the events.
+		 */
+		throughput?: { perMinute?: number; measuring?: boolean };
 
 		/** The history of the messages handled per minute. */
 		history?: Chart;
@@ -129,8 +136,9 @@ export interface SiteApplication {
 	nodes: number;
 
 	/**
-	 * The share of the application's nodes that are sending a signal, if only some of
-	 * them are. The application's figures are then the sums of those nodes.
+	 * The share of the application's nodes that report the metrics of its
+	 * figures, if only some of them do, as the lowest of the shares of its
+	 * figures. A node with no signal counts as one that doesn't report.
 	 */
 	coverage?: number;
 
@@ -151,10 +159,11 @@ export interface SiteApplication {
 	deadline?: number;
 
 	/**
-	 * The events recorded per minute, if the engine supports it, and the
-	 * application's event streams, if the engine reports them.
+	 * The events recorded per minute, if the engine supports it, with
+	 * `measuring` as it is for the site's events, and the application's event
+	 * streams, if the engine reports them.
 	 */
-	events?: { perMinute?: number; streams?: Streams };
+	events?: { perMinute?: number; measuring?: boolean; streams?: Streams };
 
 	/**
 	 * The messages that are ready to be delivered now, and those that are

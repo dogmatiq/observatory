@@ -5,6 +5,7 @@ import { LinksPage } from "./components/LinksPage.tsx";
 import { Message } from "./components/Message.tsx";
 import { Page } from "./components/Page.tsx";
 import { ReviewPage } from "./components/ReviewPage.tsx";
+import { SitePage } from "./components/SitePage.tsx";
 import {
 	application,
 	clusterId as fixtureClusterId,
@@ -27,7 +28,7 @@ import {
 	routeOf,
 	sitePath,
 } from "./lib/route.ts";
-import { useWatched } from "./lib/watch.ts";
+import { useWatched, useWatchedSite } from "./lib/watch.ts";
 import type { Installation, Site } from "./model.ts";
 
 /**
@@ -92,10 +93,8 @@ export function App({ path = window.location.pathname }: { path?: string }) {
 				/>
 			);
 
-
 		case "review":
 			return <ReviewPage />;
-
 
 		case "not-found":
 			return (
@@ -186,55 +185,43 @@ function Found<T>({
 	}
 }
 
-/** SiteByKey is the page of the site with the given key. */
-function SiteByKey({ siteKey }: { siteKey: string }) {
-	const read = useCallback(
-		(signal: AbortSignal) => fetchInstallations({ siteKey }, signal),
-		[siteKey],
-	);
-
-	return (
-		<Found
-			polled={usePolled(read)}
-			missing={{
-				title: "This site isn't known",
-				text: "The Observatory knows no application at a site with this key. This page shows the site as soon as a node at it connects.",
-			}}
-		>
-			{(installations, stopped) => (
-				<SiteApplications installations={installations} stopped={stopped} />
-			)}
-		</Found>
-	);
-}
-
 /**
- * SiteApplications is the page of a site, which lists the applications at it.
- * The installations are those at the site.
+ * SiteByKey is the site view of the site with the given key, which is the nil
+ * UUID for the applications at no site.
  */
-function SiteApplications({
-	installations,
-	stopped,
-}: {
-	installations: Installation[];
-	stopped?: string;
-}) {
-	const site = installations[0]?.site;
+function SiteByKey({ siteKey }: { siteKey: string }) {
+	const watched = useWatchedSite(siteKey);
 
-	return (
-		<LinksPage
-			title={
-				site === undefined
-					? "Applications at no site"
-					: `Applications at ${site.name}`
-			}
-			links={installations.map((i) => ({
-				href: applicationAtSitePath(i.site?.key, i.application.key),
-				label: i.application.name,
-			}))}
-			stopped={stopped}
-		/>
-	);
+	switch (watched.status) {
+		case "loading":
+			return <Loading />;
+
+		case "failed":
+			return (
+				<Message title="This site can't be read">
+					The Observatory can't be reached.
+				</Message>
+			);
+
+		case "unknown":
+			return (
+				<Message title="This site isn't known">
+					The Observatory has no application at a site with this key. This page
+					shows the site as soon as a node at it connects.
+				</Message>
+			);
+
+		case "ready":
+		case "stale":
+			return (
+				<LiveData receivedAt={watched.at}>
+					<SitePage
+						data={watched.data}
+						stopped={watched.status === "stale" ? updatesStopped : undefined}
+					/>
+				</LiveData>
+			);
+	}
 }
 
 /** ApplicationByKey is the page of the application with the given key. */
@@ -431,10 +418,7 @@ function Named({ name }: { name: string }) {
 				const [only, ...others] = candidates;
 				if (only !== undefined && others.length === 0) {
 					return only.kind === "site" ? (
-						<SiteApplications
-							installations={only.installations}
-							stopped={stopped}
-						/>
+						<SiteByKey siteKey={only.site.key} />
 					) : (
 						<ApplicationSites
 							installations={only.installations}

@@ -448,26 +448,127 @@ test("the application view of an application that isn't known at the site says s
 	);
 });
 
-test("a site lists its applications, each linking to its application view", async () => {
-	lookups({
-		installations: [
-			{ application: billing, site: euWest },
-			{ application: statements, site: euWest },
-			{ application: statements },
-		],
-		clusters: [],
+/**
+ * siteDocument is the state document of the eu-west site, at which the
+ * statements application has one node sending a signal and the billing
+ * application has one node with no signal.
+ */
+const siteDocument = {
+	site: euWest,
+	queues: { messages: 5, failing: 1, queues: 2 },
+	applications: {
+		a1: {
+			name: "statements",
+			nodes: { n1: {} },
+			queues: { messages: 5, failing: 1, queues: 1 },
+		},
+		a2: {
+			name: "billing",
+			nodes: { n2: { noSignal: true } },
+			queues: { messages: 0, failing: 0, queues: 1 },
+		},
+	},
+};
+
+/** Connects the stream that is open, and sends the burst of a site. */
+function connectSite(
+	document: Record<string, unknown> = siteDocument,
+	source = FakeEventSource.live[0],
+) {
+	act(() => {
+		source?.open();
+		source?.send("changed", document);
+		source?.send("synced");
 	});
+}
+
+test("a site's page is the site view of what the stream tells it, each application linking to its application view", async () => {
+	const requests = serve(() => new Response("{}"));
 
 	render(<App path="/-/site/s1" />);
+	await waitFor(() => expect(watching()).toEqual(["/-/api/sites/s1/watch"]));
+	expect(screen.getByText("Loading…")).toBeDefined();
+
+	connectSite();
+
+	expect(await screen.findByRole("region", { name: "Totals" })).toBeDefined();
+	expect(
+		within(screen.getByRole("region", { name: "Applications" }))
+			.getAllByRole("link")
+			.map((l) => [l.textContent, l.getAttribute("href")]),
+	).toEqual([
+		["billing", "/-/site/s1/app/a2"],
+		["statements", "/-/site/s1/app/a1"],
+	]);
+	expect(requests).toEqual([]);
+});
+
+test("a site's page has the site in its title bar's trail", async () => {
+	serve(() => new Response("{}"));
+
+	render(<App path="/-/site/s1" />);
+	await waitFor(() => expect(watching()).toHaveLength(1));
+	connectSite();
+
+	const trail = await screen.findByRole("navigation", {
+		name: "Where this page is",
+	});
+	expect(
+		within(trail)
+			.getAllByRole("link")
+			.map((l) => [l.textContent, l.getAttribute("href")]),
+	).toEqual([["eu-west", "/-/site/s1"]]);
+});
+
+test("the page of the applications at no site watches the site with the nil UUID, and has no trail", async () => {
+	serve(() => new Response("{}"));
+
+	render(<App path={`/-/site/${noSite}`} />);
+	await waitFor(() =>
+		expect(watching()).toEqual([`/-/api/sites/${noSite}/watch`]),
+	);
+
+	const { site: _, ...unsited } = siteDocument;
+	connectSite(unsited);
+
+	expect(await screen.findByRole("region", { name: "Totals" })).toBeDefined();
+	expect(
+		screen.queryByRole("navigation", { name: "Where this page is" }),
+	).toBeNull();
+});
+
+test("a site's page keeps its data, and says so, while updates have stopped", async () => {
+	serve(() => new Response("{}"));
+
+	render(<App path="/-/site/s1" />);
+	await waitFor(() => expect(watching()).toHaveLength(1));
+	connectSite();
+	await screen.findByRole("region", { name: "Totals" });
+	expect(screen.getByRole("status").textContent).toBe("");
+
+	act(() => FakeEventSource.live[0]?.fail());
+
+	expect(screen.getByRole("region", { name: "Totals" })).toBeDefined();
+	expect(screen.getByRole("status").textContent).toContain(
+		"Updates have stopped",
+	);
+
+	connectSite();
+
+	expect(screen.getByRole("status").textContent).toBe("");
+});
+
+test("a site that the Observatory doesn't know says so", async () => {
+	const requests = serve(() => new Response("", { status: 404 }));
+
+	render(<App path="/-/site/s1" />);
+	await waitFor(() => expect(watching()).toHaveLength(1));
+	act(() => FakeEventSource.live[0]?.fail(true));
 
 	expect(
-		await screen.findByRole("heading", { name: "Applications at eu-west" }),
+		await screen.findByRole("heading", { name: "This site isn't known" }),
 	).toBeDefined();
-	expect(
-		screen
-			.getAllByRole("link", { name: /billing|statements/ })
-			.map((l) => l.getAttribute("href")),
-	).toEqual(["/-/site/s1/app/a2", "/-/site/s1/app/a1"]);
+	expect(requests).toEqual(["/-/api/sites/s1"]);
 });
 
 test("an application that runs at several sites lists them, each linking to its application view", async () => {
@@ -521,9 +622,7 @@ test("a name that only a site has shows that site", async () => {
 
 	render(<App path="/eu-west" />);
 
-	expect(
-		await screen.findByRole("heading", { name: "Applications at eu-west" }),
-	).toBeDefined();
+	await waitFor(() => expect(watching()).toEqual(["/-/api/sites/s1/watch"]));
 });
 
 test("a name that a site and an application share lists both, each linking to its permalink", async () => {

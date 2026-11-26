@@ -181,3 +181,41 @@ test("a compact digest whose figures only some of its application's nodes report
 
 	expect(await tipOf(flag)).toContain(someApplicationNodesReport.text);
 });
+
+test("a compact digest's rate that waits only on a node being measured stays as it was, with no flag", () => {
+	const app = siteApplications[0] as (typeof siteApplications)[number];
+	const withRate = (events: { perMinute?: number; measuring?: boolean }) => (
+		<SiteBreakdown
+			data={siteOf([{ ...app, events }], euWest)}
+			breakdown="compact-digests"
+		/>
+	);
+	const { rerender } = render(withRate({ perMinute: 330 }));
+	const digest = () =>
+		screen.getByRole("article", { name: app.application.name });
+
+	rerender(withRate({ measuring: true }));
+
+	expect(digest().textContent).toContain("330/min");
+	expect(within(digest()).queryByText(/samples/)).toBeNull();
+	expect(digest().querySelector(".glitch")).toBeNull();
+});
+
+test("the site's events tile holds its rate while a node is being measured", () => {
+	const data = siteOf(apps, euWest);
+	const withRate = (rate: { perMinute?: number; measuring?: boolean }) => (
+		<SiteOverview
+			data={{
+				...data,
+				events: { ...(data.events as NonNullable<typeof data.events>), rate },
+			}}
+		/>
+	);
+	const { rerender } = render(withRate({ perMinute: 330 }));
+	const tile = () => screen.getByRole("article", { name: "Events" });
+
+	rerender(withRate({ measuring: true }));
+
+	expect(tile().textContent).toMatch(/^330events per minute/);
+	expect(tile().querySelector(".glitch")).toBeNull();
+});

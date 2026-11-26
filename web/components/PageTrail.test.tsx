@@ -61,6 +61,18 @@ test("on an application's page, the trail is the site and the application", () =
 	]);
 });
 
+test("on a site's page, the trail is the site, and its hovercard has only the site", async () => {
+	render(<PageTrail site={site} />);
+
+	expect(trail()).toEqual([["eu-west", sitePath(site.key)]]);
+	const card = await hovercard();
+	expect(
+		within(card)
+			.getAllByRole("link")
+			.map((a) => a.textContent),
+	).toEqual(["eu-west"]);
+});
+
 test("on a cluster's own page, the trail ends with the cluster, by its engine's name and its ID", () => {
 	render(
 		<PageTrail
