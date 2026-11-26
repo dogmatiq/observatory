@@ -265,10 +265,13 @@ test("a rate that waits only on a node being measured stays as it was, unblurred
 	const events = () => screen.getByRole("article", { name: "Events" });
 
 	rerender(withRate({ measuring: true }));
+	// The tile's text is only the figure and its detail, so it has no flag, whose
+	// status a screen reader would read there.
 	expect(events().textContent).toBe(
 		"330events per minute, 1.2K events on 2 streams",
 	);
 	expect(events().querySelector(".distrust-blur")).toBeNull();
+	expect(events().querySelector(".glitch")).toBeNull();
 });
 
 test("a rate that isn't known for any other reason is lost, and stays lost while a node is then measured", () => {
