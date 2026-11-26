@@ -1063,7 +1063,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   node stops sending a signal, its section glitches once and then lingers for five seconds in the gray of the flat line,
   falling to empty, before its share shrinks away. An application's section on the site view follows the latest
   deadline of its nodes, and a heartbeat raises it only if it moves that deadline later. Done for the cluster and engine
-  tiles (c354465, 258341f, cda0004, 926c390): the stream sends each heartbeat's expiry with it, and a node that gives no way to tell
+  tiles (c354465, 258341f, cda0004, 926c390, 7b5301c): the stream sends each heartbeat's expiry with it, and a node that gives no way to tell
   when its heartbeats expire stays full while it is connected. The site view's applications tile follows once its server
   side is built.
   Decided: the demo engine keeps its 15-second expiry, though its chart barely moves between heartbeats, because
@@ -1075,7 +1075,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   from the interval that the spec only calls an aim, so the page doesn't use the interval. It is the figures' glitch
   turned on its side for a line: the left and the right half of the section slip up and down, once through the figures'
   keyframes, with their red and cyan shadows, and the ends of the section stay joined to the line. For a viewer who asks
-  for less motion the section doesn't slip, and has only its shadows. Done (926c390).
+  for less motion the section doesn't slip, and has only its shadows. Done (926c390, 7b5301c).
   Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
   sparklines' readouts are shown: "node 3f8e2a10", with "node" muted and the short ID in the cluster's color, over
   "heartbeat 4 s ago", or "heartbeat just now" under 1.5 seconds. The
