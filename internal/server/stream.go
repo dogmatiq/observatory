@@ -360,9 +360,14 @@ func documentOf(view observe.ClusterView) map[string]any {
 
 	rates := map[string]any{}
 
-	// A rate that the nodes support is present, and has a "rate" once it is known.
+	// A rate that the nodes support is present, and has a "rate" once it is
+	// known. Until then it says whether it is waiting for a node's count to be
+	// measured for long enough.
 	rateOf := func(r *observe.Rate) map[string]any {
 		if r.PerSecond == nil {
+			if r.Measuring {
+				return map[string]any{"measuring": true}
+			}
 			return map[string]any{}
 		}
 		return map[string]any{"rate": significant(*r.PerSecond)}

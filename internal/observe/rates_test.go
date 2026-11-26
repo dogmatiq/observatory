@@ -86,6 +86,41 @@ func TestRates(t *testing.T) {
 		})
 	})
 
+	t.Run("it says that a rate is being measured until the total has been observed for five seconds", func(t *testing.T) {
+		synctest.Test(t, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(t.Context())
+			o := NewObserver()
+			q := uuidpb.Generate()
+
+			n := startNode(t, ctx, o, uuidpb.Generate(), queueRemoved)
+			n.sample(t, 0, "q", 1, removed(q, 10))
+
+			measuring := func() bool {
+				t.Helper()
+				for _, s := range Combine(time.Now(), o.Nodes()) {
+					if s.Metric == queueRemoved {
+						return s.Measuring
+					}
+				}
+				t.Fatal("no sample of the queue")
+				return false
+			}
+
+			time.Sleep(4 * time.Second)
+			if !measuring() {
+				t.Fatal("expected the rate to be being measured")
+			}
+
+			time.Sleep(time.Second)
+			if measuring() {
+				t.Fatal("unexpected measuring once the rate is known")
+			}
+
+			cancel()
+			<-n.Engine.Done
+		})
+	})
+
 	t.Run("it gives no rate until the total has been observed for five seconds", func(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(t.Context())

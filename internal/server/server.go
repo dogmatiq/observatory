@@ -58,7 +58,10 @@
 //   - "rates": {"events", "throughput"}, which are the events recorded and the
 //     messages removed from the queues, each {"rate"} in times per second. A
 //     rate that no node supports the metrics for is absent. A rate that the
-//     nodes support and that isn't known yet is {}, which has no "rate". The
+//     nodes support and that isn't known yet is {}, which has no "rate", or
+//     {"measuring": true} if it isn't known only because a node's count has been
+//     observed for too short a time to give its rate, as for a few seconds after
+//     the node joins the cluster or reconnects. The
 //     throughput also has "of", which is what it counts: "handled", for the
 //     commands and deadlines that handlers have handled, "removed", for the
 //     messages that are removed from the queues, "commands handled", for only the

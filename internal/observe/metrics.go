@@ -731,6 +731,13 @@ type ClusterSample struct {
 	// Each node's rate comes from that node's own call, so it is never made from
 	// values that came from different calls.
 	PerSecond *float64
+
+	// Measuring is true if a sample that contributes to the value is a
+	// cumulative count that has been observed for less than five seconds, which
+	// makes PerSecond nil. It is so for a few seconds after a node joins the
+	// cluster or reconnects, until the Observatory has measured the node's count
+	// for long enough to give its rate.
+	Measuring bool
 }
 
 // addRates returns the sum of two rates, or nil if either is nil.
@@ -841,12 +848,14 @@ func (r reading) reads() bool {
 	return len(r.nodes) > 0 || r.cluster != nil
 }
 
-// rateOf returns the rate of a sample at the time now, or nil if it has none.
-func rateOf(now time.Time, s Sample) *float64 {
+// rateOf returns the rate of a sample at the time now, or nil if it has none,
+// and whether it has none only because it is a cumulative count that has been
+// observed for less than [minRateSpan].
+func rateOf(now time.Time, s Sample) (rate *float64, measuring bool) {
 	if r, ok := s.perSecond(now); ok {
-		return &r
+		return &r, false
 	}
-	return nil
+	return nil, len(s.run) > 0
 }
 
 // Combine returns what the nodes of one cluster report about the cluster as a
@@ -875,7 +884,8 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 	var out []ClusterSample
 	if r.cluster != nil {
 		for _, s := range r.cluster.ClusterMetrics.Samples {
-			out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rateOf(now, s)})
+			rate, measuring := rateOf(now, s)
+			out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rate, measuring})
 		}
 	}
 
@@ -891,13 +901,13 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 				continue
 			}
 
-			rate := rateOf(now, s)
+			rate, measuring := rateOf(now, s)
 
 			k := thing{s.Metric, s.subject}
 			i, ok := combined[k]
 			if !ok {
 				combined[k] = len(out)
-				out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rate})
+				out = append(out, ClusterSample{s.Metric, proto.Clone(s.Message), rate, measuring})
 				continue
 			}
 
@@ -905,6 +915,7 @@ func Combine(now time.Time, nodes []Node) []ClusterSample {
 			case summed:
 				setValue(out[i].Message, valueOf(out[i].Message)+valueOf(s.Message))
 				out[i].PerSecond = addRates(out[i].PerSecond, rate)
+				out[i].Measuring = out[i].Measuring || measuring
 			case greatest:
 				setValue(out[i].Message, max(valueOf(out[i].Message), valueOf(s.Message)))
 			}

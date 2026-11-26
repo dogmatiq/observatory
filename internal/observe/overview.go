@@ -461,6 +461,11 @@ type Rate struct {
 	// PerSecond is the number of times per second. It is nil until the
 	// Observatory can give it.
 	PerSecond *float64 `json:"perSecond,omitempty"`
+
+	// Measuring is true if PerSecond is nil because a node's count has been
+	// observed for too short a time to give its rate, as it is for a few seconds
+	// after the node joins the cluster or reconnects.
+	Measuring bool `json:"measuring,omitempty"`
 }
 
 // Spread is one part of a quantity that is spread over several things, such as
@@ -643,15 +648,26 @@ type summedRate struct {
 	perSecond float64
 	samples   int
 	unknown   bool
+
+	// measuring is true if a sample that was added has no rate yet because it
+	// is still being measured.
+	measuring bool
 }
 
 func (r *summedRate) add(s ClusterSample) {
 	r.samples++
 	if s.PerSecond == nil {
 		r.unknown = true
+		r.measuring = r.measuring || s.Measuring
 		return
 	}
 	r.perSecond += *s.PerSecond
+}
+
+// summed returns the sum as a [Rate].
+func (r summedRate) summed() *Rate {
+	v := r.rate()
+	return &Rate{PerSecond: v, Measuring: v == nil && r.measuring}
 }
 
 // rate returns the sum of the rates in times per second, or nil if it is
@@ -817,7 +833,7 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 			o.Events.Streams = spreadOf(f.streams)
 		}
 		if recorded {
-			o.Events.Rate = &Rate{f.eventsRecorded.rate()}
+			o.Events.Rate = f.eventsRecorded.summed()
 			o.Events.History = &Chart{Points: []ChartPoint{}}
 		}
 
@@ -854,16 +870,16 @@ func overviewOf(now time.Time, nodes []Node) (Application, Overview, chartValues
 		// are, and, if they are not either, the kind of message that is reported.
 		switch {
 		case handledCommands && handledDeadlines:
-			o.Queues.Throughput = &Rate{f.handled.rate()}
+			o.Queues.Throughput = f.handled.summed()
 			o.Queues.Counted = "handled"
 		case removed:
-			o.Queues.Throughput = &Rate{f.removed.rate()}
+			o.Queues.Throughput = f.removed.summed()
 			o.Queues.Counted = "removed"
 		case handledCommands:
-			o.Queues.Throughput = &Rate{f.handled.rate()}
+			o.Queues.Throughput = f.handled.summed()
 			o.Queues.Counted = "commands handled"
 		case handledDeadlines:
-			o.Queues.Throughput = &Rate{f.handled.rate()}
+			o.Queues.Throughput = f.handled.summed()
 			o.Queues.Counted = "deadlines handled"
 		}
 		o.Queues.Coverage = coverageOf(

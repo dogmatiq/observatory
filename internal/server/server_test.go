@@ -1180,6 +1180,39 @@ func TestStream(t *testing.T) {
 		})
 	})
 
+	t.Run("it says that a rate is waiting for a node's count to be measured, until it has been for five seconds", func(t *testing.T) {
+		withStream(t, func(_ *observe.Observer, _ *observe.Recorder, n *node, w *watchRequest) {
+			n.sample(t, recordedIndex, "a", 1, metricsgrpc.HandlerEventsRecorded_builder{HandlerKey: handlerKey(0), CumulativeCount: 0}.Build())
+
+			time.Sleep(time.Second)
+			synctest.Wait()
+
+			// The latest patch of the events' rate says what it is now.
+			latest := func() map[string]any {
+				var events map[string]any
+				for _, p := range patches(w, t) {
+					if r, ok := p["rates"].(map[string]any); ok {
+						if v, ok := r["events"].(map[string]any); ok {
+							events = v
+						}
+					}
+				}
+				return events
+			}
+
+			if got := latest(); got["measuring"] != true || got["rate"] != nil {
+				t.Fatalf("unexpected rate while the count is measured: %v", got)
+			}
+
+			time.Sleep(5 * time.Second)
+			synctest.Wait()
+
+			if got := latest(); got["measuring"] != nil || got["rate"] != 0.0 {
+				t.Fatalf("unexpected rate once the count is measured: %v", got)
+			}
+		})
+	})
+
 	t.Run("it tells a page how long after it arrived a heartbeat expires", func(t *testing.T) {
 		withStream(t, func(_ *observe.Observer, _ *observe.Recorder, n *node, w *watchRequest) {
 			n.heartbeatExpiring(t, 15*time.Second)
