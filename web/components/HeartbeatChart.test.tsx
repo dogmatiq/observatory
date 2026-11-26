@@ -99,9 +99,13 @@ test("a node that goes keeps its place, lingers as its level drains to empty, an
 		/>,
 	);
 
-	// It lingers, from the level that it had when it went.
+	// It glitches at the level that it had when it went, and then lingers,
+	// draining from that level.
 	expect(last().levels).toEqual([1, 0.5, 0.2]);
 	expect(last().weights).toEqual([1, 1, 1]);
+
+	advance(500);
+	expect(last().levels).toEqual([1, 0.5, 0.2]);
 
 	advance(2500);
 	expect(last().levels).toEqual([1, 0.25, 0.2]);
@@ -130,7 +134,7 @@ test("a node that comes back while its section lingers is live again", () => {
 	);
 
 	rerender(<HeartbeatChart sections={[{ id: "a", level: 1 }]} />);
-	advance(1000);
+	advance(1500);
 
 	rerender(
 		<HeartbeatChart
@@ -140,7 +144,7 @@ test("a node that comes back while its section lingers is live again", () => {
 			]}
 		/>,
 	);
-	advance(5000);
+	advance(5500);
 
 	expect(last().levels).toEqual([1, 1]);
 	expect(last().weights).toEqual([1, 1]);

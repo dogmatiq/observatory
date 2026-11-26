@@ -26,7 +26,7 @@ const shareTime = 500;
 const leaveTime = 700;
 
 /**
- * How long a node's section stays on the chart after the node has gone, in
+ * How long a node's section lingers on the chart after its glitch, in
  * milliseconds, before its share shrinks away.
  */
 const lingerTime = 5000;
@@ -97,14 +97,17 @@ interface Share {
 
 /**
  * lingering returns the share as it is drawn at `now`: a node that has gone
- * drains from the level that its section had when it went to empty over
- * {@link lingerTime}.
+ * keeps the level that its section had when it went while it glitches, and
+ * then drains to empty over {@link lingerTime}.
  */
 function lingering(share: Share, now: number): Share {
 	if (share.goneAt === undefined) {
 		return share;
 	}
-	const t = Math.min(1, Math.max(0, (now - share.goneAt) / lingerTime));
+	const t = Math.min(
+		1,
+		Math.max(0, (now - share.goneAt - glitchTime) / lingerTime),
+	);
 	return { ...share, level: share.level * (1 - t) };
 }
 
@@ -122,7 +125,8 @@ function lingering(share: Share, now: number): Share {
  * A node goes when its section is no longer in `sections`. Its section then
  * glitches once, as a figure does, turned on its side: the left and the right
  * half of the section slip up and down on their own, with a red and a cyan
- * shadow. It then lingers for {@link lingerTime}, in the gray of the flat line,
+ * shadow, for {@link glitchTime}. It then lingers for {@link lingerTime}, in
+ * the gray of the flat line,
  * draining from the level that it had to empty, and then its share shrinks
  * away. A node that comes back while its section lingers is live again.
  *
@@ -387,7 +391,7 @@ export function HeartbeatChart({ sections }: { sections: readonly Section[] }) {
 				if (
 					s.goneAt !== undefined &&
 					s.target > 0 &&
-					now - s.goneAt >= lingerTime
+					now - s.goneAt >= glitchTime + lingerTime
 				) {
 					const done = { ...s, level: 0, target: 0 };
 					lingered.push(done);
