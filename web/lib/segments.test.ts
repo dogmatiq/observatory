@@ -369,13 +369,13 @@ test("a bar of a site's applications is largest first, leaves out those with non
 	]);
 	expect(segments.map((s) => s.readout)).toEqual([
 		{
-			subject: "application payments",
+			subject: "payments application",
 			figure: "30",
 			unit: "events/min",
 			share: "75%",
 		},
 		{
-			subject: "application accounts",
+			subject: "accounts application",
 			figure: "10",
 			unit: "events/min",
 			share: "25%",

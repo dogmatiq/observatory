@@ -211,7 +211,7 @@ export function applicationSegments(
 				value: a.amount,
 				title: `${countOf(a.amount, singular, plural)} in ${a.application.name}`,
 				readout: segmentReadout(
-					`application ${a.application.name}`,
+					`${a.application.name} application`,
 					a.amount,
 					unit,
 					total === 0 ? 0 : a.amount / total,
