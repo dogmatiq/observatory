@@ -649,21 +649,21 @@ parts. An item that says "Done" is built.
   and no glitch, and moves to the new rate once the node has been measured. The server says so with the rate, as
   {"measuring": true} in place of its number. A rate that isn't known for any other reason is lost as before. Summing
   only the nodes that have been measured, so that the rate dips by the new node's share, was tried on a temporary page
-  and not chosen, because the last total is closer to the truth. Done (c1fc7d9, c2fb5d1).
+  and not chosen, because the last total is closer to the truth. Done (1141017, bd6df5d).
 - Places for the `Glitch`: somewhere that needs attention, kept for the exceptional so that it keeps its meaning. A
   glitch marks an event, the moment that something happens, as a short burst, and never a lasting state. In use: a lost
   figure just before its zero, an alert flag appearing, and a node's section of the heartbeat chart when the node goes.
   Decided: the orange or red "+N" of a number glitches once as it grows in, when the part that it counts begins (done,
-  69e11af). Decided: a page that has stopped being updated, because the Observatory can't be reached, says so by a red
+  d30c232). Decided: a page that has stopped being updated, because the Observatory can't be reached, says so by a red
   alert flag in its title bar, in place of the line of text that it had above the page, and the flag glitches as it
-  appears, as a card's does (done, aa3dbc3). Later: the health Issues when the rules come back. More are added as they are
+  appears, as a card's does (done, e8dad8f). Later: the health Issues when the rules come back. More are added as they are
   found.
 - Decided: the time in a heartbeat chart's readout is its measurement, so it has the tile's color, as a sparkline's
   value does, and the rest is muted: the cluster tile's says "node 3f8e2a10" over "heartbeat 4 s ago", and the engine
-  tile's only "heartbeat 4 s ago", because its chart has one share (done, 69e11af, aa3dbc3).
+  tile's only "heartbeat 4 s ago", because its chart has one share (done, d30c232, e8dad8f).
 - The prepositions of the page (decided). The spec's own words are kept: events are "on" an event stream, messages are
   "in" a queue, instances are "bound to" an event stream or a queue, and workloads are "owned by" a node. A distribution
-  is "across" the things that it is of, and "between" is not used, because it means two. Done (3f51cb3): the events
+  is "across" the things that it is of, and "between" is not used, because it means two. Done (341d720): the events
   tiles say "events on 2 streams", and the instance bars "100 instances bound to event stream 8b0081fd".
 - Some bars show load at this moment, such as the bar of the nodes that handled a handler's messages, and others show
   values that build up over a long time, such as the bindings of instances. Both are worth having, so a card for which
@@ -693,7 +693,7 @@ parts. An item that says "Done" is built.
   Spanish, Portuguese, Romanian, Czech, Hungarian, Lithuanian, Latvian, Albanian, Vietnamese, Indonesian, Welsh,
   Ukrainian, Turkish, Maltese, Dutch, Swedish, Icelandic, Finnish and Estonian ones. Nothing
   moves for a viewer who asks for less motion, and everything drifts very slowly: the stars take half an hour to cross a
-  tile. The earlier idea, a night sky for a chart that is only empty, with a tumbleweed, is at `3a30728`, and is not used.
+  tile. The earlier idea, a night sky for a chart that is only empty, with a tumbleweed, is at `eeed75c`, and is not used.
   - Handler cards say what their chart counts in the moon's popover, by kind, in `chartedWords` of `HandlerCard`. Those
     words reach users, so they are the user's to change.
 - Use the spec's words on the page: commands pending, events pending and deadlines pending for what the cards call
@@ -1070,7 +1070,7 @@ Tick each item when it is done, and write the pull request or commit that did it
   node stops sending a signal, its section glitches once and then lingers for five seconds in the gray of the flat line,
   with no shade under it, falling to empty, before its share shrinks away. An application's section on the site view follows the latest
   deadline of its nodes, and a heartbeat raises it only if it moves that deadline later. Done for the cluster and engine
-  tiles (c354465, 258341f, cda0004, 926c390, 7b5301c): the stream sends each heartbeat's expiry with it, and a node that gives no way to tell
+  tiles (93cd265, 8482139, 2cacb1f, 53ae090, 0424877): the stream sends each heartbeat's expiry with it, and a node that gives no way to tell
   when its heartbeats expire stays full while it is connected. The site view's applications tile follows once its server
   side is built.
   Decided: the demo engine keeps its 15-second expiry, though its chart barely moves between heartbeats, because
@@ -1082,14 +1082,14 @@ Tick each item when it is done, and write the pull request or commit that did it
   from the interval that the spec only calls an aim, so the page doesn't use the interval. It is the figures' glitch
   turned on its side for a line: the left and the right half of the section slip up and down, once through the figures'
   keyframes, with their red and cyan shadows, and the ends of the section stay joined to the line. For a viewer who asks
-  for less motion the section doesn't slip, and has only its shadows. Done (926c390, 7b5301c).
+  for less motion the section doesn't slip, and has only its shadows. Done (53ae090, 0424877).
   Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
   sparklines' readouts are shown: "node 3f8e2a10", muted, over "heartbeat 4 s ago", or
-  "heartbeat just now" under 1.5 seconds, with the time in the cluster's color (aa3dbc3). The
+  "heartbeat just now" under 1.5 seconds, with the time in the cluster's color (e8dad8f). The
   share's line itself widens, from 1.5 to 4 pixels, over about 220 milliseconds, and narrows again when the pointer
   leaves. It is widest in the share and tapers back to 1.5 pixels just past its edges, so that it has no border, and it
   follows the line where a glitch has moved it. The share's shade is stronger by as much. Done for the cluster and
-  engine tiles (df9ce8d), with a tap on a share doing the same on a screen that is touched; the temporary page is gone.
+  engine tiles (7b108bc), with a tap on a share doing the same on a screen that is touched; the temporary page is gone.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
@@ -1098,14 +1098,14 @@ Tick each item when it is done, and write the pull request or commit that did it
   Decided since, in place of the bars' drill-down hovercards, their copyable IDs (IC 1A) and the drill-down cards on a
   handler digest's bars (IC 1B, IC 1C): pointing at a segment of any bar shows what the segment is of in the card's
   readout, beside its icon, where the charts' readouts are. The thing is in the muted color, by its name before its
-  kind, as "payments application", or by its kind and the first part of its ID, as "queue 113cbdc3" (421dd64), over its amount and its share of the bar in the bar's color, as "queue 113cbdc3" over "12 messages,
+  kind, as "payments application", or by its kind and the first part of its ID, as "queue 113cbdc3" (319855e), over its amount and its share of the bar in the bar's color, as "queue 113cbdc3" over "12 messages,
   63%". A bar that has no shares, and a segment that merges the rest, give the amount only. A readout is at most two
   lines, so that it moves nothing under the pointer. Nothing opens, and an ID can't be copied from a bar any more; the
   trail in the title bar is where keys and IDs are copied. A handler's digest gets a readout beside its kind icon,
   over the end of its name, which keeps its size and fades out under it, and its chart gets a readout as a tile's has.
-  A digest's readout has the color of the bar or the chart that is pointed at, not the digest's own. On a screen that is touched, a tap on a segment or a chart does what pointing does. Done (f83b85c, 6a7a2d6).
+  A digest's readout has the color of the bar or the chart that is pointed at, not the digest's own. On a screen that is touched, a tap on a segment or a chart does what pointing does. Done (ebf30d9, c5a1e03).
   Done with the explainers: no card's icon opens a hovercard, so an icon no longer grows when it is pointed at.
-  Approved and done (ID 2; daab9a7, 9f153b0): the title bar says where the page is as a trail, which is the page's address: the site
+  Approved and done (ID 2; cacb684, 97ba64f): the title bar says where the page is as a trail, which is the page's address: the site
   and the application, and, on a cluster's own page, the cluster or the engine, each a link to its own page. An
   application at no site has no site step: its trail starts with the application, and its hovercard has no site. On
   an application's page, the cluster that runs it is only in the trail's hovercard, because a reader asks to see the
