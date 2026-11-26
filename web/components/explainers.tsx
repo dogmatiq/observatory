@@ -186,7 +186,7 @@ export function cardExplainers(
 					text: "the number of messages ready to be delivered now",
 					when: { lacks: " per " },
 					side: "left",
-					atText: "16",
+					atText: "19",
 					with: [
 						{ at: ":scope > article > span", atText: "messages" },
 						{ at: ".text-4xl .text-failing", atText: true, keepInk: true },
@@ -685,7 +685,7 @@ export function cardExplainers(
 					at: ".flex-wrap",
 					text: "the number of deadlines ready to be handled now",
 					side: "right",
-					atText: "5",
+					atText: "6",
 					with: [
 						{ at: ".flex-wrap", atText: "deadlines" },
 						{ at: ".flex-wrap .text-failing", atText: true, keepInk: true },
@@ -791,7 +791,7 @@ export function cardExplainers(
 					at: ".tabular-nums > :last-child",
 					text: "the number of messages ready to be delivered now",
 					side: "top",
-					atText: "7",
+					atText: formatCompact(compactApp.queues?.messages ?? 0),
 					with: [
 						{
 							at: ".tabular-nums > :last-child .text-failing",
@@ -1181,10 +1181,7 @@ const siteQueuesExample: ExplainerSpec = {
 			at: ".text-4xl",
 			text: "the number of messages ready to be delivered now, across the applications",
 			side: "left",
-			atText: formatCompact(
-				(explainedSite.queues?.messages ?? 0) -
-					(explainedSite.queues?.failing ?? 0),
-			),
+			atText: formatCompact(explainedSite.queues?.messages ?? 0),
 			with: [
 				{ at: ":scope > article > span", atText: "messages" },
 				{ at: ".text-4xl .text-failing", atText: true, keepInk: true },
