@@ -1190,7 +1190,10 @@ Tick each item when it is done, and write the pull request or commit that did it
   whose most recent delivery attempt failed and a due one as one ready to be delivered now, so a failing message whose
   next attempt has come due is both, and the sum counts it twice. Filed as dogmatiq/protobuf#53, which asks for the messages
   that wait to be reported as counts that never overlap: scheduled (deadlines only), ready and failing, with the
-  pending metrics removed, since they are the sum of the others. Until it is done or rejected, the Observatory emulates
+  pending metrics removed, since they are the sum of the others. A comment on it asks for the spec to say that every
+  failing message is one that waits, and suggests that commands get a scheduled count too, for an engine that holds a
+  command back before it is ready, with a ready message waiting behind others of higher priority counted as ready; then
+  the stand-in below is an upper bound for commands too, as it is for deadlines. Until it is done or rejected, the Observatory emulates
   it: the ready count of each queue, of each kind of message, and of a process's deadlines is the smaller of the due
   count and the pending count less the failing one, which is exact for commands and the closest bound for deadlines
   (`readyOf` in `internal/observe/overview.go`; done, 0f8743d). Revisit when dogmatiq/protobuf#53 is done, to read the
