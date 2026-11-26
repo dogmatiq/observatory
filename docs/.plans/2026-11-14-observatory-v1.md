@@ -1065,9 +1065,14 @@ Tick each item when it is done, and write the pull request or commit that did it
   to its deadline, and a node that gives no way to tell when its heartbeats expire stays full while it is connected; the
   fallback to the usual intervals is gone. The site view's applications tile follows once its server side is built.
   Decided: the demo engine keeps its 15-second expiry, though its chart barely moves between heartbeats, because
-  runkit's own heartbeats, every second with a 5-second expiry, drain a section by about as much. Ideas to give the
-  chart character from real data (a blip when a heartbeat arrives, a glitch while one is late, a mark where the next
-  is due) are on a temporary page, undecided.
+  runkit's own heartbeats, every second with a 5-second expiry, drain a section by about as much. Of the ideas to give
+  the chart character from real data, tried on a temporary page, neither a blip when a heartbeat arrives (too much with
+  frequent heartbeats and many nodes) nor a mark where the next is due is built.
+  Decided: a node's section glitches while its heartbeat is late, which is once the interval that its engine gives has
+  passed with no new heartbeat, until the heartbeat expires. It is the figures' glitch turned on its side for a line:
+  the left and the right half of the section slip up and down on the figures' keyframes, with their red and cyan
+  shadows, by more as the heartbeat gets later, and the ends of the section stay joined to the line. Still to build;
+  it needs the engine's interval on the page. Next on the temporary page: pointing at a node's share of the chart.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
