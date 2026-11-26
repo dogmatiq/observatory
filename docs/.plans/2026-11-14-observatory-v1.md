@@ -1076,8 +1076,9 @@ Tick each item when it is done, and write the pull request or commit that did it
   Decided: pointing at a node's share of the heartbeat chart shows the tile's readout beside its icon, as the
   sparklines' readouts are shown: "node 3f8e2a10", with "node" muted and the short ID in the cluster's color, over
   "heartbeat 4 s ago", "heartbeat just now" under 1.5 seconds, or "heartbeat 3 s late" once the heartbeat is late. The
-  share's line is thicker and its shade stronger, fading out at the share's edges so that it has no border; how thick
-  the line is, is being tried on the temporary page. Still to build.
+  share's line itself widens, from 1.5 to 4 pixels, over about 220 milliseconds, and narrows again when the pointer
+  leaves. It is widest in the share and tapers back to 1.5 pixels just past its edges, so that it has no border, and it
+  follows the line where a glitch has moved it. The share's shade is stronger by as much. Still to build.
   The code that `/review` uses to show cards that way until then goes with them: `SegmentCard`'s `paragraphs` prop and
   the `ExplainersBuilt` context.
   Every hovercard that is about one thing starts with the thing's name, in bold capitals, then its kind, as a digest
