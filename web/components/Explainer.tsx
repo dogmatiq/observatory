@@ -183,7 +183,7 @@ export interface Note {
 
 	/**
 	 * Other words that are in focus with the part, such as the label of a vital,
-	 * which is in the detail line, under the figure, or the "+N" of the failing
+	 * which is in the particulars, under the figure, or the "+N" of the failing
 	 * ones of a number that waits, which are part of that number. Words that
 	 * keep their ink, as a "+N" keeps its orange, aren't drawn in the color of
 	 * the most prominent text.

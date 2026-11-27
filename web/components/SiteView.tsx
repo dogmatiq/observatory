@@ -131,7 +131,7 @@ export function SiteTotals({ data }: { data: SiteData }) {
 
 /**
  * SiteEventsTile is the site's events tile, whose headline is the events per
- * minute across the applications, whose detail line gives the events on the
+ * minute across the applications, whose particulars give the events on the
  * event streams of all the applications together, and how many streams there
  * are, as the cluster view's does, and whose bar shows which
  * applications record the most.
@@ -167,7 +167,7 @@ export function SiteEventsTile({
 					<Ramped value={streams?.events ?? 0} format={formatCompact} />
 				)
 			}
-			detail={
+			particulars={
 				rate ? (
 					<>
 						<span>
@@ -232,8 +232,8 @@ export function SiteEventsTile({
 /**
  * SiteQueuesTile is the site's queues tile, whose headline is the messages that
  * are ready to be delivered now across the applications, with those that are
- * failing beside them, as the cluster view's queues tile has them, whose detail
- * line gives the number of queues of all the applications together, and whose
+ * failing beside them, as the cluster view's queues tile has them, whose
+ * particulars give the number of queues of all the applications together, and whose
  * bar shows which applications have the most ready.
  */
 export function SiteQueuesTile({
@@ -264,7 +264,7 @@ export function SiteQueuesTile({
 					<Failing count={queues.failing} size="headline" />
 				</span>
 			}
-			detail={
+			particulars={
 				<>
 					<Noun>{nounFor(queues.messages, "message", "messages")}</Noun>
 					{queues.queues !== undefined && (
@@ -367,7 +367,7 @@ export function ApplicationsTile({ data }: { data: SiteData }) {
 					<NoSignal count={live.length === 0 ? 0 : out} of="applications" />
 				</span>
 			}
-			detail={
+			particulars={
 				<span>
 					<Noun>
 						{nounFor(data.applications.length, "application", "applications")}

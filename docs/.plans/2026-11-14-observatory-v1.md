@@ -1224,6 +1224,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   translation, with its translator.
 - Later: a home page that shows everything the Observatory sees at once, in a very stylized way, themed as a star field
   or an observatory, as the skies and the moon are.
+- Decided: the line under a tile's headline, which gives the headline's unit and the figures that go with it, is called
+  its particulars, in place of "detail line", in the design doc and in the code (`MetricTile`'s `particulars`).
 - Done: the statuses of the card of a node that doesn't report its workloads and of a section that only some nodes
   report say nothing about versions, because a status has one fixed text for each cause. The server still compares the
   nodes' versions of the engine and of the application, and sends whether they are the same, for wherever the views

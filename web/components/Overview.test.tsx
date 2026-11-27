@@ -341,7 +341,7 @@ test("a rate that waits only on a node being measured stays as it was, unblurred
 	const events = () => screen.getByRole("article", { name: "Events" });
 
 	rerender(withRate({ measuring: true }));
-	// The tile's text is only the figure and its detail, so it has no flag, whose
+	// The tile's text is only the figure and its particulars, so it has no flag, whose
 	// status a screen reader would read there.
 	expect(events().textContent).toBe(
 		"330events per minute, 1.2K events on 2 streams",

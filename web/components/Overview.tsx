@@ -276,7 +276,7 @@ export function EventsTile({
 					<Ramped value={total} format={formatCompact} />
 				)
 			}
-			detail={
+			particulars={
 				rate ? (
 					<>
 						<span>
@@ -330,7 +330,7 @@ export function EventsTile({
 
 /**
  * How the queues tile says what its rate counts, in the card of the rate, in the
- * detail line and in the readout of its chart.
+ * particulars and in the readout of its chart.
  */
 export const countedWords: Record<
 	Counted,
@@ -411,7 +411,7 @@ export function QueuesTile({
 	const counted = throughput?.of ?? "removed";
 	const wording = countedWords[counted];
 
-	// The number and its detail line both have the card of the rate.
+	// The number and its particulars both have the card of the rate.
 
 	const rate = (
 		<Figure number={scaled?.amount} format={formatCompact} unit={per} />
@@ -438,7 +438,7 @@ export function QueuesTile({
 					<span>{rate}</span>
 				)
 			}
-			detail={
+			particulars={
 				queues ? (
 					<>
 						<Noun>{nounFor(messages, "message", "messages")}</Noun>
@@ -562,7 +562,7 @@ export function ClusterTile({
 					<NoSignal count={live.length === 0 ? 0 : out} of="nodes" />
 				</span>
 			}
-			detail={
+			particulars={
 				<>
 					<span>
 						<Noun>
@@ -635,7 +635,7 @@ export function EngineTile({
 			value={
 				<span>{node === undefined ? <Alarm>Offline</Alarm> : "Online"}</span>
 			}
-			detail={null}
+			particulars={null}
 			chart={<HeartbeatChart sections={sections} />}
 		/>
 	);

@@ -55,7 +55,7 @@ export function MetricTile({
 	label,
 	icon,
 	value,
-	detail,
+	particulars,
 	bar,
 	chart,
 	href,
@@ -73,8 +73,11 @@ export function MetricTile({
 	/** The headline number. */
 	value: ReactNode;
 
-	/** The detail line under the number, which always takes two lines of room. */
-	detail: ReactNode;
+	/**
+	 * The particulars under the number: its unit, and the figures that go with
+	 * it. They always take two lines of room.
+	 */
+	particulars: ReactNode;
 
 	/** The bar of how the number is spread, if there is one. */
 	bar?: ReactNode;
@@ -135,7 +138,7 @@ export function MetricTile({
 				</div>
 			</div>
 			<span className="relative z-10 mt-1 min-h-[calc(2*1.5em)] text-sm text-muted">
-				{detail}
+				{particulars}
 			</span>
 			<Presence>
 				{bar && <div className="relative z-10 mt-3">{bar}</div>}
@@ -162,7 +165,7 @@ export function MetricTile({
 }
 
 /**
- * Noun marks the words in a tile's detail that say what the headline number
+ * Noun marks the words in a tile's particulars that say what the headline number
  * counts, which stand out from the rest.
  */
 export function Noun({ children }: { children: ReactNode }) {
