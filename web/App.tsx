@@ -32,11 +32,12 @@ import { useWatched, useWatchedSite } from "./lib/watch.ts";
 import type { Installation, Site } from "./model.ts";
 
 /**
- * What a page that has stopped being updated says, because the Observatory
- * can't be reached, as the tooltip of the alert flag in its title bar.
+ * What a page that has stopped being updated says, as the tooltip of the alert
+ * flag in its title bar. It doesn't say why, because the page can't tell
+ * whether the server stopped or the network between them did.
  */
 const updatesStopped =
-	"Updates have stopped, because the Observatory can't be reached. This is the last data that it sent.";
+	"Updates have stopped arriving. This is the last data that arrived.";
 
 /**
  * App is the root component of the user interface. It shows the page that the

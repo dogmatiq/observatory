@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 const stopped =
-	"Updates have stopped, because the Observatory can't be reached.";
+	"Updates have stopped arriving. This is the last data that arrived.";
 
 test("a page that has stopped being updated has a red alert flag in its title bar, whose tooltip says why", async () => {
 	render(<Page stopped={stopped}>content</Page>);
