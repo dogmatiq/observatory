@@ -1226,6 +1226,14 @@ Tick each item when it is done, and write the pull request or commit that did it
   or an observatory, as the skies and the moon are.
 - Decided: the line under a tile's headline, which gives the headline's unit and the figures that go with it, is called
   its particulars, in place of "detail line", in the design doc and in the code (`MetricTile`'s `particulars`).
+- Later: feedback on whether things are getting better. Wherever a bar's card gives advice, such as "An even spread across
+  the queues is better" on the queues tile, the Observatory would also follow how the bar changes over
+  time, and say so when the trend is toward the advice ("messages are spreading more evenly than ten minutes ago") or
+  away from it. This needs a measure of how even a bar is, kept as a series for each bar that has advice, and a
+  rule for how long a trend must hold before the page says it. The Observatory keeps its history in memory only, so the
+  trend is only as long as that history. Questions to settle then: which bars have advice, what the window is, whether
+  the feedback is words, a mark on the bar or both, and how it avoids reading as an alert, since the Observatory is an
+  insight tool and not a monitoring tool.
 - Done: the statuses of the card of a node that doesn't report its workloads and of a section that only some nodes
   report say nothing about versions, because a status has one fixed text for each cause. The server still compares the
   nodes' versions of the engine and of the application, and sends whether they are the same, for wherever the views
