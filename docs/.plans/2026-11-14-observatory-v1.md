@@ -1222,6 +1222,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   Sagan, would suit a lens that searches for a signal. The rules of the moon's quotes apply: each quote is checked
   against its published text, with a link to where it can be read, and a quote in another language has a published
   translation, with its translator.
+- Later: a home page that shows everything the Observatory sees at once, in a very stylized way, themed as a star field
+  or an observatory, as the skies and the moon are.
 - Done: the statuses of the card of a node that doesn't report its workloads and of a section that only some nodes
   report say nothing about versions, because a status has one fixed text for each cause. The server still compares the
   nodes' versions of the engine and of the application, and sends whether they are the same, for wherever the views
