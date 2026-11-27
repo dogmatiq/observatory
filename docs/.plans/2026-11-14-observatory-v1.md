@@ -687,8 +687,9 @@ parts. An item that says "Done" is built.
   popover is a card (`MoonCard`): its heading is the author's own word for the moon, with "the moon" after it in a lighter
   style on the same line if the word is foreign, or just "Moon" for an English quote; then the phase of the moon; then
   a quote about the moon, in a block quote, with the author and a link to the text, and, if the quote is not in English,
-  its translation in a block quote with the translator under it. It says nothing about the card, because only one sky
-  of a page has the moon (decided). A different quote opens each time. Only quotes that were checked against the text
+  its translation in a block quote with the translator under it. Then a status, "There's nothing to chart here, so
+  here's a quote about the moon instead.", which says nothing more about the card, because only one sky of a page has
+  the moon (decided). A different quote opens each time. Only quotes that were checked against the text
   they link to are in `moon-lore.ts`, and a translation is only ever a published one: a quote that has none is left out,
   and a test says so. The quotes are in scripts that the bundled typefaces have letters for (a test says so too), which
   is why there is no polytonic Greek, Chinese, Arabic or Hindi. The quotes still wanted are those for the countries that

@@ -12,10 +12,10 @@ import { InfoCard } from "./InfoCard.tsx";
  *   moon tonight under them;
  * - something that someone said about the moon, with who said it and a link to where
  *   it can be read, and, if it is in another language, its translation and who
- *   translated it.
- *
- * It has no status, and doesn't say anything about the card whose sky has the
- * moon, because only one sky of a page has the moon.
+ *   translated it;
+ * - a status, which says that the quote is there because there is nothing to
+ *   chart. It says nothing more about the card whose sky has the moon, because
+ *   only one sky of a page has the moon.
  */
 export function MoonCard({
 	phase,
@@ -47,6 +47,10 @@ export function MoonCard({
 				</>
 			}
 			kind={phaseName.charAt(0).toUpperCase() + phaseName.slice(1)}
+			status={{
+				icon: "chart",
+				text: "There's nothing to chart here, so here's a quote about the moon instead.",
+			}}
 		>
 			<figure className="flex flex-col gap-2 text-2xs">
 				<blockquote className="border-l-2 border-line-strong pl-3">
