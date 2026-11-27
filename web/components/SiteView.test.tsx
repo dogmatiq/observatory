@@ -80,18 +80,6 @@ test("the applications at no site link to the site whose key is the nil UUID", (
 	);
 });
 
-test("each square names its application to assistive technology", () => {
-	render(<SiteBreakdown data={siteOf(apps, euWest)} breakdown="squares" />);
-
-	const grid = screen.getByRole("region", { name: "Applications" });
-
-	expect(
-		within(grid)
-			.getAllByRole("link")
-			.map((l) => l.textContent),
-	).toEqual(apps.map((a) => a.application.name));
-});
-
 test("the alert icon of an application with no signal says what that means", async () => {
 	const name = apps[1]?.application.name as string;
 	render(
@@ -145,7 +133,6 @@ test("a compact digest's flag says that its rate isn't known yet, while it isn't
 	render(
 		<SiteBreakdown
 			data={siteOf([{ ...app, events: { perMinute: undefined } }], euWest)}
-			breakdown="compact-digests"
 		/>,
 	);
 
@@ -158,9 +145,7 @@ test("a compact digest's flag says that its rate isn't known yet, while it isn't
 
 test("a compact digest has no flag while its rate is known and its application sends a signal", () => {
 	const app = siteApplications[0] as (typeof siteApplications)[number];
-	render(
-		<SiteBreakdown data={siteOf([app], euWest)} breakdown="compact-digests" />,
-	);
+	render(<SiteBreakdown data={siteOf([app], euWest)} />);
 
 	const digest = screen.getByRole("article", { name: app.application.name });
 	expect(within(digest).queryByText(/samples|signal/)).toBeNull();
@@ -168,12 +153,7 @@ test("a compact digest has no flag while its rate is known and its application s
 
 test("a compact digest whose figures only some of its application's nodes report says so by its flag", async () => {
 	const app = siteApplications[0] as (typeof siteApplications)[number];
-	render(
-		<SiteBreakdown
-			data={siteOf([{ ...app, coverage: 0.5 }], euWest)}
-			breakdown="compact-digests"
-		/>,
-	);
+	render(<SiteBreakdown data={siteOf([{ ...app, coverage: 0.5 }], euWest)} />);
 
 	const digest = screen.getByRole("article", { name: app.application.name });
 	const flag = within(digest).getByText(someApplicationNodesReport.text)
@@ -185,10 +165,7 @@ test("a compact digest whose figures only some of its application's nodes report
 test("a compact digest's rate that waits only on a node being measured stays as it was, with no flag", () => {
 	const app = siteApplications[0] as (typeof siteApplications)[number];
 	const withRate = (events: { perMinute?: number; measuring?: boolean }) => (
-		<SiteBreakdown
-			data={siteOf([{ ...app, events }], euWest)}
-			breakdown="compact-digests"
-		/>
+		<SiteBreakdown data={siteOf([{ ...app, events }], euWest)} />
 	);
 	const { rerender } = render(withRate({ perMinute: 330 }));
 	const digest = () =>

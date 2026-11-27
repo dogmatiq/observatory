@@ -87,33 +87,15 @@ export function ReviewPage() {
 					title="The grid of applications"
 					deciding="Whether each application below the tiles is a compact digest, with its name and figures, or a square in a grid that names it only when pointed at."
 					notDeciding="What a compact digest's figures are, and its explainer, which is approved; the hovercard of its alert flag (SH 2); how a compact digest looks when its application's messages fail or its signal stops (SS); the order of the applications (SL 0)."
-					note="Each application is a compact digest with its name, its events per minute and its messages waiting, which links to its application view. The alternative is the plan's first idea, a grid of squares like a contribution graph, which names an application only when it is pointed at."
+					note="Each application is a compact digest with its name, its events per minute and its messages waiting, which links to its application view."
 				>
 					<State
 						label="Compact digests with names and figures"
 						recommendation="Approve. A reader finds an application by its name at a glance, and sees its figures without pointing at it. A hundred compact digests fit in about a screen."
 						wide
 					>
-						<SiteBreakdown
-							data={siteOf(calm, euWest)}
-							breakdown="compact-digests"
-						/>
+						<SiteBreakdown data={siteOf(calm, euWest)} />
 					</State>
-					<Choices
-						of="A"
-						title="the grid"
-						framed={false}
-						choices={[
-							[
-								"Squares, like a contribution graph",
-								<SiteBreakdown
-									key="squares"
-									data={siteOf(calm, euWest)}
-									breakdown="squares"
-								/>,
-							],
-						]}
-					/>
 				</Part>
 			</Tile>
 

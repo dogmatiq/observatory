@@ -976,8 +976,8 @@ Tick each item when it is done, and write the pull request or commit that did it
   applications together, which says roughly how widely the site's work can be spread; and the number of applications sending a signal, with the
   number with no signal, whose chart is the heartbeat chart with a share for each application sending a signal. Below them,
   each application in the order of their names, as a small card with its name, its events per minute and its messages
-  waiting, linking to its application view; the plan's first idea, a grid of squares like a contribution graph, is the
-  alternative. An application is sending a signal while its engine, or any node of its cluster, is. The coverage rule
+  waiting, linking to its application view; the plan's first idea, a grid of squares like a contribution graph, lost
+  to them (SL 1A), and was removed. An application is sending a signal while its engine, or any node of its cluster, is. The coverage rule
   applies across the site: a total's coverage is the share of the nodes at the site that report it, and an application
   with no signal counts as nodes that don't. The view of the applications at no site is the same, at the nil UUID's
   address. The backend is built once the design is settled. Done (f79c6ca, 44aed09): the server adds up the cluster

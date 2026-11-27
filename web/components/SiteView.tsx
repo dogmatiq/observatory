@@ -1,4 +1,4 @@
-import { type CSSProperties, useId, useMemo } from "react";
+import { useId, useMemo } from "react";
 import { cn } from "../lib/cn.ts";
 import { Covered, Distrusted } from "../lib/distrust.tsx";
 import { formatCompact, inUnit, nounFor, shortPer } from "../lib/format.ts";
@@ -19,7 +19,6 @@ import {
 import { Figure } from "./Figure.tsx";
 import { HeartbeatChart } from "./HeartbeatChart.tsx";
 import { Icon } from "./Icon.tsx";
-import { InfoCard } from "./InfoCard.tsx";
 import {
 	Alarm,
 	accentClasses,
@@ -31,7 +30,6 @@ import {
 	raisedClasses,
 } from "./MetricTile.tsx";
 import { NameLink } from "./NameLink.tsx";
-import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
 import { Sparkline } from "./Sparkline.tsx";
@@ -47,15 +45,6 @@ import { subsystemColors } from "./subsystems.ts";
 import { useRate } from "./useRate.ts";
 
 /**
- * Breakdown is how the site view lays out its applications below its tiles:
- * `compact-digests`, a grid of compact digests, each with the application's name
- * and figures,
- * or `squares`, a grid of small squares in the manner of a contribution graph,
- * each of which names its application only when it is pointed at.
- */
-export type Breakdown = "compact-digests" | "squares";
-
-/**
  * SiteOverview is the site view: the totals of the applications at a site, or at
  * no site, as three tiles across the top, the same size as the cluster view's,
  * and each application below them, in the order of their names, so that an
@@ -65,29 +54,20 @@ export function SiteOverview({ data }: { data: SiteData }) {
 	return (
 		<div className="grid gap-8">
 			<SiteTotals data={data} />
-			<SiteBreakdown data={data} breakdown="compact-digests" />
+			<SiteBreakdown data={data} />
 		</div>
 	);
 }
 
 /**
- * SiteBreakdown is the part of the site view below its tiles, which is each of
- * its applications, laid out as `breakdown` says.
+ * SiteBreakdown is the part of the site view below its tiles, which is a grid of
+ * compact digests, one for each of its applications, with the application's
+ * name and figures.
  */
-export function SiteBreakdown({
-	data,
-	breakdown,
-}: {
-	data: SiteData;
-	breakdown: Breakdown;
-}) {
+export function SiteBreakdown({ data }: { data: SiteData }) {
 	return (
 		<section aria-label="Applications">
-			{breakdown === "compact-digests" ? (
-				<CompactDigests data={data} alert="icon" explained />
-			) : (
-				<ApplicationSquares data={data} />
-			)}
+			<CompactDigests data={data} alert="icon" explained />
 		</section>
 	);
 }
@@ -586,98 +566,5 @@ function ApplicationFigures({ app }: { app: SiteApplication }) {
 				</span>
 			)}
 		</span>
-	);
-}
-
-/**
- * ApplicationSquares is the breakdown of the site view as a grid of small
- * squares, one for each application, in the order of the applications, in the
- * manner of a contribution graph. A square's shade is how busy its application
- * is, by its events per minute, in four steps. A square is orange while the
- * application has failing messages, and an outline while there is no signal from it.
- * Pointing at a square shows the card of its application, and the square links
- * to its application view.
- */
-function ApplicationSquares({ data }: { data: SiteData }) {
-	const busiest = Math.max(
-		1,
-		...data.applications.map((a) => a.events?.perMinute ?? 0),
-	);
-
-	return (
-		<ul
-			className={cn(
-				"flex flex-wrap gap-1.5 rounded-card bg-panel p-4 [box-shadow:var(--shadow-raised)]",
-				subsystemColors.cluster,
-			)}
-		>
-			{data.applications.map((a) => {
-				const out = a.nodes === 0;
-				const failing = (a.queues?.failing ?? 0) > 0;
-				const busy = (a.events?.perMinute ?? 0) / busiest;
-				const step = busy === 0 ? 0 : busy < 0.05 ? 1 : busy < 0.25 ? 2 : 3;
-
-				return (
-					<li key={a.application.key}>
-						<Popover card content={<ApplicationCard app={a} />}>
-							<a
-								href={applicationAtSitePath(data.site?.key, a.application.key)}
-								className={cn(
-									"block size-5 rounded-[4px] transition-transform duration-150 hover:scale-125 motion-reduce:transition-none",
-									out
-										? "border-2 border-dashed border-bad"
-										: failing
-											? "bg-failing"
-											: "bg-(--subsystem)",
-									!out &&
-										!failing &&
-										["opacity-25", "opacity-45", "opacity-70", ""][step],
-									a.coverage !== undefined && "distrust-blur",
-								)}
-								style={
-									a.coverage === undefined
-										? undefined
-										: ({ "--distrust": 1 - a.coverage } as CSSProperties)
-								}
-							>
-								<span className="sr-only">{a.application.name}</span>
-							</a>
-						</Popover>
-					</li>
-				);
-			})}
-		</ul>
-	);
-}
-
-/**
- * ApplicationCard is the card of a square of [ApplicationSquares]. It names the
- * application and gives its figures, or says, as a status, that there is no
- * signal from it.
- */
-export function ApplicationCard({ app }: { app: SiteApplication }) {
-	const out = app.nodes === 0;
-
-	return (
-		<InfoCard
-			subsystem="cluster"
-			icon="application"
-			kind="Application"
-			name={app.application.name}
-			status={
-				out
-					? {
-							icon: "alert",
-							text: noSignalText,
-						}
-					: undefined
-			}
-		>
-			{!out && (
-				<Covered coverage={app.coverage ?? 1}>
-					<ApplicationFigures app={app} />
-				</Covered>
-			)}
-		</InfoCard>
 	);
 }
