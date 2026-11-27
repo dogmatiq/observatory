@@ -7,6 +7,7 @@ import { ReadoutContext } from "../lib/readout.tsx";
 import { bindingSegments, handlerNodeSegments } from "../lib/segments.ts";
 import type { HandlerData, HandlerSummary } from "../model.ts";
 import { AlertFlag } from "./AlertFlag.tsx";
+import { ChartRoom } from "./ChartRoom.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 import {
 	accentClasses,
@@ -18,7 +19,6 @@ import { NameLink } from "./NameLink.tsx";
 import { Popover, Tooltip } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { ReadoutLines, useReadoutPlace } from "./ReadoutLines.tsx";
-import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import { someNodesReport } from "./statuses.ts";
@@ -30,17 +30,6 @@ import { handlerSubsystem, kindColors, subsystemColors } from "./subsystems.ts";
  */
 const minimizesConcurrencyText =
 	"Minimize concurrency: this handler's configuration instructs the engine to attempt to process messages one at a time, minimizing conflicts and/or contention.";
-
-/**
- * What the chart of a handler's digest counts, by the kind of handler, for the
- * words of the sky that is there if no node reports it.
- */
-const chartedWords: Record<HandlerData["kind"], string> = {
-	aggregate: "the events that this handler records",
-	process: "the events that this handler handles",
-	integration: "the messages that this handler handles",
-	projection: "the events that this handler handles",
-};
 
 /**
  * HandlerDigest is the digest of one handler, on the cluster view. It shows the
@@ -156,24 +145,30 @@ export function HandlerDigest({
 				</span>
 			</div>
 			<Summary handler={handler} summary={summary} />
-			<Presence shape="fade" className="absolute inset-x-0 bottom-0">
-				{history ? (
-					<Sparkline
-						chart={history}
-						describe={(value) => {
-							const { amount, per } = scaleRate(value);
-							return {
-								figure: formatCompact(amount),
-								unit: `${charted}${shortPer[per]}`,
-								subsystem: chartSubsystem,
-							};
-						}}
-						className={cn("h-10", subsystemColors[chartSubsystem])}
-					/>
-				) : (
-					<Sky missing={chartedWords[handler.kind]} height={60} />
+			{/* The sky takes the place of the chart, so it has the chart's color. */}
+			<div
+				className={cn(
+					"absolute inset-x-0 bottom-0",
+					subsystemColors[chartSubsystem],
 				)}
-			</Presence>
+			>
+				<ChartRoom chart={history} skyHeight={60}>
+					{(chart) => (
+						<Sparkline
+							chart={chart}
+							describe={(value) => {
+								const { amount, per } = scaleRate(value);
+								return {
+									figure: formatCompact(amount),
+									unit: `${charted}${shortPer[per]}`,
+									subsystem: chartSubsystem,
+								};
+							}}
+							className="h-10"
+						/>
+					)}
+				</ChartRoom>
+			</div>
 		</>
 	);
 

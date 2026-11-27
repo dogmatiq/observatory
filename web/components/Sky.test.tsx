@@ -22,7 +22,7 @@ afterEach(() => {
 function Cards({ names }: { names: string[] }) {
 	return names.map((name) => (
 		<div key={name} data-card={name}>
-			<Sky missing="the rate of events" />
+			<Sky />
 		</div>
 	));
 }
@@ -66,7 +66,7 @@ const quoteIn = (tip: string) => moonQuotes.find((q) => tip.includes(q.text));
 const heading = (q: (typeof moonQuotes)[number]) =>
 	q.moon ? `${q.moon} the moon` : "Moon";
 
-test("the popover of the moon is a card with the moon's name by its quote's author, the phase, the quote with a link to its text, and why there is no chart, and not which node", async () => {
+test("the popover of the moon is a card with the moon's name by its quote's author, the phase, and the quote with a link to its text, and nothing about the card", async () => {
 	const { container } = render(<Cards names={["a"]} />);
 
 	const moon = container.querySelector("[data-moon]") as Element;
@@ -85,10 +85,7 @@ test("the popover of the moon is a card with the moon's name by its quote's auth
 	expect(
 		tooltip.querySelector(`a[href="${quote?.url}"]`)?.getAttribute("target"),
 	).toBe("_blank");
-	expect(tip).toContain(
-		"There are no samples of the rate of events, so here's a quote about the moon instead.",
-	);
-	expect(tip).not.toMatch(/node/i);
+	expect(tip).not.toMatch(/node|sample|chart/i);
 });
 
 test("a quote that is translated shows its translator, and one that is in English does not", async () => {

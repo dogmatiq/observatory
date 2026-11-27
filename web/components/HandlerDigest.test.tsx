@@ -413,9 +413,7 @@ test("a chart has the color of the messages that it counts", () => {
 		{},
 		{ history: chart, charted: "commands" },
 	).container;
-	expect(commands.querySelector("svg.h-10")?.getAttribute("class")).toContain(
-		"--color-queues",
-	);
+	expect(colorOf(commands.querySelector("svg.h-10"))).toBe("--color-queues");
 
 	cleanup();
 
@@ -424,9 +422,31 @@ test("a chart has the color of the messages that it counts", () => {
 		{},
 		{ history: chart, charted: "events" },
 	).container;
-	expect(events.querySelector("svg.h-10")?.getAttribute("class")).toContain(
-		"--color-streams",
-	);
+	expect(colorOf(events.querySelector("svg.h-10"))).toBe("--color-streams");
+});
+
+/** The color of the subsystem that an element takes its colors from. */
+function colorOf(element: Element | null): string | undefined {
+	const colored = element?.closest('[class*="[--subsystem:"]');
+	return colored?.className.match(
+		/\[--subsystem:var\((--color-[a-z]+)\)\]/,
+	)?.[1];
+}
+
+test("a digest whose chart has been at zero for the whole of its minute has a sky in its place, in the chart's color", () => {
+	const chart = {
+		end: 0,
+		points: Array.from({ length: 61 }, (_, i) => ({
+			at: (i - 60) * 1000,
+			value: 0,
+		})),
+	};
+	const { container } = digest("projection", {}, { history: chart });
+
+	const moon = container.querySelector("[data-moon]");
+	expect(moon).not.toBeNull();
+	expect(container.querySelector("svg.h-10")).toBeNull();
+	expect(colorOf(moon)).toBe("--color-streams");
 });
 
 test("the punctuation of a handler's name is muted, and the words are not, and a tooltip has the whole name when it is cut short", async () => {

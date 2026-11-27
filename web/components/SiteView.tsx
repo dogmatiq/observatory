@@ -8,6 +8,7 @@ import { applicationAtSitePath } from "../lib/route.ts";
 import { applicationSegments } from "../lib/segments.ts";
 import type { SiteApplication, SiteData } from "../model.ts";
 import { AlertFlag } from "./AlertFlag.tsx";
+import { ChartRoom } from "./ChartRoom.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Explained } from "./Explainer.tsx";
 import {
@@ -33,7 +34,6 @@ import { NameLink } from "./NameLink.tsx";
 import { Popover } from "./Popover.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
-import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { StackedBar } from "./StackedBar.tsx";
 import {
@@ -232,18 +232,18 @@ export function SiteEventsTile({
 				/>
 			}
 			chart={
-				events.history ? (
-					<Sparkline
-						chart={events.history}
-						className="h-12"
-						describe={(value) => ({
-							figure: formatCompact(inUnit(value, per)),
-							unit: `events${shortPer[per]}`,
-						})}
-					/>
-				) : (
-					<Sky missing="the rate of events" />
-				)
+				<ChartRoom chart={events.history}>
+					{(chart) => (
+						<Sparkline
+							chart={chart}
+							className="h-12"
+							describe={(value) => ({
+								figure: formatCompact(inUnit(value, per)),
+								unit: `events${shortPer[per]}`,
+							})}
+						/>
+					)}
+				</ChartRoom>
 			}
 		/>
 	);
@@ -322,18 +322,18 @@ export function SiteQueuesTile({
 				/>
 			}
 			chart={
-				queues.history ? (
-					<Sparkline
-						chart={queues.history}
-						className="h-12"
-						describe={(value) => ({
-							figure: formatCompact(inUnit(value, per)),
-							unit: `handled${shortPer[per]}`,
-						})}
-					/>
-				) : (
-					<Sky missing="the rate at which messages are handled" />
-				)
+				<ChartRoom chart={queues.history}>
+					{(chart) => (
+						<Sparkline
+							chart={chart}
+							className="h-12"
+							describe={(value) => ({
+								figure: formatCompact(inUnit(value, per)),
+								unit: `handled${shortPer[per]}`,
+							})}
+						/>
+					)}
+				</ChartRoom>
 			}
 		/>
 	);

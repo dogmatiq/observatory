@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { overview } from "../fixtures/overview.ts";
 import { golden } from "../fixtures/prototype-golden.ts";
 import type { Chart } from "../model.ts";
-import { heightOf, sparklineGeometry, valueAt } from "./sparkline.ts";
+import { heightOf, isIdle, sparklineGeometry, valueAt } from "./sparkline.ts";
 
 const [account, schedule, mailer, balances] = overview.handlers;
 
@@ -125,4 +125,35 @@ test("the largest value of a chart is drawn at its top, and nothing at its botto
 
 	expect(heightOf(chart, 50)).toBeCloseTo(46 / 48);
 	expect(heightOf(chart, 0)).toBeCloseTo(2 / 48);
+});
+
+/** A chart that ends at 0, of the values given, one a second, the last at 0. */
+const chartOf = (values: number[]): Chart => ({
+	end: 0,
+	points: values.map((value, i) => ({
+		at: (i - values.length + 1) * 1000,
+		value,
+	})),
+});
+
+test("a chart that has been at zero for the whole of its window is idle", () => {
+	expect(isIdle(chartOf(Array(61).fill(0)))).toBe(true);
+});
+
+test("a chart with a value above zero in its window isn't idle", () => {
+	const values = Array(61).fill(0);
+	values[30] = 1;
+	expect(isIdle(chartOf(values))).toBe(false);
+});
+
+test("a chart whose line enters its window from above zero isn't idle", () => {
+	expect(isIdle(chartOf([1, ...Array(60).fill(0)]))).toBe(false);
+});
+
+test("a chart that has been at zero since a time before its window is idle", () => {
+	expect(isIdle(chartOf([5, 0, ...Array(60).fill(0)]))).toBe(true);
+});
+
+test("a chart that has been recorded for less than its window isn't idle", () => {
+	expect(isIdle(chartOf(Array(30).fill(0)))).toBe(false);
 });

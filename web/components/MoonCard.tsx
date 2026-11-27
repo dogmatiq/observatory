@@ -4,27 +4,25 @@ import { type MoonQuote, moonQuotes, pickOther } from "../lib/moon-lore.ts";
 import { InfoCard } from "./InfoCard.tsx";
 
 /**
- * MoonCard is the card of the moon in the sky of a card that has no chart. From the
- * top it has:
+ * MoonCard is the card of the moon in a sky, which a card draws when it has
+ * nothing to chart. From the top it has:
  *
  * - what the author of the quote called the moon, and, if that is not English, what
  *   it means, in a lighter style after it, on the same line, with the phase of the
  *   moon tonight under them;
  * - something that someone said about the moon, with who said it and a link to where
  *   it can be read, and, if it is in another language, its translation and who
- *   translated it;
- * - a status, which says why the card has no chart, as the status of a rate does,
- *   in terms of samples, and that the quote is there instead: `missing` is what
- *   there are no samples of, as a noun phrase, such as "the rate of events".
+ *   translated it.
+ *
+ * It has no status, and doesn't say anything about the card whose sky has the
+ * moon, because only one sky of a page has the moon.
  */
 export function MoonCard({
 	phase,
-	missing,
 	quote,
 }: {
 	/** How far the moon is through its month, from [moonPhase]. */
 	phase: number;
-	missing: string;
 	quote: MoonQuote;
 }) {
 	const phaseName = moonName(phase);
@@ -49,10 +47,6 @@ export function MoonCard({
 				</>
 			}
 			kind={phaseName.charAt(0).toUpperCase() + phaseName.slice(1)}
-			status={{
-				icon: "chart",
-				text: `There are no samples of ${missing}, so here's a quote about the moon instead.`,
-			}}
 		>
 			<figure className="flex flex-col gap-2 text-2xs">
 				<blockquote className="border-l-2 border-line-strong pl-3">
@@ -95,17 +89,11 @@ let lastQuote: MoonQuote | undefined;
  * drawn, and a popover draws its content each time that it opens, so each time that
  * the popover opens it shows another.
  */
-export function PickedMoonCard({
-	phase,
-	missing,
-}: {
-	phase: number;
-	missing: string;
-}) {
+export function PickedMoonCard({ phase }: { phase: number }) {
 	const [quote] = useState(() => {
 		lastQuote = pickOther(moonQuotes, lastQuote);
 		return lastQuote;
 	});
 
-	return <MoonCard phase={phase} missing={missing} quote={quote} />;
+	return <MoonCard phase={phase} quote={quote} />;
 }

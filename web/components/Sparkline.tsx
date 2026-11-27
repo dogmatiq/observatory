@@ -45,12 +45,7 @@ export function Sparkline({
 	describe?: (value: number) => Pick<Readout, "figure" | "unit" | "subsystem">;
 }) {
 	const id = useId();
-
-	// A chart stands still if the numbers around it are not current, as they are not
-	// for a cluster with no node reporting, and shows what it showed when the last
-	// node reported.
-	const scrolled = useScrolled();
-	const end = chart.end + (useDistrusted() ? 0 : scrolled);
+	const end = chart.end + useChartScroll();
 	const geometry = sparklineGeometry({ ...chart, end });
 
 	return (
@@ -88,6 +83,19 @@ export function Sparkline({
 			)}
 		</>
 	);
+}
+
+/**
+ * useChartScroll returns how far a chart has scrolled since its data arrived, in
+ * milliseconds, which is what is added to its end to give the time at its
+ * right-hand edge as it is drawn now.
+ */
+export function useChartScroll(): number {
+	// A chart stands still if the numbers around it are not current, as they are not
+	// for a cluster with no node reporting, and shows what it showed when the last
+	// node reported.
+	const scrolled = useScrolled();
+	return useDistrusted() ? 0 : scrolled;
 }
 
 /**

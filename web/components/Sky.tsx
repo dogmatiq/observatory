@@ -86,25 +86,22 @@ function useHoldsMoon(kind: "night" | "day"): boolean {
 }
 
 /**
- * Sky fills the room that a chart would have, along the bottom of a card, when no
- * node reports what the chart is made from, with a scene of hills and a sky that
- * drift sideways very slowly. It is the night in the dark color mode, and the day
- * in the light one.
+ * Sky fills the room that a chart would have, along the bottom of a card, when
+ * there is nothing to chart, with a scene of hills and a sky that drift sideways
+ * very slowly. It is the night in the dark color mode, and the day in the light
+ * one.
  *
  * In one sky of the page, which is the one that has been drawn longest, there is
- * the moon in its real phase, and its popover says what phase that is, and why
- * the card has no chart. `missing` says what there are no samples of, as a noun phrase,
- * such as "the rate of events".
+ * the moon in its real phase, and its popover says what phase that is, with a
+ * quote about the moon. The popover doesn't say anything about the card, because
+ * only one sky of the page has the moon.
  *
  * It is decoration, so it is hidden from assistive technology, and it draws
  * nothing that moves for a viewer who asks for less motion.
  */
 export function Sky({
-	missing,
 	height = 64,
 }: {
-	missing: string;
-
 	/** The height of the room, in pixels, which is the height of a chart and its margin. */
 	height?: number;
 }) {
@@ -112,7 +109,7 @@ export function Sky({
 	const night = useHoldsMoon("night");
 	const day = useHoldsMoon("day");
 	const moon = (holds: boolean, tone: "night" | "day") =>
-		holds && <Moon missing={missing} tone={tone} />;
+		holds && <Moon tone={tone} />;
 
 	return (
 		<div
@@ -279,13 +276,7 @@ const moonColors = {
  * It rises from behind the hills when it comes to a sky, over half a minute.
  * It is opaque, so that nothing behind it shows through.
  */
-function Moon({
-	missing,
-	tone,
-}: {
-	missing: string;
-	tone: keyof typeof moonColors;
-}) {
+function Moon({ tone }: { tone: keyof typeof moonColors }) {
 	const id = useId();
 	const colors = moonColors[tone];
 	// A copy of a card shows the moon where it already is, without rising.
@@ -316,11 +307,7 @@ function Moon({
 	);
 
 	return (
-		<Popover
-			card
-			interactive
-			content={<PickedMoonCard phase={phase} missing={missing} />}
-		>
+		<Popover card interactive content={<PickedMoonCard phase={phase} />}>
 			<svg
 				data-moon=""
 				aria-hidden="true"

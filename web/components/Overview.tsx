@@ -17,6 +17,7 @@ import {
 	streamSegments,
 } from "../lib/segments.ts";
 import type { Application, Counted, LiveNode, OverviewData } from "../model.ts";
+import { ChartRoom } from "./ChartRoom.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Explained, type ExplainerSpec } from "./Explainer.tsx";
 import {
@@ -33,7 +34,6 @@ import { HeartbeatChart, type Section } from "./HeartbeatChart.tsx";
 import { Alarm, Failing, MetricTile, NoSignal, Noun } from "./MetricTile.tsx";
 import { Presence } from "./Presence.tsx";
 import { Ramped } from "./Ramped.tsx";
-import { Sky } from "./Sky.tsx";
 import { Sparkline } from "./Sparkline.tsx";
 import { NodeBar, StackedBar } from "./StackedBar.tsx";
 import {
@@ -311,18 +311,18 @@ export function EventsTile({
 				)
 			}
 			chart={
-				data.history ? (
-					<Sparkline
-						chart={data.history}
-						className="h-12"
-						describe={(value) => ({
-							figure: formatCompact(inUnit(value, per)),
-							unit: `events${shortPer[per]}`,
-						})}
-					/>
-				) : (
-					<Sky missing="the rate of events" />
-				)
+				<ChartRoom chart={data.history}>
+					{(chart) => (
+						<Sparkline
+							chart={chart}
+							className="h-12"
+							describe={(value) => ({
+								figure: formatCompact(inUnit(value, per)),
+								unit: `events${shortPer[per]}`,
+							})}
+						/>
+					)}
+				</ChartRoom>
 			}
 		/>
 	);
@@ -474,18 +474,18 @@ export function QueuesTile({
 				)
 			}
 			chart={
-				data.history ? (
-					<Sparkline
-						chart={data.history}
-						className="h-12"
-						describe={(value) => ({
-							figure: formatCompact(inUnit(value, per)),
-							unit: `${wording.unit}${shortPer[per]}`,
-						})}
-					/>
-				) : (
-					<Sky missing="the rate at which messages get through the queues" />
-				)
+				<ChartRoom chart={data.history}>
+					{(chart) => (
+						<Sparkline
+							chart={chart}
+							className="h-12"
+							describe={(value) => ({
+								figure: formatCompact(inUnit(value, per)),
+								unit: `${wording.unit}${shortPer[per]}`,
+							})}
+						/>
+					)}
+				</ChartRoom>
 			}
 		/>
 	);

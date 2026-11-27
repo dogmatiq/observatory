@@ -152,3 +152,27 @@ export function heightOf(chart: Chart, value: number): number {
 		sparklineHeight
 	);
 }
+
+/**
+ * isIdle returns whether a chart has been at zero for the whole of the time
+ * that it shows, so that its line lies along the bottom from one edge to the
+ * other. A chart whose points begin after its left-hand edge has not been
+ * recorded for that long, and isn't idle.
+ */
+export function isIdle(chart: Chart): boolean {
+	const start = chart.end - chartWindowMs;
+
+	// The line enters the chart from the last point at or before its left-hand
+	// edge, so that point and every one after it are drawn. A point after the
+	// right-hand edge counts too, because the line slopes toward it.
+	let from: number | undefined;
+	for (const [i, p] of chart.points.entries()) {
+		if (p.at <= start) {
+			from = i;
+		}
+	}
+
+	return (
+		from !== undefined && chart.points.slice(from).every((p) => p.value === 0)
+	);
+}

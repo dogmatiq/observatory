@@ -681,14 +681,14 @@ parts. An item that says "Done" is built.
   the bar as the chart, constellations, an orrery, an aurora, an observatory, an Earth-rise, radio dishes, a sundial and
   an armillary sphere) the user chose these. In the dark color mode it is the night: stars that drift sideways very slowly
   and twinkle, over opaque hills that drift a little faster. In the light mode it is the day: a pale wash of the tile's
-  color, thin cloud, and the same hills. In one sky of the page, the one that has been without a chart longest, there is
+  color, thin cloud, and the same hills. In one sky of the page, the one that has been drawn longest, there is
   the moon in its real phase, with seas and craters that are only just there. It rises from behind the hills over eighteen
   seconds when it comes to a sky, and passes to the next when its sky goes. In the day the cloud is in front of it. Its
   popover is a card (`MoonCard`): its heading is the author's own word for the moon, with "the moon" after it in a lighter
   style on the same line if the word is foreign, or just "Moon" for an English quote; then the phase of the moon; then
   a quote about the moon, in a block quote, with the author and a link to the text, and, if the quote is not in English,
-  its translation in a block quote with the translator under it; then a status that says there is no chart because
-  nothing is reporting what it counts. A different quote opens each time. Only quotes that were checked against the text
+  its translation in a block quote with the translator under it. It says nothing about the card, because only one sky
+  of a page has the moon (decided). A different quote opens each time. Only quotes that were checked against the text
   they link to are in `moon-lore.ts`, and a translation is only ever a published one: a quote that has none is left out,
   and a test says so. The quotes are in scripts that the bundled typefaces have letters for (a test says so too), which
   is why there is no polytonic Greek, Chinese, Arabic or Hindi. The quotes still wanted are those for the countries that
@@ -697,8 +697,11 @@ parts. An item that says "Done" is built.
   Ukrainian, Turkish, Maltese, Dutch, Swedish, Icelandic, Finnish and Estonian ones. Nothing
   moves for a viewer who asks for less motion, and everything drifts very slowly: the stars take half an hour to cross a
   tile. The earlier idea, a night sky for a chart that is only empty, with a tumbleweed, is at `eeed75c`, and is not used.
-  - Handler cards say what their chart counts in the moon's popover, by kind, in `chartedWords` of `HandlerCard`. Those
-    words reach users, so they are the user's to change.
+  - Decided: a chart that has been at zero for the whole minute that it shows is a sky too, because a line along the
+    bottom shows nothing that the sky doesn't. The chart comes back with its next value above zero, and stays for at
+    least a minute, until that value has scrolled out of it; the two fade into each other (`ChartRoom`). A digest's sky
+    has the color of its chart, as the "?" of its explainer does, so a projection's sky is the color of events, not
+    gray.
 - Use the spec's words on the page: commands pending, events pending and deadlines pending for what the cards call
   backlogs, messages pending in the queues tile, and instances in progress, which is also the spec's word. The health
   rule that is called Backlog is about due messages, so it takes the spec's word "due" when the rules come back.
